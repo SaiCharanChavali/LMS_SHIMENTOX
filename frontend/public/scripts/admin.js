@@ -8,18 +8,21 @@ const ROLE_NAV={
   hr:[['dashboard','grid','Dashboard'],['courses','book','My Learning'],['admin-courses','file','Manage Courses'],['paths','path','Learning Paths'],['skills','target','Skills & Competencies'],['admin-users','users','Users & Teams'],['assessments','check','Assessments'],['calendar','calendar','Training Calendar'],['cert-records','award','Certificates'],['reports','chart','Reports & Analytics'],['account','user','My Profile']],
   trainer:[...LEARNER_NAV,['MANAGE'],['admin-courses','file','Manage Courses'],['assessments','check','Assessments'],['reports','chart','Reports & Analytics']],
   manager:[...LEARNER_NAV,['MY TEAM'],['reports','chart','Team Reports']],
-  employee:LEARNER_NAV,
+  // Employees open on My Learning, so it also leads their sidebar.
+  employee:[LEARNER_NAV[1],LEARNER_NAV[0],...LEARNER_NAV.slice(2)],
 };
 const EXTRA_PAGES=['course','history','assessments','course-preview'];
 
+// The first page after sign-in: My Learning for employees, the dashboard for every other role.
+function homePage(){return currentUser?.role==='employee'?'courses':'dashboard';}
 function resolvePage(route){
   if(firstAdminSetup)return 'admin-setup';
   if(!currentUser)return 'login';
   if(currentUser.mustChangePassword)return 'password-setup';
-  if(['home','login','logout',''].includes(route))return 'dashboard';
+  if(['home','login','logout',''].includes(route))return homePage();
   const allowed=portalNavigation().map(([href])=>href).concat(EXTRA_PAGES,['account','certificates','courses']);
-  if(route==='course-preview'&&!can('courses.manage'))return 'dashboard';
-  return allowed.includes(route)?route:'dashboard';
+  if(route==='course-preview'&&!can('courses.manage'))return homePage();
+  return allowed.includes(route)?route:homePage();
 }
 function portalNavigation(){return (ROLE_NAV[currentUser.role]||LEARNER_NAV).filter(item=>item.length===3);}
 function navigationGroups(){return ROLE_NAV[currentUser.role]||LEARNER_NAV;}

@@ -23,7 +23,7 @@ function pageContent(page){
 function sidebarNavigation(active){
   return navigationGroups().map(item=>item.length===1?`<div class="nav-label nav-section">${esc(item[0])}</div>`:`<a href="#${item[0]}" class="${active===item[0]?'active':''}" ${active===item[0]?'aria-current="page"':''}>${icon(item[1])}${esc(item[2])}</a>`).join('');
 }
-function render(){if(!portalReady)return;const route=location.hash.slice(1)||'dashboard';const page=resolvePage(route);const app=document.getElementById('app');
+function render(){if(!portalReady)return;const route=location.hash.slice(1);const page=resolvePage(route);const app=document.getElementById('app');
   if(page==='admin-setup'){document.title='Set up • ShimentoX';app.innerHTML=initialAdminPage();bindInitialAdmin();return;}
   if(page==='login'){document.title='Sign in • ShimentoX';app.innerHTML=login();bindAuthForm();return;}
   if(page==='password-setup'){document.title='Set your password • ShimentoX';app.innerHTML=passwordSetupPage();bindPasswordSetup();return;}

@@ -109,11 +109,15 @@ async function main() {
   await element('first-password-form').onsubmit({preventDefault(){}});
   assert.equal(run('currentUser.mustChangePassword'),false);
   assert.equal(run('currentUser.name'),'Sai Charan');
-  assert.ok(app.innerHTML.includes('Welcome back, Sai'));
+  // Employees open on My Learning, which also leads their sidebar.
+  assert.equal(context.location.hash,'courses');
+  assert.equal(context.document.title,'My Learning • ShimentoX');
   assert.ok(!app.innerHTML.includes('href="#admin-users"'));
   assert.ok(app.innerHTML.includes('My Profile'));
   assert.equal(run('portalNavigation().length'),7);
-  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Dashboard','My Learning','Learning Paths','Skills & Goals','Training Calendar','My Certificates','My Profile']));
+  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Learning','My Dashboard','Learning Paths','Skills & Goals','Training Calendar','My Certificates','My Profile']));
+  context.location.hash='';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
+  context.location.hash='#dashboard';run('render()');assert.ok(app.innerHTML.includes('Welcome back, Sai'),'The dashboard is still one click away.');
   context.location.hash='#admin-courses';run('render()');
   assert.ok(!app.innerHTML.includes('id="course-editor-form"'));
   console.log('PASS assigned-credential login, mandatory password change, candidate navigation and route protection');

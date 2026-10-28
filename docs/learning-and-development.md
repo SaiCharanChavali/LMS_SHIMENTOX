@@ -76,7 +76,7 @@ A published, beginner, text-based course (Artificial Intelligence, 60 minutes, v
 
 ## Retrieval-Augmented Generation (packaged course)
 
-A single text lesson, *What is Retrieval-Augmented Generation (RAG)*, in Artificial Intelligence (beginner, 30 minutes, everyone, published). Its concepts and structure follow the GeeksforGeeks article [RAG Architecture](https://www.geeksforgeeks.org/nlp/rag-architecture/), which the lesson credits in its *Learning reference* section; the wording, examples, diagrams and questions are original.
+A single text lesson, *What is Retrieval-Augmented Generation (RAG)*, in Artificial Intelligence (beginner, 30 minutes, everyone, published). Its concepts and structure follow the GeeksforGeeks article [RAG Architecture](https://www.geeksforgeeks.org/nlp/rag-architecture/); the source is recorded in the course data for attribution and is not shown on the lesson page. The wording, examples, diagrams and questions are original.
 
 | What | Where |
 |---|---|

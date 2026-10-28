@@ -46,7 +46,7 @@ class RAGCourseTests(PortalFixture):
         content = lesson['content']
         for heading in ('## Understanding RAG in plain language', '## Components of RAG architecture', '### The role of Dense Passage Retrieval (DPR)',
                         '## How RAG works', '## RAG architecture illustration', '## FiD vs. FiE', '## Advantages of RAG',
-                        '## Practical example: a company knowledge assistant', '## Knowledge check', '## Learning reference'):
+                        '## Practical example: a company knowledge assistant', '## Knowledge check'):
             self.assertIn(heading, content)
         for step in ('Query processing', 'Embedding generation', 'Vector database retrieval', 'Retrieved context selection', 'LLM response generation', 'Final response'):
             self.assertIn(step, content)
@@ -54,7 +54,10 @@ class RAGCourseTests(PortalFixture):
         self.assertIn(':::flow', content)
         self.assertIn(':::slot knowledge-check', content)
         self.assertIn('does not remove it', content)
-        self.assertIn('(https://www.geeksforgeeks.org/nlp/rag-architecture/)', content)
+        # The source article is kept in the course data for attribution, not shown on the lesson page.
+        self.assertNotIn('## Learning reference', content)
+        self.assertNotIn('geeksforgeeks.org', content)
+        self.assertEqual(DATA['source']['url'], 'https://www.geeksforgeeks.org/nlp/rag-architecture/')
         self.assertEqual(lesson['assessmentId'], CHECK)
         self.assertEqual(data['requiredAssessmentId'], CHECK)
 

@@ -9,7 +9,7 @@
   "visibility": "everyone",
   "status": "published",
   "description": "Learn the fundamentals of Generative AI, large language models, prompt engineering, workplace applications, and responsible AI through structured text-based lessons and practical exercises.",
-  "knowledgeCheck": {"passPercent": 70, "maxAttempts": 5, "timeLimitMinutes": 10},
+  "knowledgeCheck": {"passPercent": 70, "maxAttempts": 3, "timeLimitMinutes": 10},
   "finalAssessment": {
     "id": "generative-ai-fundamentals-final",
     "title": "Generative AI Fundamentals: Final Assessment",

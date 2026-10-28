@@ -83,7 +83,10 @@ async function main() {
     return { ok: status < 400, status, json: async () => copy(result) };
   }
   const context = {
-    document: { getElementById: element, querySelectorAll: () => [], body: { classList: classes() }, hidden: false, addEventListener: (n, fn) => (docEvents[n] ||= []).push(fn), title: '' },
+    document: { getElementById: element, querySelectorAll: () => [], body: { classList: classes() }, hidden: false, addEventListener: (n, fn) => (docEvents[n] ||= []).push(fn), title: '',
+      // Exams require full screen; tests can deny it with allowFullscreen=false.
+      fullscreenElement: null, documentElement: { async requestFullscreen() { if (!context.allowFullscreen) throw Error('denied'); context.document.fullscreenElement = this; } }, async exitFullscreen() { context.document.fullscreenElement = null; } },
+    allowFullscreen: true,
     location: { hash: '#dashboard' }, window: { addEventListener: (n, fn) => (events[n] ||= []).push(fn), scrollTo() {}, print() {} },
     fetch, Intl, Date, URL, performance: { time: 0, now() { return this.time; } }, setTimeout: () => 1, clearTimeout() {}, setInterval() {},
     FormData: class { constructor(form) { this.form = form; } get(key) { return this.form.answers[key] ?? null; } }
@@ -109,11 +112,15 @@ async function main() {
   await element('first-password-form').onsubmit({preventDefault(){}});
   assert.equal(run('currentUser.mustChangePassword'),false);
   assert.equal(run('currentUser.name'),'Sai Charan');
-  assert.ok(app.innerHTML.includes('Welcome back, Sai'));
+  // Employees open on My Learning, which also leads their sidebar.
+  assert.equal(context.location.hash,'courses');
+  assert.equal(context.document.title,'My Learning • ShimentoX');
   assert.ok(!app.innerHTML.includes('href="#admin-users"'));
   assert.ok(app.innerHTML.includes('My Profile'));
   assert.equal(run('portalNavigation().length'),7);
-  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Dashboard','My Learning','Learning Paths','Skills & Goals','Training Calendar','My Certificates','My Profile']));
+  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Learning','My Dashboard','Learning Paths','Skills & Goals','Training Calendar','My Certificates','My Profile']));
+  context.location.hash='';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
+  context.location.hash='#dashboard';run('render()');assert.ok(app.innerHTML.includes('Welcome back, Sai'),'The dashboard is still one click away.');
   context.location.hash='#admin-courses';run('render()');
   assert.ok(!app.innerHTML.includes('id="course-editor-form"'));
   console.log('PASS assigned-credential login, mandatory password change, candidate navigation and route protection');
@@ -149,6 +156,20 @@ async function main() {
   assert.equal(run('learning.run.attempts[0][0].status'), 'terminated');
   assert.ok(!requests.some(r => 'score' in r.data || 'certificates' in r.data));
   console.log('PASS persisted exam start, tab-switch keepalive termination, no client-supplied grading');
+
+  // Full screen is required: a blocked request uses no attempt, and leaving full screen ends the attempt.
+  context.document.hidden = false;
+  const starts = () => requests.filter(r => r.path === 'learning/exam-start').length, startsBefore = starts();
+  context.allowFullscreen = false; assert.equal(await run('startExam(0)'), false);
+  assert.equal(starts(), startsBefore, 'No attempt is used when full screen is blocked.');
+  assert.ok(run('examNotice').includes('full screen'));
+  context.allowFullscreen = true; assert.equal(await run('startExam(0)'), true);
+  assert.ok(context.document.fullscreenElement && app.innerHTML.includes('Stay in full screen'));
+  context.document.fullscreenElement = null; docEvents.fullscreenchange[0]();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(run('activeExam'), null);
+  assert.equal(requests.filter(r => r.path === 'learning/exam-finish').at(-1).data.reason, 'Attempt terminated: you exited full screen.');
+  console.log('PASS exams require full screen and leaving it terminates the attempt');
 
   context.document.hidden = false;
   const testAdmin={id:'admin-one',name:'Portal Admin',email:'admin@shimentox.com',role:'admin',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z',certificates:0,courseRuns:0,active:true};
@@ -224,6 +245,18 @@ async function main() {
   assert.ok(app.innerHTML.includes('MODULE 1'));
   context.location.hash='#reports';run('render()');assert.ok(!app.innerHTML.includes('Export CSV'));
   console.log('PASS employee dashboard, assignments, recommendations, notifications, course resources, assistant state');
+
+  // A running knowledge check or final assessment replaces the course page: only the questions are shown in full screen.
+  context.location.hash='#course';
+  run(`currentCourseExtras.assessments=[{id:'check-1',title:'Knowledge check: Lesson one',kind:'knowledge',passPercent:70,attemptsLeft:2}];
+    inlineAttempt={assessmentId:'check-1',attempt:{id:'attempt-1',attemptNumber:1,deadline:Date.now()+600000,questions:[{id:'q1',prompt:'Which rule applies?',code:'',options:['Full screen','None']}]}};render()`);
+  assert.ok(app.innerHTML.includes('class="exam-focus"')&&app.innerHTML.includes('Which rule applies?')&&app.innerHTML.includes('KNOWLEDGE CHECK · ATTEMPT 1'));
+  assert.ok(!app.innerHTML.includes('Learning materials')&&!app.innerHTML.includes('MODULE 1'),'No course content is shown during the attempt.');
+  context.document.fullscreenElement=null;docEvents.fullscreenchange[0]();
+  assert.equal(run('inlineAttempt'),null);
+  assert.ok(app.innerHTML.includes('MODULE 1'),'The course page returns once the attempt ends.');
+  await new Promise(resolve=>setImmediate(resolve));
+  console.log('PASS knowledge checks open on their own in full screen, without the course content');
   for(const [role,expected] of [['manager','Team Reports'],['trainer','Manage Courses'],['hr','Users & Teams']]){context.roleUser={...server.user,role};run('currentUser=roleUser');assert.ok(run('portalNavigation().map(n=>n[2])').includes(expected),role);}
   run('currentUser=roleUser;currentUser.role="trainer"');assert.ok(!run('portalNavigation().map(n=>n[0])').includes('admin-users'));
   context.adminUser={...testAdmin};run('currentUser=adminUser');await run('loadCandidate()');

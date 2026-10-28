@@ -18,7 +18,7 @@
     "title": "RAG knowledge check",
     "description": "Six questions on RAG components, Dense Passage Retrieval, FiD and FiE, embeddings, vector databases and advantages.",
     "passPercent": 70,
-    "maxAttempts": 5,
+    "maxAttempts": 3,
     "timeLimitMinutes": 10,
     "questionCount": 6,
     "questions": [

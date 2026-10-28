@@ -73,15 +73,14 @@ class RAGCourseTests(PortalFixture):
         # 4 of 6 is 67%, below the 70% pass mark.
         self.assertEqual((result['status'], result['score'], result['total'], result['percent'], result['passPercent']), ('failed', 4, 6, 67, 70))
         self.assertTrue(all(d['explanation'] and d['answer'] == ANSWERS[q['prompt']] for d, q in zip(result['details'], attempt['questions'])))
-        orders = [attempt['questions']]
-        for _ in range(3):
-            orders.append(self.take(client, 0)[0]['questions'])
+        orders = [attempt['questions'], self.take(client, 0)[0]['questions']]
         self.assertTrue(any(q['options'] != bank[q['prompt']] for questions in orders for q in questions), 'Answer positions are shuffled.')
         attempt, result = self.take(client, 5)
         self.assertEqual((result['status'], result['percent']), ('passed', 83))
         with closing(connect(self.db_path)) as db:
             rows = db.execute('SELECT status,percent FROM assessment_attempts WHERE assessment_id=? AND employee_id=? ORDER BY attempt_number', (CHECK, client.id)).fetchall()
-        self.assertEqual([tuple(r) for r in rows], [('failed', 67), ('failed', 0), ('failed', 0), ('failed', 0), ('passed', 83)])
+        self.assertEqual([tuple(r) for r in rows], [('failed', 67), ('failed', 0), ('passed', 83)])
+        self.assertEqual(client.request(f'me/assessments/{CHECK}/start', {})[0], 409, 'No more than three attempts.')
 
     def test_mark_complete_and_pass_issue_one_certificate(self):
         client, data = self.enrolled()

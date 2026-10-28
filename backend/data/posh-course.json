@@ -14,7 +14,7 @@
   },
   "knowledgeCheck": {
     "passPercent": 70,
-    "maxAttempts": 5,
+    "maxAttempts": 3,
     "timeLimitMinutes": 10
   },
   "finalAssessment": {

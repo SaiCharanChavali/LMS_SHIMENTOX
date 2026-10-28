@@ -145,7 +145,7 @@ function bindAuthForm() {
     button.disabled=true;button.setAttribute?.('aria-busy','true');button.innerHTML='<span class="auth-spinner" aria-hidden="true"></span>Signing in…';
     try {
       const session=await api('auth/login',{email,password,remember:document.getElementById('remember').checked});
-      currentUser=session.user;csrfToken=session.csrfToken;await loadCandidate();location.hash='dashboard';render();
+      currentUser=session.user;csrfToken=session.csrfToken;await loadCandidate();location.hash=homePage();render();
     }catch(error){authError(error.message);}finally{button.disabled=false;button.removeAttribute?.('aria-busy');button.innerHTML=signInLabel();}
   };
 }
@@ -158,7 +158,7 @@ function bindPasswordSetup() {
     event.preventDefault();const password=document.getElementById('first-new-password').value;
     if(password!==document.getElementById('first-confirm-password').value)return authError('Your new passwords do not match.');
     const button=document.getElementById('first-password-submit');button.disabled=true;
-    try {const result=await api('auth/password',{currentPassword:document.getElementById('temporary-password').value,password});currentUser=result.user;await loadCandidate();location.hash='dashboard';render();}
+    try {const result=await api('auth/password',{currentPassword:document.getElementById('temporary-password').value,password});currentUser=result.user;await loadCandidate();location.hash=homePage();render();}
     catch(error){authError(error.message);}finally{button.disabled=false;}
   };
 }

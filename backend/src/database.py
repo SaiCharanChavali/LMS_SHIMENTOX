@@ -40,6 +40,8 @@ GENAI_COURSE = BACKEND / 'data/generative-ai-course.json'
 RAG_COURSE = BACKEND / 'data/rag-course.json'
 POSH_COURSE = BACKEND / 'data/posh-course.json'
 ADMIN_SEED = BACKEND / 'data/admin-seed.json'
+# Exam security rule for every scored attempt: no more than three attempts (module exams, assignments, knowledge checks and assessments).
+MAX_EXAM_ATTEMPTS = 3
 PYTHON_PATH = BACKEND / 'data/shimento-python-course.json'
 JAVA_PATH = BACKEND / 'data/java-full-stack-course.json'
 VIDEO_ROOT = BACKEND / 'videos'
@@ -70,6 +72,7 @@ def initialize(path):
         if version in (1, 2):
             db.executescript((BACKEND / 'database/migrations/003_employee_development.sql').read_text(encoding='utf-8'))
         db.executescript((BACKEND / 'database/schema.sql').read_text(encoding='utf-8'))
+        upgrade_assessment_attempts(db)
         # Fresh and upgraded databases converge on the same columns without losing rows.
         for table, column, definition in ADDED_COLUMNS:
             if column not in {r[1] for r in db.execute(f'PRAGMA table_info({table})')}:
@@ -109,9 +112,52 @@ def initialize(path):
         # Retire the earlier Java modules before seeding, so the new assessments can take their positions.
         restructure_java_course(db, JAVA_PATH, stamp)
         seed_checkpoints(db, JAVA_PATH)
+        # Assessments saved before the three-attempt rule keep their history but allow no more than three attempts.
+        db.execute('UPDATE assessments SET max_attempts=? WHERE max_attempts>?', (MAX_EXAM_ATTEMPTS, MAX_EXAM_ATTEMPTS))
         db.commit()
     finally:
         db.close()
+
+
+def upgrade_assessment_attempts(db):
+    """Allow 'terminated' assessment attempts (left full screen, switched tabs, navigated away) with the reason they ended.
+
+    SQLite cannot change a CHECK constraint in place, so an older table is rebuilt once with every row kept.
+    """
+    sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='assessment_attempts'").fetchone()[0]
+    if "'terminated'" in sql:
+        return
+    # SQLite's documented table rebuild: foreign keys are paused so existing history is copied exactly as stored.
+    db.executescript('''
+        PRAGMA foreign_keys=OFF;
+        BEGIN;
+        CREATE TABLE assessment_attempts_upgraded (
+            id TEXT PRIMARY KEY,
+            assessment_id TEXT NOT NULL REFERENCES assessments(id),
+            employee_id TEXT NOT NULL REFERENCES candidates(id),
+            attempt_number INTEGER NOT NULL,
+            question_ids_json TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('in-progress','passed','failed','expired','terminated')),
+            started_at TEXT NOT NULL,
+            deadline REAL NOT NULL,
+            finished_at TEXT,
+            score INTEGER,
+            total INTEGER NOT NULL,
+            percent INTEGER,
+            answers_json TEXT,
+            option_orders_json TEXT NOT NULL DEFAULT '',
+            reason TEXT NOT NULL DEFAULT '',
+            UNIQUE(assessment_id, employee_id, attempt_number)
+        );
+        INSERT INTO assessment_attempts_upgraded(id,assessment_id,employee_id,attempt_number,question_ids_json,status,started_at,deadline,finished_at,score,total,percent,answers_json,option_orders_json)
+            SELECT id,assessment_id,employee_id,attempt_number,question_ids_json,status,started_at,deadline,finished_at,score,total,percent,answers_json,option_orders_json FROM assessment_attempts;
+        DROP TABLE assessment_attempts;
+        ALTER TABLE assessment_attempts_upgraded RENAME TO assessment_attempts;
+        CREATE UNIQUE INDEX IF NOT EXISTS one_active_assessment ON assessment_attempts(assessment_id, employee_id) WHERE status='in-progress';
+        CREATE INDEX IF NOT EXISTS assessment_attempts_employee ON assessment_attempts(employee_id);
+        COMMIT;
+        PRAGMA foreign_keys=ON;
+    ''')
 
 
 def seed_admin(path, source=ADMIN_SEED):
@@ -146,7 +192,7 @@ def seed_assessment(db, identity, course_id, kind, title, description, settings,
     """Create or refresh a packaged assessment. Banks that employees have already attempted are left unchanged."""
     if db.execute('SELECT 1 FROM assessment_attempts WHERE assessment_id=?', (identity,)).fetchone():
         return
-    values = (title, description, kind, course_id, settings['passPercent'], settings['maxAttempts'], settings.get('questionCount', len(questions)), settings['timeLimitMinutes'])
+    values = (title, description, kind, course_id, settings['passPercent'], min(settings['maxAttempts'], MAX_EXAM_ATTEMPTS),settings.get('questionCount', len(questions)), settings['timeLimitMinutes'])
     if db.execute('SELECT 1 FROM assessments WHERE id=?', (identity,)).fetchone():
         db.execute("UPDATE assessments SET title=?,description=?,kind=?,course_id=?,pass_percent=?,max_attempts=?,question_count=?,time_limit_minutes=?,status='published',updated_at=? WHERE id=?", (*values, stamp, identity))
     else:

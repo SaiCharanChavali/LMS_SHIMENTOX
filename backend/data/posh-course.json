@@ -1,0 +1,516 @@
+{
+  "id": "posh-act-awareness",
+  "version": 1,
+  "title": "POSH",
+  "category": "Policies & Compliance",
+  "difficulty": "beginner",
+  "durationMinutes": 60,
+  "visibility": "everyone",
+  "status": "published",
+  "description": "Learn the Prevention of Sexual Harassment (PoSH) Act, 2013: what sexual harassment is, the duties of prevention and prohibition, the Internal Committee, how complaints are filed and resolved, false complaints and confidentiality, and the employer's role, with knowledge checks and a final assessment.",
+  "source": {
+    "title": "A Compact Guidebook on the PoSH Act and Rules, 2013, ISTM (Government of India)",
+    "url": "https://www.istm.gov.in/home/posh_act"
+  },
+  "knowledgeCheck": {
+    "passPercent": 70,
+    "maxAttempts": 5,
+    "timeLimitMinutes": 10
+  },
+  "finalAssessment": {
+    "id": "posh-act-awareness-final",
+    "title": "POSH: Final Assessment",
+    "description": "Ten questions drawn at random from the whole course. Score 70% or more to earn your certificate.",
+    "passPercent": 70,
+    "maxAttempts": 3,
+    "timeLimitMinutes": 20,
+    "questionCount": 10,
+    "questions": [
+      [
+        "What is the full name of the PoSH Act?",
+        [
+          "The Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013",
+          "The Protection of Staff and Hiring Act, 2013",
+          "The Prevention of Sexual Harassment in Government Offices Act, 2005",
+          "The Workplace Safety and Health Act, 2013"
+        ],
+        0,
+        "The PoSH Act is the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013."
+      ],
+      [
+        "Showing pornography to a colleague at work is:",
+        [
+          "Acceptable if done privately",
+          "One of the behaviours the Act defines as sexual harassment",
+          "Covered only if it happens twice",
+          "Covered only for government employees"
+        ],
+        1,
+        "Showing pornography is one of the behaviours listed in the Act's definition of sexual harassment."
+      ],
+      [
+        "A manager hints that a promotion depends on accepting dinner invitations with sexual overtones. Under the Act this is:",
+        [
+          "Normal negotiation",
+          "Only a performance issue",
+          "An implied promise of preferential treatment, which can be sexual harassment",
+          "Not covered because nothing was said directly"
+        ],
+        2,
+        "An implied or explicit promise of preferential treatment, in connection with sexual behaviour, can amount to sexual harassment."
+      ],
+      [
+        "Which sectors does the PoSH Act cover?",
+        [
+          "Only the private sector",
+          "Only the government sector",
+          "Only organised industries",
+          "Government and private, organised and unorganised sectors"
+        ],
+        3,
+        "The Act applies to government and private organisations, in organised and unorganised sectors, including domestic workers."
+      ],
+      [
+        "What proportion of Internal Committee members must be women?",
+        [
+          "At least half",
+          "At least one",
+          "All members",
+          "At least a quarter"
+        ],
+        0,
+        "At least half of the members of the Internal Committee must be women."
+      ],
+      [
+        "What is the maximum term of an Internal Committee member?",
+        [
+          "One year",
+          "Three years",
+          "Five years",
+          "Until retirement"
+        ],
+        1,
+        "Members serve a term set by the employer, of no more than three years."
+      ],
+      [
+        "Where does a woman complain if her workplace has fewer than 10 employees?",
+        [
+          "To her manager only",
+          "To the respondent",
+          "To the Local Committee of the district",
+          "Nowhere, because the Act does not apply"
+        ],
+        2,
+        "Where there is no Internal Committee, the complaint goes to the Local Committee constituted by the District Officer."
+      ],
+      [
+        "A party misses three consecutive hearings without good reason. What can the Committee do?",
+        [
+          "Nothing, it must wait indefinitely",
+          "Fine the party",
+          "Close the case as proved",
+          "End the proceedings or decide ex parte after 15 days' written notice"
+        ],
+        3,
+        "After three consecutive absences, the Committee may end the proceedings or decide ex parte, giving at least 15 days' written notice."
+      ],
+      [
+        "Can the Internal Committee inquire into an anonymous complaint?",
+        [
+          "No, anonymous or pseudonymous complaints cannot be inquired into",
+          "Yes, always",
+          "Yes, if the respondent agrees",
+          "Only if it is posted on the intranet"
+        ],
+        0,
+        "Complaints must be in writing and identify the complainant. A Committee member can help a woman write her complaint."
+      ],
+      [
+        "What powers does the Committee have during an inquiry?",
+        [
+          "Powers to arrest the respondent",
+          "Civil court powers to summon witnesses, examine them on oath and require documents",
+          "Powers to impose criminal sentences",
+          "No powers beyond asking questions"
+        ],
+        1,
+        "For the inquiry, the Committee has the powers of a civil court for summoning, examining on oath and requiring documents."
+      ],
+      [
+        "Within how many days of completing the inquiry must the Committee send its report to the employer?",
+        [
+          "60 days",
+          "30 days",
+          "10 days",
+          "90 days"
+        ],
+        2,
+        "The Committee sends its findings and recommendations to the employer within 10 days of completing the inquiry."
+      ],
+      [
+        "Within what time can a party appeal against the Committee's recommendations?",
+        [
+          "7 days",
+          "30 days",
+          "1 year",
+          "90 days"
+        ],
+        3,
+        "An appeal can be filed within 90 days of the recommendations."
+      ],
+      [
+        "What is the correct order of these complaint stages?",
+        [
+          "Lodging, conciliation, inquiry, report, act upon",
+          "Inquiry, lodging, report, conciliation, appeal",
+          "Report, inquiry, lodging, act upon, conciliation",
+          "Conciliation, report, lodging, inquiry, appeal"
+        ],
+        0,
+        "A complaint is lodged and circulated, conciliation may be tried, the inquiry is held, the report goes to the employer, and the employer acts on it. Appeal comes last."
+      ],
+      [
+        "A colleague asks you who filed a complaint that is being heard. What should you do?",
+        [
+          "Share what you have heard",
+          "Decline, because the identities and details are confidential",
+          "Post about it in the team chat",
+          "Ask the Committee and pass it on"
+        ],
+        1,
+        "The identity of everyone involved and the case details are confidential. Breaching confidentiality is itself misconduct."
+      ],
+      [
+        "Which of these is an employer's duty under the Act?",
+        [
+          "Deciding complaints without the Committee",
+          "Requiring complainants to settle with money",
+          "Providing a safe workplace, including protection from visitors and clients",
+          "Publishing the names of respondents"
+        ],
+        2,
+        "The employer must provide a safe working environment, including safety from third parties such as visitors and clients."
+      ]
+    ]
+  },
+  "lessons": [
+    {
+      "slug": "lesson-01",
+      "title": "Introduction to the PoSH Act",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Explain what the PoSH Act is and why it exists.\n- Describe the three principles of the Act: prevention, prohibition and redressal.\n- Recognise the behaviours the law defines as sexual harassment.\n- Identify who is protected and what counts as a workplace.\n\n## What is the PoSH Act?\nThe **Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013**, usually called the **PoSH Act**, is an Indian law that protects women from sexual harassment at work. The **PoSH Rules, 2013** set out how the Act is applied in practice, for example how a complaint is written and how an inquiry is run.\n\nThe Act applies to government and private organisations, and to both organised and unorganised sectors. It covers formal and informal work, including domestic workers and factory labourers, regardless of the number of workers.\n\n## The three principles\nThe Act rests on three principles. Every duty in this course belongs to one of them.\n\n| Principle | What it means | Example in practice |\n|---|---|---|\n| **Prevention** | Stop harassment before it happens | Awareness sessions, training and clear policies |\n| **Prohibition** | Make clear that harassment is not allowed | Displaying what harassment is and its penalties |\n| **Redressal** | Resolve complaints fairly and quickly | An Internal Committee that handles complaints confidentially |\n\n## What counts as sexual harassment\nThe Act defines sexual harassment as any one or more of these **unwelcome** acts or behaviours, whether direct or implied:\n\n- Physical contact and advances\n- A demand or request for sexual favours\n- Making sexually coloured remarks\n- Showing pornography\n- Any other unwelcome physical, verbal or non-verbal conduct of a sexual nature\n\nThe Act also names circumstances that can amount to sexual harassment when they occur in connection with such behaviour:\n\n- An implied or explicit **promise of preferential treatment** in her employment\n- An implied or explicit **threat of detrimental treatment** in her employment\n- An implied or explicit **threat about her present or future employment status**\n- **Interference with her work**, or creating an intimidating, offensive or hostile work environment\n- **Humiliating treatment** likely to affect her health or safety\n\n:::note The test is whether the behaviour is unwelcome\nWhat matters is how the behaviour is received, not what the other person intended. A \"joke\" that makes a colleague uncomfortable can still be harassment.\n:::\n\n## Who is protected\n- An **aggrieved woman** is a woman of any age, employed or not, who alleges that she was subjected to sexual harassment at a workplace.\n- This includes employees, trainees, interns, contract staff, visitors, clients and domestic workers.\n- The person complained against is called the **respondent**.\n\nMany organisations, including those with gender-neutral policies, extend their internal anti-harassment policy to everyone. The Act itself protects women.\n\n## What counts as a workplace\nThe workplace is wider than the office building. It includes:\n\n- Any office, branch, factory or site of the organisation\n- Any place visited by the employee arising out of or during the course of employment, such as a client site, hotel or conference venue\n- Transport provided by the employer for that journey\n- A dwelling place or house, for domestic workers\n\n:::example Example: the team offsite\nAt a team dinner after a client workshop, a senior colleague repeatedly makes sexual comments about a junior colleague's appearance. Even though it happened in a restaurant, the dinner arose out of work, so it falls within the Act's idea of a workplace.\n:::\n\n## Key takeaways\n- The PoSH Act protects women from sexual harassment at work and rests on prevention, prohibition and redressal.\n- Sexual harassment is unwelcome sexual behaviour, judged by its effect, not its intent.\n- The \"workplace\" includes work trips, client sites and employer-provided transport.\n\n## Learning reference\n\nThis lesson is based on the guidebook below and on the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013 and its Rules. The explanations, examples and questions are original. This course is awareness training, not legal advice. For a specific case, contact your Internal Committee or HR.\n\n- [A Compact Guidebook on the PoSH Act and Rules, 2013, ISTM (Government of India)](https://www.istm.gov.in/home/posh_act)",
+      "knowledgeCheck": [
+        [
+          "What are the three principles of the PoSH Act?",
+          [
+            "Prevention, prohibition and redressal",
+            "Punishment, publicity and penalty",
+            "Policy, payment and promotion",
+            "Reporting, review and retraining"
+          ],
+          0,
+          "The Act rests on prevention (stop it happening), prohibition (make clear it is not allowed) and redressal (resolve complaints fairly)."
+        ],
+        [
+          "Which of these can be sexual harassment under the Act?",
+          [
+            "Disagreeing with a colleague in a meeting",
+            "Making sexually coloured remarks",
+            "Giving honest feedback on a report",
+            "Asking a colleague to meet a deadline"
+          ],
+          1,
+          "Sexually coloured remarks are named in the Act. The other options are normal work behaviour."
+        ],
+        [
+          "What decides whether behaviour is sexual harassment?",
+          [
+            "Whether the person meant it as a joke",
+            "Whether it happened inside the office building",
+            "Whether it is unwelcome to the person who receives it",
+            "Whether a manager was present"
+          ],
+          2,
+          "The test is whether the behaviour is unwelcome. Intent does not decide it, and the workplace is wider than the office."
+        ],
+        [
+          "An employee is harassed in a cab the employer provided for a client visit. Is this covered by the Act?",
+          [
+            "No, because it was outside the office",
+            "Only if it happened during office hours",
+            "Only if the client complains",
+            "Yes, because employer-provided transport for work is part of the workplace"
+          ],
+          3,
+          "The workplace includes places visited during the course of employment and the transport the employer provides for that journey."
+        ]
+      ],
+      "description": "What the PoSH Act is, its three principles of prevention, prohibition and redressal, the behaviours that count as sexual harassment, and who and where the law protects."
+    },
+    {
+      "slug": "lesson-02",
+      "title": "Prevention and Prohibition",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- List the preventive measures an organisation must put in place.\n- Explain what prohibition means for every workplace.\n- Describe what must be displayed and communicated to employees.\n- Explain the employer's penalty for non-compliance.\n\n## Prevention: stopping harassment before it starts\nThe guidebook gives a checklist on prevention. An organisation should make sure that:\n\n1. **Everyone knows the rules.** Every person visiting the workplace should know what sexual harassment is and the penalties for it.\n2. **An Internal Committee exists.** An Internal Committee, headed by a senior woman employee, is constituted at the workplace.\n3. **The Committee is visible.** Its members' names and contact details are displayed where people can easily see them.\n4. **Separate offices have their own committee.** Offices in different buildings or locations have separate committees.\n5. **People are trained.** All employees receive orientation and awareness training, and committee members receive training on how to handle complaints.\n6. **Complaints are reported.** The committee reports the complaints received in each calendar year, and the action taken, to the employer.\n7. **Data reaches the annual report.** The employer includes complaint data in its annual report.\n\n## Prohibition: harassment is not allowed anywhere\n- No woman may be subjected to sexual harassment at any workplace, whatever the sector or the number of workers.\n- The employer must provide a workplace free from sexual harassment.\n- Any woman visiting a workplace, whether employed there or not, is protected.\n- Domestic workers are included as aggrieved women.\n\n## What must be displayed\nDisplays turn a policy on paper into something employees actually see. The employer must display, in visible and well-lit places:\n\n| Display | Why it matters |\n|---|---|\n| What constitutes sexual harassment | People can recognise it |\n| The penalties for sexual harassment | It deters misconduct |\n| The order constituting the Internal Committee | It shows the Committee is formally in place |\n| Names and contact numbers of Committee members | People know exactly whom to approach |\n\n## What this means for you as an employee\n- Attend PoSH awareness training and know where the Committee's details are displayed.\n- Treat colleagues, interns, visitors and clients with respect, in person and online.\n- If you see something, you can support the person affected and encourage them to contact the Committee.\n\n## Penalties for employers\nAn employer that does not constitute an Internal Committee, or does not follow the Act's other provisions, can be fined up to **Rs 50,000**. For repeated offences the penalty can be doubled, and the organisation's business licence or registration can be cancelled.\n\n:::note Prevention is continuous\nA poster and a one-time session are not enough. Awareness programmes should run regularly, and the number of programmes held is part of the Committee's annual report.\n:::\n\n## Key takeaways\n- Prevention means awareness, training, a visible Internal Committee and regular reporting.\n- Prohibition applies to every workplace and protects every woman who visits it.\n- Employers that ignore the Act face fines and can lose their business licence.\n\n## Learning reference\n\nThis lesson is based on the guidebook below and on the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013 and its Rules. The explanations, examples and questions are original. This course is awareness training, not legal advice. For a specific case, contact your Internal Committee or HR.\n\n- [A Compact Guidebook on the PoSH Act and Rules, 2013, ISTM (Government of India)](https://www.istm.gov.in/home/posh_act)",
+      "knowledgeCheck": [
+        [
+          "Which of these must the employer display at the workplace?",
+          [
+            "Names and contact numbers of the Internal Committee members",
+            "The salaries of Committee members",
+            "Details of past complaints and the people involved",
+            "The respondent's performance record"
+          ],
+          0,
+          "The Committee order with members' names and contact numbers, what harassment is and its penalties must be displayed. Case details stay confidential."
+        ],
+        [
+          "An organisation has offices in two different buildings. What does the guidebook advise?",
+          [
+            "One committee for the head office only",
+            "Separate committees for offices in different buildings",
+            "No committee if each office has fewer than 50 people",
+            "A committee only when a complaint is received"
+          ],
+          1,
+          "Separate offices in different buildings or locations should have their own committees."
+        ],
+        [
+          "What is the maximum fine for an employer that fails to comply with the Act for the first time?",
+          [
+            "Rs 5,000",
+            "Rs 10,000",
+            "Rs 50,000",
+            "Rs 5,00,000"
+          ],
+          2,
+          "The fine is up to Rs 50,000. Repeat offences can be doubled and can lead to cancellation of the business licence."
+        ],
+        [
+          "Who does the prohibition principle protect?",
+          [
+            "Only permanent employees",
+            "Only employees in organisations with 100+ staff",
+            "Only women in the government sector",
+            "Any woman at the workplace, including visitors and domestic workers"
+          ],
+          3,
+          "Prohibition applies to every workplace and protects any woman there, employed or not, including domestic workers."
+        ]
+      ],
+      "description": "The preventive measures every organisation must take, what must be displayed, what prohibition means at work, and the penalties for employers that do not comply."
+    },
+    {
+      "slug": "lesson-03",
+      "title": "The Internal Committee",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Explain when an Internal Committee is required and how it is formed.\n- Describe the Committee's composition, tenure and quorum.\n- Describe the Committee's powers and the rules it follows.\n- Explain when the Local Committee is used instead.\n\n## When an Internal Committee is required\nEvery workplace with **10 or more employees** must constitute an **Internal Complaints Committee (ICC)**, also called the Internal Committee. The guidebook notes that it may be called the \"Internal Committee\" or \"Complaints Committee\", but not any other name.\n\n- It is constituted by a **written order** of the employer.\n- The order is published, for example on the organisation's website or intranet.\n- Offices in different locations or buildings have their own committees.\n\n## Who sits on the Committee\n| Role | Who | Notes |\n|---|---|---|\n| **Presiding Officer** | A senior-level woman employee | If none is available, a senior woman from another office or department of the same employer can be nominated |\n| **Internal members** | At least two employees | Committed to the cause of women, or with social work experience or legal knowledge |\n| **External member** | One person from an NGO or association working on women's issues, or someone familiar with sexual harassment issues | Brings an independent view |\n\n- At least **half** of the members must be women.\n- Members serve for a term set by the employer, of **no more than three years**.\n- The external member is paid an allowance for each day of proceedings, plus travel costs.\n\n:::acronym The Committee at a glance | Who leads it, who sits on it and how it decides.\nP | Presiding Officer | A senior woman employee leads every inquiry\nI | Internal members | At least two employees with the right experience\nE | External member | One independent member from outside the organisation\n:::\n\n## How the Committee works\n- **Natural justice:** both sides are heard, and decisions are based on evidence.\n- **Quorum:** at least **three members**, including the Presiding Officer, must be present during an inquiry.\n- **No lawyers:** neither party may be represented by a legal practitioner at any stage.\n- **Written complaints only:** if a woman cannot write her complaint, the Presiding Officer or a member must help her put it in writing.\n- **No anonymous complaints:** anonymous or pseudonymous complaints cannot be inquired into.\n- **Absence from hearings:** if a party fails to appear for **three consecutive hearings** without good reason, the Committee may end the proceedings or decide *ex parte* (without that party), after giving at least **15 days'** written notice.\n\n## The Committee's powers\nDuring an inquiry, the Committee has the same powers as a civil court for:\n\n- Summoning and enforcing the attendance of any person and examining them on oath\n- Requiring documents to be discovered and produced\n\n## When a member must be removed\nThe employer must remove a Committee member who breaches confidentiality, is convicted of an offence, has disciplinary proceedings pending against them, or has abused their position. Vacancies, including temporary ones caused by leave or training, must be filled.\n\n## The Local Committee\nSome complaints cannot go to an Internal Committee: for example, when the workplace has fewer than 10 employees, or when the complaint is against the employer. In these cases a **Local Committee**, constituted by the District Officer of the district, receives the complaint.\n\n## Key takeaways\n- Workplaces with 10 or more employees must constitute an Internal Committee by written order.\n- It is led by a senior woman, includes an external member, and at least half its members are women.\n- Inquiries need a quorum of three, follow natural justice and do not allow lawyers.\n\n## Learning reference\n\nThis lesson is based on the guidebook below and on the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013 and its Rules. The explanations, examples and questions are original. This course is awareness training, not legal advice. For a specific case, contact your Internal Committee or HR.\n\n- [A Compact Guidebook on the PoSH Act and Rules, 2013, ISTM (Government of India)](https://www.istm.gov.in/home/posh_act)",
+      "knowledgeCheck": [
+        [
+          "From how many employees must a workplace constitute an Internal Committee?",
+          [
+            "10 or more",
+            "25 or more",
+            "50 or more",
+            "100 or more"
+          ],
+          0,
+          "Every workplace with 10 or more employees must constitute an Internal Committee by written order."
+        ],
+        [
+          "Who presides over the Internal Committee?",
+          [
+            "The head of HR, whatever their seniority",
+            "A senior-level woman employee",
+            "The external member",
+            "The employer's lawyer"
+          ],
+          1,
+          "The Presiding Officer is a senior-level woman employee. If none is available, one can be nominated from another office of the same employer."
+        ],
+        [
+          "What is the minimum quorum for an inquiry?",
+          [
+            "Two members",
+            "All members",
+            "Three members, including the Presiding Officer",
+            "The Presiding Officer alone"
+          ],
+          2,
+          "At least three members, including the Presiding Officer, must be present during an inquiry."
+        ],
+        [
+          "A party wants to bring a lawyer to an Internal Committee hearing. What does the Act allow?",
+          [
+            "Lawyers are allowed only for the respondent",
+            "Lawyers are allowed in the final hearing",
+            "Lawyers are allowed if both sides agree",
+            "Neither party may be represented by a legal practitioner"
+          ],
+          3,
+          "Legal practitioners may not represent either party at any stage of the proceedings."
+        ]
+      ],
+      "description": "When an Internal Committee is required, who sits on it, how it runs inquiries, the powers it has, and when the Local Committee is used instead."
+    },
+    {
+      "slug": "lesson-04",
+      "title": "Filing and Handling a Complaint",
+      "durationMinutes": 11,
+      "content": "## Learning objectives\n- Describe the eight stages of handling a complaint.\n- State the time limits for filing, inquiry, reporting and action.\n- Explain how conciliation works and its limits.\n- Describe the interim relief available during an inquiry.\n\n## Filing a complaint\n- The aggrieved woman files a **written complaint** with the Internal Committee of the workplace concerned.\n- If there is no Internal Committee, she can approach the Local Committee of the district.\n- The complaint is filed within **three months** of the incident, or of the last incident in a series. The Committee can extend this by up to **three more months**, recording the reasons in writing, if circumstances prevented her from filing earlier.\n- She submits **six copies** of the complaint, with supporting documents and the names and addresses of witnesses, where available.\n- If she cannot file because of physical or mental incapacity or death, a relative, friend, co-worker or other person allowed by the Rules can file it, in the cases and with the consent the Rules require.\n\n## The eight stages\n:::flow Stages of complaints handling\nLodging | The written complaint is filed\nCirculation | A copy goes to the respondent, who replies in writing\nConciliation | An optional settlement, only if she asks for it\nInquiry | Both sides are heard and evidence is examined\nPending inquiry | Interim relief can protect the complainant\nReport | Findings and recommendations go to the employer\nAct upon | The employer acts on the recommendations\nAppeal | Either party can appeal the recommendations\n:::\n\n## Conciliation\nBefore starting an inquiry, the Committee may try to settle the matter, but **only if the aggrieved woman requests it** in writing.\n\n- **No monetary settlement** may be the basis of conciliation.\n- If a settlement is reached, the Committee records it and sends copies to the employer and both parties, and no further inquiry is held.\n- If the respondent does not honour the settlement, the Committee proceeds with the inquiry.\n\n## The inquiry\n- If the respondent is an employee, the inquiry follows the applicable service rules; otherwise it follows the PoSH Rules.\n- Both parties are heard, and each is given a copy of the other's statements so they can respond.\n- The inquiry must be completed within **90 days**.\n\n## Interim relief while the inquiry is pending\nOn the aggrieved woman's written request, the Committee can recommend that the employer:\n\n- Transfer her or the respondent to another workplace\n- Grant her leave of up to **three months**, in addition to the leave she is otherwise entitled to\n- Restrain the respondent from reporting on her work performance or writing her confidential report\n\n## Report, action and appeal\n| Stage | Time limit |\n|---|---|\n| File a complaint | Within 3 months of the incident (extendable by 3 months) |\n| Complete the inquiry | Within 90 days |\n| Committee sends its report to the employer | Within 10 days of completing the inquiry |\n| Employer acts on the recommendations | Within 60 days of receiving the report |\n| Appeal against the recommendations | Within 90 days of the recommendations |\n\nIf the allegation is proved, the Committee can recommend action under the service rules and can recommend that compensation be paid to the aggrieved woman, deducted from the respondent's salary.\n\n:::example Example: a complaint from start to finish\nPriya, a project analyst, files a written complaint about repeated messages with sexual remarks from a team lead. The Committee sends a copy to the team lead and asks for a written reply. Priya does not want conciliation, so the Committee holds an inquiry. While it is running, Priya asks that the team lead no longer review her work, and the Committee recommends this. The inquiry finishes within 90 days, the report reaches the employer within 10 days, and the employer acts on it within 60 days.\n:::\n\n## Key takeaways\n- Complaints are written and filed within three months, extendable by three more.\n- Conciliation happens only at her request and never involves money.\n- The inquiry takes no more than 90 days, and the employer acts within 60 days of the report.\n\n## Learning reference\n\nThis lesson is based on the guidebook below and on the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013 and its Rules. The explanations, examples and questions are original. This course is awareness training, not legal advice. For a specific case, contact your Internal Committee or HR.\n\n- [A Compact Guidebook on the PoSH Act and Rules, 2013, ISTM (Government of India)](https://www.istm.gov.in/home/posh_act)",
+      "knowledgeCheck": [
+        [
+          "Within what time should a complaint normally be filed?",
+          [
+            "Within three months of the incident",
+            "Within one week of the incident",
+            "Within one year of the incident",
+            "At any time, with no limit"
+          ],
+          0,
+          "The complaint is filed within three months. The Committee can extend this by up to three more months, recording its reasons in writing."
+        ],
+        [
+          "Which statement about conciliation is correct?",
+          [
+            "The Committee must always try conciliation first",
+            "It happens only at the aggrieved woman's request and cannot involve money",
+            "It is a payment to settle the complaint",
+            "It is decided by the respondent"
+          ],
+          1,
+          "Conciliation is attempted only if the aggrieved woman requests it, and no monetary settlement can be its basis."
+        ],
+        [
+          "How long does the Committee have to complete an inquiry?",
+          [
+            "30 days",
+            "60 days",
+            "90 days",
+            "6 months"
+          ],
+          2,
+          "The inquiry must be completed within 90 days."
+        ],
+        [
+          "Which interim relief can the Committee recommend while an inquiry is pending?",
+          [
+            "Dismissing the respondent immediately",
+            "Publishing the respondent's name",
+            "Ending the inquiry early",
+            "Granting her up to three months' leave in addition to her normal leave"
+          ],
+          3,
+          "Interim relief includes a transfer, up to three months of extra leave, or stopping the respondent from assessing her work."
+        ]
+      ],
+      "description": "The eight stages of a complaint, from filing to appeal, the time limits at each stage, conciliation, and the interim relief available during an inquiry."
+    },
+    {
+      "slug": "lesson-05",
+      "title": "False Complaints, Confidentiality and Outcomes",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Explain how the Committee handles complaints that turn out to be false.\n- Distinguish a complaint that is not proved from a false complaint.\n- Describe the confidentiality duties of everyone involved.\n- Describe what the Committee's report contains.\n\n## Not proved is not the same as false\nThis is one of the most important ideas in the Act. A complaint that cannot be proved, for lack of evidence or witnesses, is **not** automatically a false complaint. Harassment often happens without witnesses.\n\nThe guidebook sets out checkpoints against false complaints:\n\n1. The Committee tells complainants that filing a false complaint, or producing false or misleading documents, is misconduct and can lead to action.\n2. Complaints should include supporting documents and witness details, where available.\n3. Failure to prove a complaint does not, by itself, make it false.\n4. Knowingly producing false or misleading documents makes a complaint false.\n5. The Committee checks for malicious intent, especially when an allegation is not proved.\n6. If malice is established, action can be taken against the complainant, in the same way as for misconduct.\n\n| Situation | Is it a false complaint? |\n|---|---|\n| The complaint is made in good faith but cannot be proved | **No** |\n| The complainant knowingly makes an untrue complaint | **Yes** |\n| The complainant knowingly submits forged or misleading documents | **Yes** |\n| A witness knowingly gives false evidence | The witness can face action |\n\n:::note Fear of a \"false complaint\" label must not silence people\nComplainants are protected when they act in good faith. Action is taken only when the Committee establishes that a complaint was malicious or knowingly false.\n:::\n\n## Confidentiality\nThe identity and addresses of the aggrieved woman, the respondent and witnesses, and the contents of the complaint, the proceedings, the recommendations and the action taken must **not** be published or made known to the public, the press or the media.\n\n- Information about the justice delivered may be shared, as long as it does not reveal the names, addresses or identity of anyone involved.\n- A person entrusted with handling a complaint who breaches confidentiality can face action under the service rules or, where there are none, a penalty under the PoSH Rules.\n- As an employee, do not discuss a colleague's case, share screenshots or speculate about who is involved.\n\n## Possible penalties\nWhen an allegation is proved (or, for a malicious complaint, against the complainant), the action follows the service rules. Where there are no service rules, the guidebook lists measures that the Committee can recommend, depending on how serious the misconduct is:\n\n- A written apology\n- A warning or reprimand\n- Withholding of promotion, pay rise or increments\n- Termination of employment\n- Counselling or community service\n\n## What the Committee's report contains\nA well-written report lets the employer act fairly and lets either party appeal on clear grounds. It records:\n\n- **The complaint:** who filed it, when, whether it was within time, and the documents and witnesses supplied.\n- **Conciliation:** whether it was requested and its outcome, confirming that no money was involved.\n- **The inquiry:** the evidence examined, the hearings held, the statements of both sides and any interim relief.\n- **The conclusion:** whether the allegation is proved, not proved, or established on the balance of probabilities, and whether malicious intent was examined.\n- **The recommendation:** the action proposed, and a confirmation that natural justice was followed.\n\n## Key takeaways\n- A complaint that is not proved is not, by itself, a false complaint.\n- Identities and case details stay confidential; breaking that is itself misconduct.\n- The Committee's report records the evidence, the conclusion and the recommended action.\n\n## Learning reference\n\nThis lesson is based on the guidebook below and on the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013 and its Rules. The explanations, examples and questions are original. This course is awareness training, not legal advice. For a specific case, contact your Internal Committee or HR.\n\n- [A Compact Guidebook on the PoSH Act and Rules, 2013, ISTM (Government of India)](https://www.istm.gov.in/home/posh_act)",
+      "knowledgeCheck": [
+        [
+          "A complaint is made in good faith but cannot be proved for lack of witnesses. What follows?",
+          [
+            "It is not automatically a false complaint",
+            "It is treated as a false complaint",
+            "The complainant must pay a penalty",
+            "The complainant is transferred"
+          ],
+          0,
+          "Failure to prove a complaint does not, by itself, make it false. Action follows only if malice or knowingly false documents are established."
+        ],
+        [
+          "Which of these makes a complaint false under the guidebook?",
+          [
+            "Having no witnesses",
+            "Knowingly producing forged or misleading documents",
+            "Filing it after two months",
+            "Asking for conciliation"
+          ],
+          1,
+          "Knowingly producing false or misleading documents makes a complaint false."
+        ],
+        [
+          "Which information may be shared publicly about a case?",
+          [
+            "The names of the people involved",
+            "The contents of the complaint",
+            "Information about the justice delivered, without identifying anyone",
+            "Screenshots of the evidence"
+          ],
+          2,
+          "Identities and case details stay confidential. Only information about the justice delivered may be shared, without identifying anyone."
+        ],
+        [
+          "Where there are no service rules, which is a penalty the Committee can recommend?",
+          [
+            "A public announcement of the case",
+            "A fine paid to the Committee",
+            "Mandatory relocation of the complainant",
+            "A written apology, warning or withholding of increments"
+          ],
+          3,
+          "The guidebook lists a written apology, warning or reprimand, withholding of promotion or increments, termination, counselling or community service."
+        ]
+      ],
+      "description": "The difference between a complaint that is not proved and a false one, the duty of confidentiality, the penalties that can be recommended, and what the Committee's report contains."
+    },
+    {
+      "slug": "lesson-06",
+      "title": "The Employer's Role and What You Can Do",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- List the employer's main duties under the PoSH Act.\n- Describe how the employer supports the Committee and the complainant.\n- Explain the employer's annual reporting duties.\n- Know what you should do if you face or witness harassment.\n\n## The employer's duties\nThe guidebook's employer checklist can be grouped into four areas:\n\n| Area | Duties |\n|---|---|\n| **Policy and safety** | Treat sexual harassment as misconduct under the service rules; provide a safe workplace, including protection from third parties such as visitors and clients |\n| **The Committee** | Constitute the Committee by written order; publish and display the order with members' names and contact numbers; remove members when required and fill vacancies |\n| **Supporting inquiries** | Provide facilities for complaints and inquiries; help secure the attendance of the respondent and witnesses; supply information the Committee needs |\n| **Acting and reporting** | Implement interim relief; act on the Committee's recommendations within 60 days; include case data in the annual report |\n\n## Supporting the aggrieved woman\n- If the respondent is not an employee, the employer helps her start action through the Committee of the workplace where the harassment happened, if she wishes.\n- If the conduct is an offence under the **Bharatiya Nyaya Sanhita** (the criminal law that replaced the Indian Penal Code) or any other law, the employer helps her file a complaint with the police, if she chooses.\n- The employer keeps every detail of the case confidential.\n\n## Annual reporting\nThe Committee prepares an annual report and submits it to the employer and the District Officer. It includes:\n\n- The number of complaints received during the year\n- The number of complaints disposed of\n- The number of cases pending for more than 90 days\n- The number of awareness workshops or programmes held\n- The nature of the action taken by the employer\n\nThe employer includes the number of cases and their outcomes in the organisation's annual report. If the organisation does not prepare an annual report, it informs the District Officer. The employer must also produce records and documents when a government officer inspects them.\n\n## If you face or witness harassment\n1. **Recognise it.** If the behaviour is unwelcome and sexual in nature, it may be harassment.\n2. **Keep a record.** Note dates, times, places, what was said or done, and who was present. Save messages and emails.\n3. **Reach out.** Contact the Internal Committee using the details displayed at your workplace, or HR.\n4. **Put it in writing.** File a written complaint within three months. A Committee member can help you write it.\n5. **Support others.** If you witness harassment, check on the person affected, offer to be a witness, and respect their choices and privacy.\n\n:::example Example: what a good manager does\nA team member tells her manager that a vendor's representative made sexual comments during a site visit. The manager listens, does not judge, explains how to reach the Internal Committee, and stops scheduling her alone with that vendor while the complaint is handled. The manager does not share the details with the rest of the team.\n:::\n\n## Key takeaways\n- Employers must prevent harassment, support the Committee, act on its findings within 60 days and report case data every year.\n- Employers help an aggrieved woman pursue criminal action, if she chooses.\n- Anyone facing harassment should record the details and contact the Internal Committee in writing within three months.\n\n## Learning reference\n\nThis lesson is based on the guidebook below and on the Sexual Harassment of Women at Workplace (Prevention, Prohibition and Redressal) Act, 2013 and its Rules. The explanations, examples and questions are original. This course is awareness training, not legal advice. For a specific case, contact your Internal Committee or HR.\n\n- [A Compact Guidebook on the PoSH Act and Rules, 2013, ISTM (Government of India)](https://www.istm.gov.in/home/posh_act)",
+      "knowledgeCheck": [
+        [
+          "Within how many days must the employer act on the Committee's recommendations?",
+          [
+            "60 days",
+            "15 days",
+            "6 months",
+            "1 year"
+          ],
+          0,
+          "The employer must act on the recommendations within 60 days of receiving the report."
+        ],
+        [
+          "Which item is part of the Committee's annual report?",
+          [
+            "The names of complainants",
+            "The number of cases pending for more than 90 days",
+            "The salaries of respondents",
+            "The personal opinions of members"
+          ],
+          1,
+          "The annual report covers complaints received and disposed of, cases pending over 90 days, awareness programmes held and the action taken."
+        ],
+        [
+          "If the conduct is also a criminal offence, what must the employer do?",
+          [
+            "Report it to the media",
+            "Ignore it, because the Committee handles everything",
+            "Help the aggrieved woman file a complaint under the law, if she chooses",
+            "Force her to file a police complaint"
+          ],
+          2,
+          "The employer helps her file a complaint under the Bharatiya Nyaya Sanhita or other law, if she chooses to."
+        ],
+        [
+          "What is a good first step if you face harassment at work?",
+          [
+            "Post about it on social media",
+            "Wait a year to see if it stops",
+            "Confront the person in front of the team",
+            "Record the details and contact the Internal Committee"
+          ],
+          3,
+          "Keep a record of dates, times, what happened and who was present, then contact the Internal Committee and file a written complaint."
+        ]
+      ],
+      "description": "The employer's duties to prevent harassment, support the Committee and report every year, and the practical steps to take if you face or witness harassment."
+    }
+  ]
+}

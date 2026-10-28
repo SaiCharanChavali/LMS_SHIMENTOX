@@ -38,6 +38,8 @@ ADDED_COLUMNS = [
 ]
 GENAI_COURSE = BACKEND / 'data/generative-ai-course.json'
 RAG_COURSE = BACKEND / 'data/rag-course.json'
+POSH_COURSE = BACKEND / 'data/posh-course.json'
+ADMIN_SEED = BACKEND / 'data/admin-seed.json'
 PYTHON_PATH = BACKEND / 'data/shimento-python-course.json'
 JAVA_PATH = BACKEND / 'data/java-full-stack-course.json'
 VIDEO_ROOT = BACKEND / 'videos'
@@ -95,6 +97,7 @@ def initialize(path):
                                (COURSE_ID, s, kind, exercise, i, q[0], json.dumps(q[1]), q[2], q[3] if len(q) > 3 else ''))
         seed_lesson_course(db, GENAI_COURSE, stamp)
         seed_lesson_course(db, RAG_COURSE, stamp)
+        seed_lesson_course(db, POSH_COURSE, stamp)
         seed_lesson_course(db, PYTHON_PATH, stamp)
         # Rename the packaged course in existing installs without changing its ID or learner history.
         db.execute('UPDATE courses SET title=? WHERE id=? AND title=?',
@@ -107,6 +110,29 @@ def initialize(path):
         restructure_java_course(db, JAVA_PATH, stamp)
         seed_checkpoints(db, JAVA_PATH)
         db.commit()
+    finally:
+        db.close()
+
+
+def seed_admin(path, source=ADMIN_SEED):
+    """Create the packaged administrator when the database has none, so a fresh clone opens on the login page.
+
+    The seed file holds a salted scrypt hash, never the password. An existing account with the same email is left unchanged.
+    """
+    if not source.exists():
+        return
+    admin = json.loads(source.read_text(encoding='utf-8'))
+    db = connect(path)
+    try:
+        with db:
+            if db.execute("SELECT 1 FROM candidates WHERE role='admin'").fetchone() or db.execute('SELECT 1 FROM candidates WHERE email=?', (admin['email'].casefold(),)).fetchone():
+                return
+            stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+            db.execute("INSERT INTO candidates(id,full_name,email,password_hash,created_at,updated_at,role,must_change_password) VALUES (?,?,?,?,?,?,'admin',0)",
+                       (admin['id'], admin['name'], admin['email'].casefold(), admin['passwordHash'], stamp, stamp))
+            db.execute('INSERT INTO course_runs(id,candidate_id,course_id,run_number,started_at) VALUES (?,?,?,1,?)', (str(uuid.uuid4()), admin['id'], COURSE_ID, stamp))
+            db.execute('INSERT INTO admin_events(admin_id,action,target_id,detail,created_at) VALUES (?,?,?,?,?)',
+                       (admin['id'], 'admin_setup', admin['id'], 'Packaged administrator created from admin-seed.json', stamp))
     finally:
         db.close()
 

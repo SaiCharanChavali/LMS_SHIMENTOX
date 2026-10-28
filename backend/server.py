@@ -7,7 +7,7 @@ import webbrowser
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'src'))
-from database import BACKEND, initialize
+from database import BACKEND, initialize, seed_admin
 from server import PortalServer, PortalHandler
 
 
@@ -20,6 +20,7 @@ def main():
     args = parser.parse_args()
     path = Path(os.environ.get('LMS_DB_PATH', str(BACKEND / 'data/lms.sqlite3'))).resolve()
     initialize(path)
+    seed_admin(path)
     if args.init_db:
         print(f'SQLite schema initialized: {path}')
         return

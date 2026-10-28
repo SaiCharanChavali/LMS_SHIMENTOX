@@ -11,7 +11,7 @@ from pathlib import Path
 
 from test_portal import PortalFixture, Client
 from server import PortalServer, PortalHandler
-from database import connect, initialize, BACKEND, CURRICULUM
+from database import connect, initialize, seed_admin, BACKEND, CURRICULUM
 from security import password_hash
 from services import now
 
@@ -44,6 +44,29 @@ class AdminTests(PortalFixture):
             with closing(connect(path)) as db:
                 self.assertEqual(db.execute("SELECT COUNT(*) FROM candidates WHERE role='admin'").fetchone()[0],1)
         finally:server.shutdown();server.server_close();thread.join()
+
+    def test_packaged_admin_skips_setup_on_a_fresh_database(self):
+        path=Path(self.temp.name)/'seeded.sqlite3';initialize(path)
+        seed=Path(self.temp.name)/'admin-seed.json'
+        seed.write_text(json.dumps({'id':'seeded-admin','name':'Seeded Admin','email':'Seeded@Test.com','passwordHash':password_hash('Seeded123!')}),encoding='utf-8')
+        seed_admin(path,seed);seed_admin(path,seed)
+        with closing(connect(path)) as db:
+            self.assertEqual([tuple(r) for r in db.execute("SELECT email,must_change_password FROM candidates WHERE role='admin'")],[('seeded@test.com',0)],'Seeded once, ready to sign in.')
+        server=PortalServer(('127.0.0.1',0),PortalHandler,path)
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        client=Client(f'http://127.0.0.1:{server.server_port}')
+        try:
+            self.assertFalse(client.request('session')[1]['setupRequired'],'The login page opens instead of admin setup.')
+            login=client.request('auth/login',{'email':'seeded@test.com','password':'Seeded123!'})
+            self.assertEqual(login[0],200,login[1]);self.assertEqual(login[1]['user']['role'],'admin')
+        finally:server.shutdown();server.server_close();thread.join()
+        # A database that already has an administrator is never changed.
+        other=Path(self.temp.name)/'has-admin.sqlite3';initialize(other)
+        with closing(connect(other)) as db, db:
+            db.execute("INSERT INTO candidates(id,full_name,email,password_hash,created_at,updated_at,role) VALUES ('own','Own','own@test.com','h','t','t','admin')")
+        seed_admin(other,seed)
+        with closing(connect(other)) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM candidates").fetchone()[0],1)
 
     def test_browser_setup_preserves_existing_account(self):
         path=Path(self.temp.name)/'browser-promote.sqlite3';initialize(path)

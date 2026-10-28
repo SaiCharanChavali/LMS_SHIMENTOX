@@ -9,6 +9,11 @@ with an in-browser Python editor, coding workshops, labs, knowledge checks and s
 required timed assignments (one after every three modules). See the
 [Python learning path](docs/python-learning-path.md) for scope and regeneration.
 
+The catalog includes **POSH**: six text lessons on the Sexual Harassment of Women
+at Workplace (Prevention, Prohibition and Redressal) Act, 2013, each with a knowledge
+check, plus a 10-question final assessment. It is based on the
+[ISTM PoSH guidebook](https://www.istm.gov.in/home/posh_act).
+
 ShimentoX's internal employee learning & development portal. It brings together course and training management, assignments and mandatory deadlines, learning paths, skills and competencies, assessments with question banks, instructor-led sessions, notifications, certificates, and learning analytics. Accounts and progress are stored in SQLite. See [learning & development](docs/learning-and-development.md) for roles, metric definitions, and the API.
 
 ## Run locally
@@ -24,7 +29,7 @@ npm start
 
 Without npm, run `python backend/server.py` from this directory. The same server serves both the frontend and the API. Stop any previous static server on port 5173 before starting it. Opening the HTML directly or using a static-only server will not provide login or database access.
 
-If no administrator exists, the browser opens a one-time **Set up your admin account** form automatically. Enter your full name, email, and password there. If the email already has an account, enter its current password to preserve and promote it. Setup is available only on the local server computer and closes permanently once an admin exists. No terminal account-creation command is required.
+If `backend/data/admin-seed.json` is present, a new database starts with that administrator, so a fresh clone opens on the login page. Create or refresh it with `python backend/tools/export_admin.py`, which saves the local admin's name, email and salted password hash (never the password). Otherwise, if no administrator exists, the browser opens a one-time **Set up your admin account** form automatically. Enter your full name, email, and password there. If the email already has an account, enter its current password to preserve and promote it. Setup is available only on the local server computer and closes permanently once an admin exists. No terminal account-creation command is required.
 
 Roles are **Administrator, HR / L&D Admin, Trainer, Manager, and Employee**. Employees see **My Dashboard, My Learning, Learning Paths, Skills & Goals, Training Calendar, My Certificates, and My Profile**. Administrators see **Dashboard, Manage Courses, Learning Paths, Skills & Competencies, Users & Teams, Assessments, Training Calendar, Certificates, Reports & Analytics, Activity Log, and My Profile**. HR, trainers and managers see their own learning plus the management pages their role allows. Backend permissions protect every API, not just sidebar visibility.
 

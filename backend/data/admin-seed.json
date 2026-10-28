@@ -1,0 +1,6 @@
+{
+  "id": "2fa43634-6617-4744-a00a-d9dac1922b6e",
+  "name": "Admin",
+  "email": "admin@shimento.com",
+  "passwordHash": "scrypt$32768$8$3$412da9cdd3b954c416eb2fd3d2a807c4$e46ccf996e53eada34d2fc320cbb72dfd83a59fc93fb43202fe0c2f4ee0eb445f28e6ed8fd5198ce2e60c52116452263b9b0a808e72ec3914fa8920b9403b710"
+}

@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.000
+Make a decision
+An if statement runs its indented block when a condition is true. The >= operator means greater than or equal to.
+
+00:00:12.000 --> 00:00:24.000
+Handle the other outcome
+An else block handles the case where the condition is false. Here, 72 is less than 80.
+
+00:00:24.000 --> 00:00:36.000
+Repeat an action
+A for loop visits each item in a collection. There are three items here, so the indented print runs three times.
+
+00:00:36.000 --> 00:00:48.000
+Ready to practice?
+Exercise 1 checks comparisons and loop counts. Indentation groups the statements inside a condition or a loop.

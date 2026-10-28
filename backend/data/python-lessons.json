@@ -1,0 +1,56 @@
+[
+  {
+    "title": "Welcome to Python",
+    "body": "Python is a readable, versatile programming language. You can use it to automate everyday tasks, analyze data, and build applications. In this lesson, you’ll write your very first Python program.",
+    "code": "# Your first Python program\nprint(\"Hello, ShimentoX!\")",
+    "task": "The print() function displays a message. Put your text inside quotation marks, then place it inside the parentheses.",
+    "src": "assets/videos/lesson-1.webm",
+    "captions": "assets/videos/lesson-1.vtt",
+    "duration": 48
+  },
+  {
+    "title": "Variables & data types",
+    "body": "Variables give names to values so you can use them later. Python understands common types such as strings, integers, floats, and booleans.",
+    "code": "employee = \"Alex\"\ncourses_completed = 1\nlearning_hours = 2.5\nis_learning = True\n\nprint(employee)",
+    "task": "Try naming a variable for your learning goal. Use descriptive names and underscores between words.",
+    "src": "assets/videos/lesson-2.webm",
+    "captions": "assets/videos/lesson-2.vtt",
+    "duration": 48
+  },
+  {
+    "title": "Working with strings",
+    "body": "A string is a sequence of characters. Combine strings, change their case, or insert variables with an f-string.",
+    "code": "name = \"Alex\"\nmessage = f\"Welcome, {name}!\"\nprint(message.upper())",
+    "task": "An f-string starts with f before the quote. Expressions inside braces are replaced with their values.",
+    "src": "assets/videos/lesson-3.webm",
+    "captions": "assets/videos/lesson-3.vtt",
+    "duration": 48
+  },
+  {
+    "title": "Lists & collections",
+    "body": "Lists keep multiple values together in order. You can add values, access an item by its position, and find the length of the list.",
+    "code": "skills = [\"Python\", \"Problem solving\"]\nskills.append(\"Automation\")\nprint(skills[0])\nprint(len(skills))",
+    "task": "Python counts positions from zero. The first element is at index 0.",
+    "src": "assets/videos/lesson-4.webm",
+    "captions": "assets/videos/lesson-4.vtt",
+    "duration": 48
+  },
+  {
+    "title": "Conditions & loops",
+    "body": "Conditions help a program make decisions. Loops repeat an action for each item in a collection.",
+    "code": "for score in [72, 85, 94]:\n    if score >= 80:\n        print(\"Great work!\")\n    else:\n        print(\"Keep practicing!\")",
+    "task": "Indentation groups statements together. Use four spaces for each level.",
+    "src": "assets/videos/lesson-5.webm",
+    "captions": "assets/videos/lesson-5.vtt",
+    "duration": 48
+  },
+  {
+    "title": "Functions & your next steps",
+    "body": "Functions group reusable instructions under a name. Use parameters to give a function input and return to send a result back.",
+    "code": "def welcome(name):\n    return f\"Happy learning, {name}!\"\n\nprint(welcome(\"Alex\"))",
+    "task": "You’ve covered the foundations. Practice by writing a function that turns hours into minutes. Keep building your Python skills!",
+    "src": "assets/videos/lesson-6.webm",
+    "captions": "assets/videos/lesson-6.vtt",
+    "duration": 48
+  }
+]

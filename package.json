@@ -1,0 +1,16 @@
+{
+  "name": "shimentox-lms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ShimentoX employee learning portal",
+  "scripts": {
+    "start": "python backend/server.py --open",
+    "start:server": "python backend/server.py",
+    "db:init": "python backend/server.py --init-db",
+    "test": "node frontend/tests/check.cjs && python -m unittest discover -s backend/tests -v",
+    "test:backend": "python -m unittest discover -s backend/tests -v",
+    "benchmark": "python backend/tools/benchmark_performance.py",
+    "check": "node --check frontend/public/scripts/admin.js && node --check frontend/public/scripts/development.js && node --check frontend/public/scripts/course-import.js && node --check frontend/public/scripts/auth.js && node --check frontend/public/scripts/app.js && node --check frontend/public/scripts/learning.js && node --check frontend/public/scripts/python-practice.js && node --check frontend/public/scripts/python-sandbox.js",
+    "videos:generate": "python frontend/tools/generate_videos.py"
+  }
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "title": "Assignment 1: Build a training-score report",
+    "instructions": "Modules 1–3: Python basics, installation, loops and sequences. Review a small training-score script, choose valid terminal commands, and complete its calculations and iteration logic. Answer all eight questions in this page; running an external editor is not required during the timed assignment.",
+    "questions": [
+      {"prompt": "The report stores a score as score = 80. Which expression produces a number equal to 90?", "options": ["score + 10", "str(score) + '10'", "'score' + '10'", "score == 90"], "correct": 0},
+      {"prompt": "What does this discount helper return?", "code": "def fee(amount, percent):\n    return amount * (1 - percent / 100)\n\nfee(200, 25)", "options": ["150.0", "175.0", "50.0", "It only prints 150"], "correct": 0},
+      {"prompt": "You saved report.py on Windows. Which command runs it from the terminal?", "options": ["py report.py", "print(report.py)", "import report.py", "run-python = report.py"], "correct": 0},
+      {"prompt": "Why create a virtual environment for this reporting project?", "options": ["To isolate its package dependencies", "To turn Python into JavaScript", "To automatically fix all syntax errors", "To encrypt the source code"], "correct": 0},
+      {"prompt": "Which slice selects only 72 and 90?", "code": "scores = [60, 72, 90, 95]", "options": ["scores[1:3]", "scores[1:2]", "scores[2:4]", "scores[0:3]"], "correct": 0},
+      {"prompt": "What list is produced by the report filter?", "code": "scores = [60, 72, 90, 95]\npassed = [s for s in scores if s >= 75]", "options": ["[90, 95]", "[60, 72]", "[72, 90, 95]", "[True, True]"], "correct": 0},
+      {"prompt": "Choose the output for this numbered report.", "code": "for number, score in enumerate([72, 90], start=1):\n    print(number, score)", "options": ["1 72, then 2 90", "0 72, then 1 90", "72 1, then 90 2", "1 90, then 2 72"], "correct": 0},
+      {"prompt": "An employee has no scores yet. Which change prevents division by zero?", "code": "average = sum(scores) / len(scores)", "options": ["Check that scores is nonempty before dividing", "Always divide by zero instead", "Convert scores to a string", "Replace / with // and keep an empty list"], "correct": 0}
+    ]
+  },
+  {
+    "title": "Assignment 2: Validate an employee settings record",
+    "instructions": "Modules 4–6: dictionaries, sets and modules; configuration manager; error handling. Complete and debug a settings validator. Focus on duplicate keys, data validation, safe updates and narrow exception handling.",
+    "questions": [
+      {"prompt": "Which result removes duplicate skills while preserving all distinct skill values?", "code": "skills = ['Python', 'SQL', 'Python']", "options": ["set(skills)", "len(skills)", "skills[0]", "str(skills)"], "correct": 0},
+      {"prompt": "Which lookup returns 'light' when the theme key is absent without adding the key?", "options": ["settings.get('theme', 'light')", "settings['theme']", "settings.append('theme')", "settings.remove('theme')"], "correct": 0},
+      {"prompt": "What does the second call return when add_setting normalizes keys and refuses duplicates?", "code": "settings = {}\nadd_setting(settings, 'Theme', 'dark')\nadd_setting(settings, 'theme', 'light')", "options": ["False, keeping the original value", "True, always replacing dark", "A new independent dictionary", "The integer 2"], "correct": 0},
+      {"prompt": "Which update correctly leaves a missing key unchanged?", "options": ["Check key in settings, then assign only if present", "Assign settings[key] without a membership check", "Clear the dictionary before every update", "Always insert the missing key twice"], "correct": 0},
+      {"prompt": "Which exception should this conversion handler catch for text equal to 'many'?", "code": "count = int(text)", "options": ["ValueError", "KeyError", "IndexError", "ZeroDivisionError"], "correct": 0},
+      {"prompt": "The conversion int('0') succeeds. What additional check is needed for a positive count?", "options": ["Reject count <= 0", "Catch KeyError instead", "Accept every integer including zero", "Check that text is a dictionary"], "correct": 0},
+      {"prompt": "Which validation rejects both a missing name and a non-string name?", "options": ["isinstance(record.get('name'), str)", "'name' in record", "bool(record)", "len(record) > 0"], "correct": 0},
+      {"prompt": "A helper lives in checks.py as valid_record. Which statement imports that function?", "options": ["from checks import valid_record", "import checks.py.valid_record", "include checks", "using checks.valid_record"], "correct": 0}
+    ]
+  },
+  {
+    "title": "Assignment 3: Review a budget and media model",
+    "instructions": "Modules 7–9: classes and objects; budget ledger; object-oriented programming. Review per-instance state, transaction accounting, transfer behavior and shared interfaces. Select the implementation decisions that preserve each model's invariants.",
+    "questions": [
+      {"prompt": "Where should a Budget create its mutable entries list so different accounts are independent?", "options": ["self.entries = [] inside __init__", "entries = [] once in the class body", "In a shared global list for all budgets", "Inside __str__ after every display"], "correct": 0},
+      {"prompt": "What quantity is printed?", "code": "item = StockItem('Mouse', 2)\nitem.receive(4)\nprint(item.count)", "options": ["6", "4", "2", "8"], "correct": 0},
+      {"prompt": "A ledger stores integer cents. What is the balance in cents?", "code": "entries = [(2500, 'deposit'), (-650, 'lunch')]\nbalance = sum(c for c, note in entries)", "options": ["1850", "3150", "18.5", "650"], "correct": 0},
+      {"prompt": "A transfer lacks enough funds. What should happen?", "options": ["Return failure and leave both ledgers unchanged", "Credit the recipient before checking funds", "Erase both ledgers", "Withdraw the full amount anyway"], "correct": 0},
+      {"prompt": "Which design supports encapsulation of salary changes?", "options": ["A property setter that rejects negative pay", "Let every caller bypass all validation", "Store all salaries in one unrelated global variable", "Delete __init__ from every class"], "correct": 0},
+      {"prompt": "Audio and Video both implement duration(). Calling duration on either through the same interface demonstrates what?", "options": ["Polymorphism", "Integer division", "List slicing", "Exception suppression"], "correct": 0},
+      {"prompt": "What happens when a subclass does not implement a required abstract method?", "options": ["Instantiating that incomplete subclass raises TypeError", "Python silently supplies the correct method", "The method becomes a dictionary key", "Every method automatically returns zero"], "correct": 0},
+      {"prompt": "Why use integer cents for the practice budget?", "options": ["To avoid binary floating-point rounding surprises in money calculations", "To prevent all possible input errors without validation", "To make negative transactions impossible", "To make transaction descriptions unnecessary"], "correct": 0}
+    ]
+  },
+  {
+    "title": "Assignment 4: Design a shape inventory and lookup table",
+    "instructions": "Modules 10–12: polygon calculator; linear data structures; hash table. Check shape invariants and fitting calculations, choose stack or queue behavior, and handle hash collisions without losing records.",
+    "questions": [
+      {"prompt": "How many 2 by 2 rectangles fit into an 8 by 3 rectangle without rotation?", "options": ["4", "6", "12", "3"], "correct": 0},
+      {"prompt": "A Square exposes a side setter. What invariant must it preserve?", "options": ["Width and height remain equal and positive", "Width must always be zero", "Only height changes", "Every square must have the same area"], "correct": 0},
+      {"prompt": "Which value is removed from this stack?", "code": "stack = ['draft', 'review']\nremoved = stack.pop()", "options": ["review", "draft", "Both items", "Neither item"], "correct": 0},
+      {"prompt": "Enrollment requests must be processed in arrival order. Which structure and operation are appropriate?", "options": ["deque with popleft()", "list with pop() at the end", "set with arbitrary removal", "A string with upper()"], "correct": 0},
+      {"prompt": "What special case must a singly linked list handle when deleting its first node?", "options": ["Update the head reference to the next node", "Always delete its tail instead", "Sort all node values first", "Require a predecessor that does not exist"], "correct": 0},
+      {"prompt": "Two distinct keys map to the same hash-table bucket. What should separate chaining do?", "options": ["Keep both entries and compare original keys during lookup", "Overwrite the older key unconditionally", "Treat equal bucket indexes as equal keys", "Reject every second entry in the table"], "correct": 0},
+      {"prompt": "Putting an existing key with a new value should do what?", "options": ["Update that key's entry without creating a duplicate", "Always append a duplicate key", "Delete all buckets", "Change every key in the table"], "correct": 0},
+      {"prompt": "Why create buckets with a comprehension rather than [[]] * size?", "options": ["Each bucket must own a separate mutable list", "A comprehension encrypts the keys", "Multiplication always sorts lists", "All buckets must share exactly one list"], "correct": 0}
+    ]
+  },
+  {
+    "title": "Assignment 5: Trace a search and recursive move planner",
+    "instructions": "Modules 13–15: recursion; searching and sorting; Tower of Hanoi. Trace call results, choose stopping conditions, verify a binary search interval and check the move count and legal-move constraints of a recursive puzzle solver.",
+    "questions": [
+      {"prompt": "What is the result of total_to(3)?", "code": "def total_to(n):\n    if n == 0:\n        return 0\n    return n + total_to(n - 1)", "options": ["6", "3", "0", "9"], "correct": 0},
+      {"prompt": "Which two properties make this recursion terminate for nonnegative integers?", "options": ["A base case at zero and decreasing n on each call", "Printing the function name repeatedly", "Adding one to n on each call without a stop", "Removing the return statement"], "correct": 0},
+      {"prompt": "What input requirement does binary search depend on?", "options": ["The values are sorted in the ordering used for comparisons", "Every value is a string", "All values are different", "The list length is a power of two"], "correct": 0},
+      {"prompt": "When values[mid] is less than the target in ascending binary search, which update is correct?", "options": ["lo = mid + 1", "hi = mid - 1", "lo = 0 forever", "Delete the entire list"], "correct": 0},
+      {"prompt": "Which description matches merge sort?", "options": ["Divide the input and merge sorted halves", "Always select a random unsorted answer", "Check only the first element", "Use a queue without comparing values"], "correct": 0},
+      {"prompt": "What is the minimum number of moves to solve Tower of Hanoi with three disks?", "options": ["7", "3", "6", "9"], "correct": 0},
+      {"prompt": "Which move violates Tower of Hanoi rules?", "options": ["Put a larger disk on a smaller disk", "Move one disk to an empty peg", "Put a smaller disk on a larger disk", "Move one top disk at a time"], "correct": 0},
+      {"prompt": "Before moving the largest disk from source to target, where must the smaller n-1 disks go?", "options": ["Onto the spare peg", "Under the largest disk on the source", "Onto the target and remain there", "They must be removed from the puzzle"], "correct": 0}
+    ]
+  },
+  {
+    "title": "Assignment 6: Plan routes and verify a learning catalogue",
+    "instructions": "Modules 16–18: graphs and trees; dynamic programming; review and capstone. Choose graph traversal behavior, reuse overlapping results and review catalogue validation and skill-counting tests. Passing this final assignment is required for course completion.",
+    "questions": [
+      {"prompt": "Which traversal finds a shortest path measured in number of edges in an unweighted graph?", "options": ["Breadth-first search", "Any depth-first path is always shortest", "Selection sort", "A hash function alone"], "correct": 0},
+      {"prompt": "Why mark a vertex visited when it is enqueued during breadth-first search?", "options": ["To prevent duplicate queue entries and repeated visits through cycles", "To ensure the graph has no edges", "To sort all vertices alphabetically", "To make every graph into a tree"], "correct": 0},
+      {"prompt": "What does memoization add to a recursive solution?", "options": ["A cache of previously computed subproblem results", "Repeated execution of every subproblem", "A requirement to use global mutable lists", "Removal of all base cases"], "correct": 0},
+      {"prompt": "What does fibonacci(6) return?", "code": "def fibonacci(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a", "options": ["8", "6", "13", "5"], "correct": 0},
+      {"prompt": "Why can this iterative Fibonacci calculation keep only two running values?", "options": ["Each next value depends only on its two predecessors", "All Fibonacci values are identical", "It never performs addition", "Python stores an invisible full table automatically"], "correct": 0},
+      {"prompt": "A catalogue counts employees per skill. Why convert each employee's skill list to a set first?", "options": ["To count a repeated skill only once for that employee", "To count each duplicate twice", "To discard all employees", "To convert skill names to numbers"], "correct": 0},
+      {"prompt": "Which test set best covers a skill-counting helper?", "options": ["Normal records, empty records, duplicate skills and invalid records", "Only one successful record", "Only printed output with no expected value", "No checks because dictionaries cannot contain mistakes"], "correct": 0},
+      {"prompt": "Which architecture keeps the capstone easier to test?", "options": ["Separate input validation, core logic and presentation", "Mix every input prompt into each calculation", "Catch every exception and silently ignore it", "Use one shared variable for all unrelated state"], "correct": 0}
+    ]
+  }
+]

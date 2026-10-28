@@ -1,0 +1,14 @@
+.brand-logo{background:transparent;border-radius:0;padding:15px 0;display:flex;justify-content:center;width:100%;max-width:220px;flex-shrink:0;letter-spacing:normal}
+.brand-logo img{display:block;width:100%;height:auto;object-fit:contain}
+.brand-sub{margin:12px 0 36px;text-align:center;font-size:8px;letter-spacing:2.2px}
+.login-visual .brand-logo{background:transparent;padding:0;max-width:255px;border-radius:0;justify-content:flex-start}
+.sidebar{background:#163e35;border-color:#244d43;color:#f0f7f3}
+.sidebar .brand-sub,.sidebar .nav-label{color:#9ebeb1}
+.sidebar .nav a{color:#bed1c8}
+.sidebar .nav a:hover{background:#214c40;color:#fff}
+.sidebar .nav a.active{background:#2b5849;color:#fff}
+.sidebar .nav a:focus-visible,.sidebar .brand-logo:focus-visible{outline-color:#b2dfc9}
+.sidebar .help-box{background:#21483d;color:#edf6f0}
+.sidebar .help-box p{color:#b2c9be}
+.sidebar .help-box a{color:#c1e7d3}
+@media(max-width:680px){.sidebar>.brand-logo{max-width:190px;margin-bottom:16px}.login-visual .brand-logo{max-width:220px}}

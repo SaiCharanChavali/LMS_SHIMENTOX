@@ -1,0 +1,1606 @@
+{
+  "id": "shimento-python-developer",
+  "title": "Python Programming Senior",
+  "contentRevision": "python-detailed-v2",
+  "category": "Technical Skills",
+  "difficulty": "beginner",
+  "durationMinutes": 500,
+  "visibility": "everyone",
+  "status": "published",
+  "interactive": true,
+  "videoEnabled": false,
+  "description": "Learn Python through interactive Shimento lessons, an in-browser code editor, coding workshops, labs and knowledge checks. Follow the Python syllabus from foundations to object-oriented programming, algorithms, graphs and dynamic programming. Six secured assignments assess each group of three modules.",
+  "source": {
+    "syllabusReference": "https://www.freecodecamp.org/learn/python-v9/",
+    "scope": "Original Shimento teaching material following the public topic sequence. No source lesson text, tests, videos or certification exam are reproduced."
+  },
+  "lessons": [
+    {
+      "slug": "lesson-01",
+      "title": "Python basics",
+      "description": "Use variables, strings, numbers, conditions and functions to turn a small requirement into a program.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Purpose and starting point\nPython is useful for transforming employee records, validating imports and automating repeatable work. This course builds those skills through small functions whose behavior you can explain and test. Begin with the difference between writing a value, calculating a value and displaying a value; confusing these steps causes problems even in larger applications.\n\n## Names, objects and common types\nAn assignment binds a name to an object. After score = 12, score refers to an integer value; assigning score = score + 3 evaluates the right-hand expression first and binds score to the new result. Assignment does not print anything. A later print(score) displays the current value.\n\nUse int for whole-number counts, float for approximate fractional values, str for text and bool for a true/false decision. Quotation marks matter: 12 is a number, while \"12\" is text. Adding two numeric values performs arithmetic; adding two strings concatenates them. Do not assume that data received as text has already been validated or converted into the type the calculation needs.\n\nNone represents an explicit absence of a value. It is different from zero, an empty string and False. A function with no explicit return returns None, which is one reason printing inside a function does not substitute for returning a result.\n\n## Expressions, division and presentation\nPython follows operator precedence, so multiplication and division are evaluated before addition unless parentheses change the grouping. The / operator performs true division; // performs floor division, and % gives a remainder. Floor division rounds toward negative infinity, so it is not simply truncation toward zero for negative inputs.\n\nFloating-point values approximate many decimal fractions. Keep the numeric result separate from presentation and format it at the display boundary. An f-string evaluates expressions inside braces, and a format such as :.2f displays two decimal places. Formatting does not change the stored result into an exact monetary representation. Business rules involving exact amounts need a deliberately chosen representation, such as integer minor units or Decimal with a defined rounding policy.\n\n## Conditions, indentation and reusable functions\nAn if statement selects a branch based on a condition. Use == for an equality comparison and = for assignment. Combine conditions with and/or; parentheses can make a business rule easier to read. Indentation defines the statements belonging to a branch, loop or function, so consistent whitespace is part of the program's structure.\n\nDefine a function with def and give its parameters meaningful names. The caller supplies arguments; return sends the result back. Keep calculations independent of console output so the same function can serve a script, test or UI. Validate a precondition before performing the operation that depends on it.\n\n## Worked example and trace\nRun this complete example in the browser editor or a local Python file.\n\n```\ndef price_after_discount(price, percent):\n    if not 0 <= percent <= 100:\n        raise ValueError(\"Percentage must be between 0 and 100\")\n    return price * (1 - percent / 100)\n\namount = price_after_discount(120, 15)\nprint(f\"Amount due: {amount:.2f}\")\n```\n\nThe output is Amount due: 102.00. The condition accepts 15, division produces 0.15, and the remaining fraction is 0.85. Multiplying by 120 produces the numeric result, which the caller formats. Passing 150 as the percentage raises the validation exception before a price is returned. This teaching helper assumes an otherwise valid numeric price; a real input boundary must define and enforce the full contract.\n\n## Guided browser practice\n- Complete discounted_price in the workshop below using the same separation between calculation and printing.\n- Predict the results for a zero discount and a full discount before running the checks.\n- Experiment with print(2 + 3) and print(\"2 + 3\") and explain the different outputs.\n- Change only indentation in a small if example and observe why a line's block membership matters.\n\n## Acceptance criteria and common mistakes\nReturn the calculated number; do not return the result of print, which is None. Show why a percentage of 25 means a remaining fraction of 0.75. Keep expected output separate from source code when copying examples. A successful submission passes the visible checks and includes an explanation of the boundary cases rather than only a screenshot of one result.",
+      "legacyContentHash": "4095d6242dcd652d08260abea9cdc9d390d1b78cd87a3dbbacc6a663f88bb50a",
+      "quiz": [
+        [
+          "What does print(7 + 5) display?",
+          [
+            "75",
+            "12",
+            "7 + 5"
+          ],
+          1
+        ],
+        [
+          "Which keyword sends a result back to a function caller?",
+          [
+            "print",
+            "if",
+            "return"
+          ],
+          2
+        ],
+        [
+          "What defines a Python block?",
+          [
+            "Indentation",
+            "Parentheses around every line",
+            "A semicolon"
+          ],
+          0
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete discounted_price so it returns the price after a percentage discount. Return the number instead of printing it.",
+        "starter": "def discounted_price(price, percent):\n    # Calculate and return the discounted price.\n    pass\n\nprint(discounted_price(80, 25))",
+        "tests": [
+          {
+            "label": "25% off 80 is 60",
+            "code": "assert discounted_price(80, 25) == 60"
+          },
+          {
+            "label": "A zero discount leaves the price unchanged",
+            "code": "assert discounted_price(35, 0) == 35"
+          },
+          {
+            "label": "A full discount returns zero",
+            "code": "assert discounted_price(20, 100) == 0"
+          }
+        ],
+        "solution": "def discounted_price(price, percent):\n    return price * (1 - percent / 100)"
+      }
+    },
+    {
+      "slug": "lesson-02",
+      "title": "Python installation",
+      "description": "Prepare an interpreter, an editor and an isolated environment for local practice.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Browser Python and local Python are different environments\nThe Shimento workshop already provides a Python interpreter in the browser. You can execute Python source there without installing a local interpreter. Local automation, files and application projects still need a local development environment. A script that works in the browser has not automatically been installed as a scheduled program on your computer.\n\nAn interpreter executes Python instructions. A terminal starts processes and passes arguments. An editor helps you write files. The interactive Python prompt evaluates Python statements, not arbitrary operating-system commands. Knowing which environment expects a command prevents a large class of avoidable setup errors.\n\n## Check the interpreter you are actually using\nOn Windows, the py launcher can select an installed interpreter. On many macOS and Linux installations, python3 is the intended command. The names and available versions depend on your installation. Check the version from the same terminal you will use to run the project. Do not infer it from an IDE label or from a different shell session.\n\nUse sys.version for interpreter-version information, sys.executable for the local executable path where applicable, and sys.implementation.name for the implementation name. In the browser, executable paths and the available filesystem differ from your local machine. The course's portable examples use standard language features; record the actual version when investigating a version-specific failure.\n\n## Isolate dependencies with a virtual environment\nA virtual environment gives a project its own package-installation context. It prevents unrelated projects from relying on accidental global package installations, but it is not a security sandbox. Code in a local virtual environment still runs with the permissions of the user who launched it.\n\nCreate the environment in the project directory. Activation modifies shell environment settings for convenience; it is not required when you invoke the environment's interpreter by its explicit path. Using python -m pip through the intended interpreter helps avoid installing into a different Python environment from the one running the script. Recreate environments from documented dependencies rather than committing the environment directory as project source.\n\n## Local setup walkthrough\nRun the following in a Windows terminal, not in the Python browser editor. The .venv directory is a project-specific convention.\n\n```\npy --version\npy -m venv .venv\n.venv\\Scripts\\python.exe -m pip --version\n.venv\\Scripts\\python.exe greeting.py\n```\n\nBefore the last command, create greeting.py containing print(\"Welcome to Shimento\"). The expected script output is Welcome to Shimento. On macOS/Linux, the corresponding environment interpreter is commonly .venv/bin/python after creating the environment with python3 -m venv .venv. If a launcher command is unavailable, fix or select the installation rather than pasting terminal commands into a Python source file.\n\n## Worked example for the browser workshop\nThis is Python source and can run in the browser. It does not launch or install a local environment.\n\n```\nimport sys\n\ndef runtime_details():\n    return {\n        \"implementation\": sys.implementation.name,\n        \"major\": sys.version_info.major,\n    }\n\ndetails = runtime_details()\nprint(details[\"implementation\"])\nprint(details[\"major\"])\n```\n\nIn the packaged course runtime, the implementation name is cpython and the major version is 3. The exact minor version is an environment fact, not a value to assume when writing every program. The workshop asks for a simpler function returning the implementation name as a string.\n\n## Guided practice and troubleshooting\n- Complete interpreter_name in the browser and verify its returned type.\n- Locally, run the greeting file through the environment's explicit interpreter path.\n- Record the executable and pip context used by that local project.\n- Distinguish command-not-found, a missing script path and a Python syntax error.\n\nYour setup evidence should let another employee reproduce the commands without guessing your IDE configuration. Do not store credentials or machine-specific environment directories in the training repository.",
+      "legacyContentHash": "c679ea38c9824e3f1b3526e2b1cf8e5df81deb562e19fd3829dfe0df43536e6c",
+      "quiz": [
+        [
+          "Where do you type py --version when using Windows locally?",
+          [
+            "Inside a Python string",
+            "In a terminal",
+            "In a list"
+          ],
+          1
+        ],
+        [
+          "What file extension normally identifies a Python script?",
+          [
+            ".py",
+            ".css",
+            ".jpg"
+          ],
+          0
+        ],
+        [
+          "Which command creates an isolated environment named study?",
+          [
+            "py study --create",
+            "print(venv)",
+            "py -m venv study"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "This editor already has Python. Import sys and complete interpreter_name to return the interpreter implementation's name. For local installation, use the terminal instructions in the lesson; terminal commands do not run in this editor.",
+        "starter": "import sys\n\ndef interpreter_name():\n    # Return sys.implementation.name.\n    pass\n\nprint(interpreter_name())",
+        "tests": [
+          {
+            "label": "The helper returns the interpreter name",
+            "code": "import sys\nassert interpreter_name() == sys.implementation.name"
+          },
+          {
+            "label": "The result is text",
+            "code": "assert isinstance(interpreter_name(), str)"
+          }
+        ],
+        "solution": "import sys\ndef interpreter_name():\n    return sys.implementation.name"
+      }
+    },
+    {
+      "slug": "lesson-03",
+      "title": "Loops and sequences",
+      "description": "Process strings, lists and tuples with indexing, slicing and iteration.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Sequences represent ordered values\nA sequence has a defined positional order. Lists, tuples and strings are common examples, but they do not have identical mutation behavior. A list can add, remove or replace elements. A tuple cannot replace its positions, although an object stored inside a tuple may itself be mutable. A string's characters cannot be changed in place; string operations create new strings.\n\nChoose the structure from the responsibility. A list suits an editable set of score readings, while a tuple can communicate a fixed group of values. Do not assume that an assignment such as backup = scores makes an independent list: both names refer to the same object. A shallow copy creates a new outer list, but nested mutable objects remain shared unless copied deliberately.\n\n## Indexing and slicing have different boundary behavior\nIndex zero selects the first item and -1 selects the last item. An empty list has neither, so direct access can raise IndexError. For values = [10, 20, 30, 40], values[1:3] returns [20, 30]: a slice includes its start and excludes its stop. A slice can be empty or safely stop at a boundary, while a single invalid index is an error.\n\nThe optional slice step controls which positions are visited. Do not use a compact slice you cannot explain; readability matters in shared automation code. Keep the distinction between an item's value and its index visible, especially when a displayed row number starts at one while list indexes start at zero.\n\n## Loops need a clear iteration contract\nA for loop visits the items of an iterable. range(4) supplies 0, 1, 2 and 3; it excludes its stop. enumerate can pair each item with a count, and start=1 is useful for human-readable numbering. The count is not automatically the item's underlying zero-based index.\n\nA while loop repeats while its condition is true. Ensure each relevant path changes the state toward termination or exits deliberately. break exits the loop; continue skips the rest of the current iteration. Indentation determines which lines belong to that iteration.\n\nAvoid removing elements from a list while an ordinary loop is traversing that same list: shifting positions can skip values or produce confusing behavior. Construct a filtered result when the operation's contract is to return a selected subset without changing the original.\n\n## Worked filtering example\nRun this code and compare the original list with the result.\n\n```\nscores = [48, 75, 92, 60]\neligible = [score for score in scores if score >= 75]\nfor number, score in enumerate(eligible, start=1):\n    print(number, score)\nprint(scores)\nprint(scores[1:3])\n```\n\nThe numbered lines are 1 75 and 2 92. The original list remains [48, 75, 92, 60], and the slice is [75, 92]. The comprehension is equivalent to creating an empty result and appending each matching score. Here its elements are integers, so retaining references to the same immutable values is safe for the intended operation.\n\n## Guided browser practice\n- Complete passing_scores using the workshop's threshold of 70, not the worked example's threshold of 75.\n- Retain matching scores in their original order and return a new list.\n- Check empty input, exactly 70, all-failing scores and repeated passing scores.\n- Verify that calling the helper does not modify the caller's source list.\n\n## Review and common mistakes\nDo not assign result = values.append(x): append mutates the list and returns None. Do not confuse a final list length with its last valid index. Explain why filtering preserves duplicates unless a separate business rule asks for uniqueness. Completion requires understanding the loop or comprehension, its stop boundaries and its mutation contract, not only matching one sample output.",
+      "legacyContentHash": "810b397a16738c0e3d144f33d1b9e720ac61478df3c1cf90c198104a8a879c33",
+      "quiz": [
+        [
+          "For values = [3, 6, 9], what is values[-1]?",
+          [
+            "3",
+            "6",
+            "9"
+          ],
+          2
+        ],
+        [
+          "Which collection is mutable?",
+          [
+            "A list",
+            "A string",
+            "A tuple"
+          ],
+          0
+        ],
+        [
+          "How many values are produced by range(4)?",
+          [
+            "3",
+            "4",
+            "5"
+          ],
+          1
+        ]
+      ],
+      "practice": {
+        "instructions": "Write passing_scores to return a new list containing scores of at least 70, in their original order. Do not change the input list.",
+        "starter": "def passing_scores(scores):\n    pass\n\nprint(passing_scores([42, 70, 88]))",
+        "tests": [
+          {
+            "label": "Filter while preserving order",
+            "code": "assert passing_scores([90, 45, 70, 68]) == [90, 70]"
+          },
+          {
+            "label": "Handle an empty list",
+            "code": "assert passing_scores([]) == []"
+          },
+          {
+            "label": "Keep the original list unchanged",
+            "code": "source = [55, 85]\npassing_scores(source)\nassert source == [55, 85]"
+          }
+        ],
+        "solution": "def passing_scores(scores):\n    return [score for score in scores if score >= 70]"
+      }
+    },
+    {
+      "slug": "lesson-04",
+      "title": "Dictionaries, sets and modules",
+      "description": "Represent named fields, remove duplicates and reuse library functions.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Dictionaries give records named fields\nA dictionary maps hashable keys to values. An employee profile might contain a name and a skills list, while a lookup table maps stable employee IDs to those profiles. Keys are unique: assigning another value under an existing key replaces its previous value. Values can be mutable, so sharing the same nested list between records can create unintended changes.\n\nUse record[key] when the key is required and missing data should be an error. Use record.get(key, default) when absence is part of the contract. A default does not validate the type of a present value. For example, a present skills field containing an integer is not repaired by get. Validate shape and types before processing externally supplied records.\n\nIterating over items yields key/value pairs. Dictionary insertion order is preserved by modern Python, but that is not the same as alphabetic sorting. Choose an explicit sorted view when the report requires a consistent order independent of input construction.\n\n## Sets represent membership and uniqueness\nA set contains unique hashable values and supports union, intersection and difference. Use intersection to find shared skills, union to combine distinct skills and difference to find skills missing from a requirement. A set is not a display-order contract: convert to a deliberately sorted list when the consumer expects alphabetical output.\n\nConverting every collection to a set loses duplicate information. That is correct when counting employees who have a skill once each, but incorrect when counting repeated events. State which business question is being answered before deduplicating.\n\n## Validate types and understand a subtle numeric case\nisinstance allows a value to satisfy a type or subtype relationship. In Python, bool is a subclass of int, so isinstance(True, int) is true. If an input contract requires an integer count but excludes booleans, enforce that distinction deliberately. Similarly, a nonempty list may still contain invalid elements; validating the outer container alone is not enough.\n\n## Modules create reusable boundaries\nA module groups definitions in a Python file. import math gives access through names such as math.sqrt; from math import sqrt brings a selected name into the current namespace. Avoid naming your own file math.py or another standard-library module name unintentionally, because import resolution may load your file instead of the expected library.\n\nKeep reusable calculation helpers separate from interactive or file-reading entry points. A module that performs unexpected work immediately on import is harder to reuse and test. For a local command-line script, an if __name__ == \"__main__\" boundary can separate entry-point behavior from definitions.\n\n## Worked example and expected result\n```\nprofile = {\"name\": \"Mira\", \"skills\": [\"Python\", \"SQL\", \"Python\"]}\nrequired = {\"Python\", \"Git\"}\navailable = set(profile[\"skills\"])\nprint(sorted(available & required))\nprint(sorted(required - available))\nprint(profile.get(\"department\", \"Unassigned\"))\n```\n\nThe output is ['Python'], then ['Git'], then Unassigned. The original profile still contains its repeated Python entry; a separate set was constructed for a membership question. The fallback is used because department is absent, not because every profile field has been validated.\n\n## Guided practice and acceptance criteria\n- Complete shared_skills, returning a sorted list of shared values without duplicates.\n- Test no shared skills, empty input, repeated tags and differently ordered input lists.\n- Write a profile validator for a nonblank name and a list of nonblank skill strings.\n- Put that validator in a local module and import it from a small entry-point file.\n\nExplain which information each transformation preserves or discards. A correct report has a defined input contract, an intentional uniqueness rule and an explicit output order.",
+      "legacyContentHash": "fa220ccbb814415195eb7c98e4a051f44be91cc31fd09d5e311f75d684a15631",
+      "quiz": [
+        [
+          "Which operator finds the intersection of two sets?",
+          [
+            "&",
+            "+",
+            "//"
+          ],
+          0
+        ],
+        [
+          "What does a dictionary associate with each key?",
+          [
+            "Only a loop",
+            "A value",
+            "A file extension"
+          ],
+          1
+        ],
+        [
+          "Which expression sorts the unique values in items?",
+          [
+            "items.unique()",
+            "len(items)",
+            "sorted(set(items))"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete shared_skills to return the shared values from two skill lists as an alphabetically sorted list with no duplicates.",
+        "starter": "def shared_skills(first, second):\n    pass\n\nprint(shared_skills(['SQL', 'Python'], ['Python', 'Git']))",
+        "tests": [
+          {
+            "label": "Find common skills",
+            "code": "assert shared_skills(['SQL', 'Python'], ['Python', 'Git']) == ['Python']"
+          },
+          {
+            "label": "Remove duplicates and sort",
+            "code": "assert shared_skills(['SQL', 'Git', 'SQL'], ['SQL', 'Git']) == ['Git', 'SQL']"
+          },
+          {
+            "label": "Handle no common values",
+            "code": "assert shared_skills([], ['Python']) == []"
+          }
+        ],
+        "solution": "def shared_skills(first, second):\n    return sorted(set(first) & set(second))"
+      }
+    },
+    {
+      "slug": "lesson-05",
+      "title": "Project: configuration manager",
+      "description": "Combine dictionary operations and functions into a small settings manager.",
+      "durationMinutes": 35,
+      "completionPercent": 90,
+      "content": "## Project brief and scope\nCreate a small configuration manager for harmless training preferences such as theme or page size. It supports adding, updating, deleting and displaying settings. The important lesson is a predictable API over shared mutable state, not merely making several dictionary operations print messages. Do not use classroom sample code to store real credentials.\n\nWrite the operation contracts before implementation. Add succeeds only when a normalized key is absent. Update succeeds only when it exists. Delete removes an existing key without creating a new one. Display returns a stable representation. Decide how empty keys and invalid values are rejected, then apply the same policy at every operation boundary.\n\n## Normalization is part of identity\nIf Theme, theme and surrounding-whitespace variants represent the same setting, normalize before both membership checks and writes. Otherwise one function can look up a different key from another function. For this exercise, strip surrounding whitespace and lowercase the key. This is a narrow classroom policy; arbitrary user-facing identifiers may require a different internationalization and case policy.\n\nNormalization does not validate the remaining content. A string of spaces becomes an empty key, which still needs a decision. Likewise, receiving a non-string key should not accidentally produce a confusing attribute error if the public API is intended to reject that input explicitly.\n\n## Mutations and return values serve different roles\nThe settings dictionary is a shared object passed to a helper. Mutating it changes the caller's dictionary. Returning True or False describes the result without requiring every caller to parse a console message. Keep user-facing wording in the presentation layer so another script or test can reuse the same operation.\n\nA failed operation should leave the dictionary unchanged. Check preconditions before writing. This principle matters later in transactions and service APIs too: failure must not quietly apply half of a requested change. Returning a success flag is useful only when it accurately reflects the resulting state.\n\n## Worked example: add without replacing\n```\ndef add_setting(settings, key, value):\n    normalized = key.strip().lower()\n    if not normalized:\n        raise ValueError(\"A setting key is required\")\n    if normalized in settings:\n        return False\n    settings[normalized] = value\n    return True\n\npreferences = {}\nprint(add_setting(preferences, \" Theme \", \"dark\"))\nprint(add_setting(preferences, \"theme\", \"light\"))\nprint(preferences)\n```\n\nThe output is True, False and {'theme': 'dark'}. The second call recognizes the normalized existing key and does not overwrite it. The example assumes a string key; extend the input validation deliberately if the function is exposed to less controlled callers.\n\n## Guided browser practice\nThe workshop asks you to implement update_setting, which differs from add_setting: a missing key must not be inserted. Normalize the key, check presence and only then update its value. Verify the returned flag and the actual dictionary after both success and failure. A function that always returns True without checking state does not satisfy the contract.\n\n## Local extension and acceptance criteria\n- Implement delete_setting with a documented missing-key result.\n- Return a title-sorted or key-sorted display without relying on the order settings happened to be inserted.\n- Test empty settings, an existing key, a missing key, whitespace normalization and a rejected empty key.\n- Verify failed updates and deletions preserve every other setting.\n- Keep calculation/mutation helpers separate from a command-line menu or browser messages.\n\nPrepare a short operation table listing preconditions, resulting state and returned value. Another employee should be able to use the manager without guessing whether an update silently creates new preferences or whether a failed call has already changed data.",
+      "legacyContentHash": "9be3fa02ad9b71828991ca26aa25a4b8fc25b42676c6f6ccec59845c6b8825ab",
+      "quiz": [
+        [
+          "What is the result of ' MODE '.strip().lower()?",
+          [
+            " MODE ",
+            "mode",
+            "Mode"
+          ],
+          1
+        ],
+        [
+          "Which expression checks whether a settings key exists?",
+          [
+            "key in settings",
+            "key + settings",
+            "settings is key"
+          ],
+          0
+        ],
+        [
+          "What should a failed update of an absent key preserve?",
+          [
+            "Only the key's case",
+            "Nothing",
+            "The original settings"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Implement update_setting. Strip whitespace and lowercase the key. Update an existing key and return True; return False without adding a missing key.",
+        "starter": "def update_setting(settings, key, value):\n    pass\n\nprefs = {'theme': 'light'}\nprint(update_setting(prefs, ' THEME ', 'dark'))\nprint(prefs)",
+        "tests": [
+          {
+            "label": "Update a normalized key",
+            "code": "prefs = {'theme': 'light'}\nassert update_setting(prefs, ' THEME ', 'dark') is True\nassert prefs['theme'] == 'dark'"
+          },
+          {
+            "label": "Do not create a missing key",
+            "code": "prefs = {}\nassert update_setting(prefs, 'theme', 'dark') is False\nassert prefs == {}"
+          }
+        ],
+        "solution": "def update_setting(settings, key, value):\n    key = key.strip().lower()\n    if key not in settings:\n        return False\n    settings[key] = value\n    return True"
+      }
+    },
+    {
+      "slug": "lesson-06",
+      "title": "Error handling",
+      "description": "Distinguish invalid input from programming errors and recover deliberately.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Distinguish invalid syntax, invalid data and failed operations\nA SyntaxError means Python could not parse the source as written. A ValueError from int(\"many\") occurs while syntactically valid code executes. A missing file or unavailable dependency is another category. Understanding which boundary failed is more useful than adding one large catch-all handler around the whole program.\n\nRead an exception traceback from the exception type and final message back to the relevant call path. A line number points to where a failure became visible, which may differ from where invalid data first entered the program. Preserve useful context when reporting or translating failures, but avoid logging secrets or unnecessary employee data.\n\n## A narrow try block supports meaningful recovery\nPut the operation that can fail inside try and catch the specific exception you can handle. Catching Exception indiscriminately can hide an unrelated NameError or a programming defect as if it were routine input validation. Do not use a bare except merely to keep printing success.\n\nAn else block executes when the try block finishes without an exception. A finally block executes for cleanup whether the operation succeeds or fails. For file objects, a with statement is normally clearer than manually closing in several branches. Do not put a return in finally simply to suppress every previous outcome; that can replace the result or failure the caller needed to observe.\n\n## Conversion is not complete validation\nThe expression int(\"0\") succeeds, but zero may be invalid for a number of participants. Separate syntax conversion from the business range check. Also document the accepted input types: int(None) raises TypeError rather than ValueError. A helper whose contract accepts strings can focus on invalid string syntax; a public boundary accepting arbitrary objects needs an explicit policy for other types.\n\nNone can be a documented “no valid result” marker, but it must not be confused with a valid count of zero if the domain allows zero. Another valid design raises a named validation exception. Choose one contract and keep callers consistent instead of returning strings, numbers and exceptions interchangeably without explanation.\n\n## Worked example with explicit outcomes\n```\ndef parse_positive(text):\n    try:\n        value = int(text)\n    except ValueError:\n        return None\n    if value <= 0:\n        return None\n    return value\n\nfor sample in [\"12\", \"0\", \"-2\", \"many\"]:\n    print(sample, parse_positive(sample))\n```\n\nThe lines end in 12, None, None and None respectively. The helper assumes a string input. The conversion handles invalid numeric text, and a separate check handles values outside the positive range. No success is reported after a failed conversion.\n\n## From simple input checks to a checksum validator\nAn ISBN-style exercise demonstrates layered validation. First check the required length and allowed characters. Then convert permitted symbols, calculate the weighted sum and evaluate the checksum rule. For ISBN-10, weights descend from 10 to 1 and X can represent 10 only in the last position. A checksum match does not excuse malformed input, and a plausible-looking string is not proof of a valid checksum.\n\n## Guided practice and review\n- Complete parse_count using the workshop's string-input contract and return None for invalid or nonpositive input.\n- Test an accepted value, zero, a negative integer string, blank input and nonnumeric text.\n- Extend a local caller to provide a useful message without mixing that message into the numeric helper's return type.\n- For an additional lab, implement the layered ISBN-10 validation and distinguish format failures from checksum failures.\n\nExplain exactly which exception is handled and which conditions are checked without exceptions. A correct solution preserves failures it cannot honestly recover from rather than hiding every defect behind a generic fallback.",
+      "legacyContentHash": "9442f4bcf7ca0a0a4cf067e8ab87a837003e7b27470b9fa22e3d69443630b419",
+      "quiz": [
+        [
+          "Which block runs for cleanup regardless of whether a try block raises?",
+          [
+            "finally",
+            "if",
+            "def"
+          ],
+          0
+        ],
+        [
+          "Which statement deliberately signals an invalid argument?",
+          [
+            "print(ValueError)",
+            "raise ValueError('Invalid value')",
+            "return except"
+          ],
+          1
+        ],
+        [
+          "When does try/except/else execute its else block?",
+          [
+            "Only when an exception was caught",
+            "Before try starts",
+            "When try succeeds without an exception"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete parse_count. Convert text to an integer and return it only when positive. Return None for invalid text, zero or a negative value. Catch ValueError specifically.",
+        "starter": "def parse_count(text):\n    pass\n\nprint(parse_count('12'))\nprint(parse_count('many'))",
+        "tests": [
+          {
+            "label": "Accept a positive integer",
+            "code": "assert parse_count('12') == 12"
+          },
+          {
+            "label": "Handle invalid text",
+            "code": "assert parse_count('many') is None"
+          },
+          {
+            "label": "Reject nonpositive values",
+            "code": "assert parse_count('0') is None\nassert parse_count('-4') is None"
+          }
+        ],
+        "solution": "def parse_count(text):\n    try:\n        value = int(text)\n    except ValueError:\n        return None\n    return value if value > 0 else None"
+      }
+    },
+    {
+      "slug": "lesson-07",
+      "title": "Classes and objects",
+      "description": "Bundle state and behavior into instances with clear responsibilities.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Model state and behavior together\nA class defines a kind of object. An instance holds the state of one particular object. Two inventory records share operations such as receiving stock, but their quantities must remain independent. Use a class when operations and the rules protecting state belong together; dictionaries remain useful for passive records.\n\nCalling a class invokes __init__ to initialize the new instance. The parameter self refers to that instance. Python supplies self when you call item.receive(3), so the caller passes only the amount. Assigning self.quantity creates instance state. A mutable class attribute, such as a shared transaction list, can accidentally connect unrelated instances.\n\n## Establish and preserve valid state\nA constructor should reject invalid starting values rather than create an object that later methods must repair. __init__ initializes an instance; it must not return a replacement object. Methods should preserve the same rules after construction. Define units, accepted types and failure behavior before implementation.\n\n## Worked example: independent inventory records\n```\nclass StockItem:\n    def __init__(self, name, quantity=0):\n        if type(quantity) is not int or quantity < 0:\n            raise ValueError(\"Use a nonnegative integer\")\n        self.name = name\n        self.quantity = quantity\n\n    def receive(self, amount):\n        if type(amount) is not int or amount <= 0:\n            raise ValueError(\"Receive a positive integer\")\n        self.quantity += amount\n        return self.quantity\n\nfirst = StockItem(\"Keyboard\", 2)\nsecond = StockItem(\"Mouse\")\nprint(first.receive(3))\nprint(second.quantity)\n```\n\nThe output is 5 followed by 0. Both instances use the same method definition, but self identifies a different object on each call. Returning the quantity supports reuse without forcing the method to print. The type check deliberately rejects booleans, which otherwise qualify as integers in isinstance checks.\n\n## References are not independent copies\nAssigning another = first creates another reference to the same object. Updating another also affects the object observed through first. Constructing another StockItem creates separate state. Draw the names and objects when debugging unexpected updates in collections of instances.\n\nClass attributes suit shared constants or deliberately shared information. Instance attributes suit per-record state. Putting an instance's mutable list on the class merely to avoid a constructor can cause every instance to append to the same list.\n\n## Coding workshop and acceptance checks\nComplete Counter in the editor. Its constructor starts self.value at zero and increment adds one. Construct two counters, increment the first twice and the second once, and verify values of two and one. A third new counter must still start at zero.\n\nExplain why a local variable named value does not update self.value. Keep required public names unchanged so checks can call your implementation. As an extension, add reset and document whether it returns a value or simply changes state. Test its effect on one instance while observing another.",
+      "legacyContentHash": "c39e73ebbe6de6bb52ec0f4a5db55942f16c3110715053385d739d495d1668a3",
+      "quiz": [
+        [
+          "What does self refer to in an instance method?",
+          [
+            "The module file",
+            "The current instance",
+            "Every class at once"
+          ],
+          1
+        ],
+        [
+          "Which method initializes a new instance?",
+          [
+            "__init__",
+            "append",
+            "__main__"
+          ],
+          0
+        ],
+        [
+          "How do you instantiate a class named Counter?",
+          [
+            "new Counter",
+            "Counter.init",
+            "Counter()"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Build a Counter class. Its constructor starts value at zero, and increment adds one. Each instance must have its own value.",
+        "starter": "class Counter:\n    def __init__(self):\n        pass\n\n    def increment(self):\n        pass\n\ncounter = Counter()\ncounter.increment()\nprint(counter.value)",
+        "tests": [
+          {
+            "label": "Initialize a counter",
+            "code": "assert Counter().value == 0"
+          },
+          {
+            "label": "Increment twice",
+            "code": "c = Counter()\nc.increment()\nc.increment()\nassert c.value == 2"
+          },
+          {
+            "label": "Keep instances independent",
+            "code": "a, b = Counter(), Counter()\na.increment()\nassert b.value == 0"
+          }
+        ],
+        "solution": "class Counter:\n    def __init__(self):\n        self.value = 0\n    def increment(self):\n        self.value += 1"
+      }
+    },
+    {
+      "slug": "lesson-08",
+      "title": "Project: budget ledger",
+      "description": "Model deposits, withdrawals, transfers and a readable spending summary.",
+      "durationMinutes": 35,
+      "completionPercent": 90,
+      "content": "## Translate a budget into transactions\nA ledger records transactions instead of repeatedly overwriting a balance. Deposits are positive integer-cent amounts and withdrawals are negative amounts. The balance is their sum. Keeping transactions explains how a balance arose, which a single balance field cannot do alone.\n\nHere, 1250 means 12.50 currency units. Integer cents avoid binary floating-point surprises in decimal currency arithmetic. Real financial systems also require currency codes, rounding policies, durable storage and audit controls. This project focuses on arithmetic and valid state changes.\n\n## Validate before changing the ledger\nA withdrawal succeeds only when its amount is positive and the current balance covers it. Check both conditions before appending. A rejected request must leave the ledger unchanged. Returning False after modifying the list violates the contract even if later code repairs the balance.\n\nComputing the balance from transactions avoids maintaining two values that can disagree. This is clear for a small ledger. A large system might cache balances, but must then keep the cache and transactions consistent.\n\n## Worked example: a controlled budget category\n```\nclass Budget:\n    def __init__(self):\n        self.ledger = []\n\n    def deposit(self, cents):\n        if type(cents) is not int or cents <= 0:\n            raise ValueError(\"Deposit positive integer cents\")\n        self.ledger.append(cents)\n\n    def balance(self):\n        return sum(self.ledger)\n\n    def withdraw(self, cents):\n        if type(cents) is not int or cents <= 0:\n            return False\n        if cents > self.balance():\n            return False\n        self.ledger.append(-cents)\n        return True\n\ntraining = Budget()\ntraining.deposit(5000)\nprint(training.withdraw(1250))\nprint(training.withdraw(4000))\nprint(training.ledger)\nprint(training.balance())\n```\n\nThe output is True, False, [5000, -1250] and 3750 on separate lines. The second withdrawal cannot be covered and creates no transaction. The remaining amount represents 37.50 units; convert only for display.\n\n## Transfers form a complete operation\nA transfer withdraws from one category and deposits into another. Validate the amount and destination before starting. In a shared persistent application, both changes belong in one database transaction so a failure cannot debit one account without crediting the other. This classroom list does not provide that persistence guarantee.\n\nKeep descriptions separate from numeric amounts if you extend transactions into dictionaries. Never calculate a balance by adding display strings such as \"12.50 spent\". Report success only after completing the operation.\n\n## Coding workshop and acceptance checks\nImplement withdraw(ledger, cents) using the supplied list contract. Return a boolean and append a negative amount only on success. Test exact balance, overdraw, zero, negative requests and an empty ledger. Save a copy before a rejected call and assert equality afterwards.\n\nExtend the project with two categories and a transfer. Their combined balance must remain constant. Then attempt an invalid transfer and verify both ledgers remain unchanged. Explain why checking failure paths is as important as checking successful balances.",
+      "legacyContentHash": "5f3a74809ab0b638a103913b6b6e86efab001766b984b88a81846a124827a989",
+      "quiz": [
+        [
+          "Which amount records a withdrawal of 3 dollars using cents?",
+          [
+            "300",
+            "-3",
+            "-300"
+          ],
+          2
+        ],
+        [
+          "How can a balance be derived from signed transaction amounts?",
+          [
+            "Sum the amounts",
+            "Count the descriptions",
+            "Sort the transactions"
+          ],
+          0
+        ],
+        [
+          "Why retain transactions rather than only a balance?",
+          [
+            "To prevent any need for validation",
+            "To make changes traceable",
+            "To make all balances equal"
+          ],
+          1
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete withdraw for a ledger of integer-cent amounts. Append a negative transaction and return True only when cents is positive and the ledger has enough funds. Otherwise return False without changing the ledger.",
+        "starter": "def withdraw(ledger, cents):\n    pass\n\nledger = [1000]\nprint(withdraw(ledger, 250))\nprint(ledger)",
+        "tests": [
+          {
+            "label": "Record a funded withdrawal",
+            "code": "ledger = [1000]\nassert withdraw(ledger, 250) is True\nassert ledger == [1000, -250]"
+          },
+          {
+            "label": "Keep an unfunded ledger unchanged",
+            "code": "ledger = [100]\nassert withdraw(ledger, 200) is False\nassert ledger == [100]"
+          },
+          {
+            "label": "Reject a negative withdrawal",
+            "code": "ledger = [100]\nassert withdraw(ledger, -10) is False\nassert ledger == [100]"
+          }
+        ],
+        "solution": "def withdraw(ledger, cents):\n    if cents <= 0 or sum(ledger) < cents:\n        return False\n    ledger.append(-cents)\n    return True"
+      }
+    },
+    {
+      "slug": "lesson-09",
+      "title": "Object-oriented programming",
+      "description": "Apply encapsulation, inheritance, polymorphism and abstraction.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Design around a usable contract\nA duration report needs objects providing duration(); it does not need to know whether each represents audio, video or a live session. New implementations can join without adding branches to the report. This is polymorphism: the same operation invokes behavior supplied by different objects.\n\nDuck typing means using the operations an object supports. It still requires a contract. All duration methods must agree on units and meaning. Mixing seconds with minutes produces plausible but incorrect totals. Document that each implementation returns nonnegative seconds.\n\n## Inheritance and composition\nInheritance models a substitutable specialized kind of object. A subclass can reuse behavior and override selected methods. super() calls the next implementation in the method resolution order, supporting cooperative initialization. Avoid duplicating parent initialization in every child.\n\nComposition puts a collaborator inside an object: a player can contain media rather than inherit from every format. Choose the design whose responsibilities and valid operations are clearest. A deeper inheritance hierarchy is not automatically better.\n\n## Worked example: a polymorphic report\n```\nfrom abc import ABC, abstractmethod\n\nclass Media(ABC):\n    @abstractmethod\n    def duration(self):\n        \"\"\"Return duration in seconds.\"\"\"\n        raise NotImplementedError\n\nclass Clip(Media):\n    def __init__(self, seconds):\n        self.seconds = seconds\n\n    def duration(self):\n        return self.seconds\n\nclass LiveSession(Media):\n    def duration(self):\n        return 1800\n\ndef report_seconds(items):\n    return sum(item.duration() for item in items)\n\nprint(report_seconds([Clip(120), LiveSession()]))\n```\n\nThe output is 1920. Each object supplies its duration behavior without a type-specific branch. The abstract base class prevents instantiation of subclasses missing duration. It does not automatically validate units or results; this example assumes valid clip durations.\n\n## Properties protect state through a stable interface\nA property can expose salary while storing _salary. Its setter can reject negative amounts before assignment. Inside the setter, assign self._salary: assigning self.salary again recursively invokes the setter. An underscore marks an internal convention; it is not security or access control.\n\nProperties are useful when attribute access needs validation. Avoid expensive network operations hidden in ordinary attribute reads. Callers should understand the likely cost and side effects of their operations.\n\n## Coding workshop and design review\nImplement total_duration by summing duration() results. Inputs may contain unrelated classes sharing that method. Do not filter by one concrete class or build an isinstance chain. Verify that an empty collection returns zero and a mixed collection includes every item.\n\nExtend a salary tracker with a validating property and confirm a rejected update preserves the old salary. Create an incomplete Media subclass and explain the TypeError on construction. Distinguish rules enforced by the abstract interface from rules requiring implementation and tests.",
+      "legacyContentHash": "60b894ee5100ad7310a70f87df3cfa71d5799b7735ddda18775a34327573522f",
+      "quiz": [
+        [
+          "What does super().__init__() commonly reuse?",
+          [
+            "A parent's initialization",
+            "The final list element",
+            "A package download"
+          ],
+          0
+        ],
+        [
+          "What is a leading underscore in an attribute name normally used for?",
+          [
+            "Encryption",
+            "An internal-use convention",
+            "A mandatory abstract method"
+          ],
+          1
+        ],
+        [
+          "An abstract base class is useful for defining what?",
+          [
+            "Only numeric constants",
+            "A browser theme",
+            "A required interface"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Implement total_duration. The input contains objects with a duration() method. Sum those method results without checking each object's concrete class.",
+        "starter": "def total_duration(media):\n    pass\n\nclass ShortClip:\n    def duration(self):\n        return 15\n\nprint(total_duration([ShortClip(), ShortClip()]))",
+        "tests": [
+          {
+            "label": "Use a shared method contract",
+            "code": "class A:\n    def duration(self): return 12\nclass B:\n    def duration(self): return 7\nassert total_duration([A(), B()]) == 19"
+          },
+          {
+            "label": "Handle an empty catalogue",
+            "code": "assert total_duration([]) == 0"
+          }
+        ],
+        "solution": "def total_duration(media):\n    return sum(item.duration() for item in media)"
+      }
+    },
+    {
+      "slug": "lesson-10",
+      "title": "Project: polygon area calculator",
+      "description": "Use related shape classes while preserving valid dimensions.",
+      "durationMinutes": 35,
+      "completionPercent": 90,
+      "content": "## Make dimensions and units explicit\nA rectangle's area is width times height, its perimeter is twice their sum and its diagonal follows the Pythagorean theorem. If lengths are centimetres, area is square centimetres. A correct number with an incorrect unit is still an incorrect report.\n\nRequire positive dimensions at the boundary. The workshop supplies positive inputs, allowing its helper to focus on fitting. A reusable public class should also document numeric types and reject nonfinite values when they would make calculations meaningless.\n\n## Whole fits differ from area ratios\nFor a regular axis-aligned grid without rotation, multiply the whole number fitting across the width by the whole number fitting down the height. Unused strips cannot automatically combine into another complete rectangle.\n\nA 9 by 5 rectangle has area 45. A 2 by 2 rectangle has area 4, but eleven such rectangles do not fit in this grid. Four fit across and two fit down, giving eight. Leftover dimensions explain why dividing areas overestimates the result.\n\n## Worked example: geometry with a stated fitting rule\n```\nfrom math import hypot\n\nclass Rectangle:\n    def __init__(self, width, height):\n        if width <= 0 or height <= 0:\n            raise ValueError(\"Positive dimensions required\")\n        self.width = width\n        self.height = height\n\n    def area(self):\n        return self.width * self.height\n\n    def perimeter(self):\n        return 2 * (self.width + self.height)\n\n    def diagonal(self):\n        return hypot(self.width, self.height)\n\n    def grid_fit(self, sw, sh):\n        if sw <= 0 or sh <= 0:\n            raise ValueError(\"Positive small dimensions required\")\n        return int(self.width // sw) * int(self.height // sh)\n\nroom = Rectangle(9, 5)\nprint(room.area())\nprint(room.perimeter())\nprint(room.grid_fit(2, 2))\n```\n\nThe output is 45, 28 and 8. Floor division counts whole placements per direction. This example assumes finite numeric dimensions and does not solve arbitrary packing with rotated or mixed orientations.\n\n## Preserve the square invariant\nA square requires equal width and height. Inheriting independent dimension setters can let callers turn it into a non-square. Override every relevant mutation or design a separate class with one side value. Sharing a small interface can be clearer than forcing inheritance.\n\nAn invariant must remain true after every public operation. Check it after construction and every setter. A class name does not itself guarantee correct state.\n\n## Coding workshop and acceptance checks\nImplement fits_inside for the stated no-rotation grid rule. Test equal-sized shapes, a smaller shape too large in one direction, the 9 by 5 example and leftover edge strips. Return a whole count.\n\nAdd perimeter and diagonal methods, comparing floating results with a tolerance. Add a square side setter and verify both dimensions remain equal after updates. Explain the distinction between area, grid fitting and general packing so users understand the project's guarantee.",
+      "legacyContentHash": "1933b3044c7ddd6b047d53b6ef4c7257ef8484704ba20ae86acb90916bfefb7e",
+      "quiz": [
+        [
+          "What is a 5 by 7 rectangle's perimeter?",
+          [
+            "35",
+            "24",
+            "12"
+          ],
+          1
+        ],
+        [
+          "What is a square's area when its side is 6?",
+          [
+            "12",
+            "24",
+            "36"
+          ],
+          2
+        ],
+        [
+          "Which operator returns a whole-number quotient for positive integers?",
+          [
+            "//",
+            "/",
+            "**"
+          ],
+          0
+        ]
+      ],
+      "practice": {
+        "instructions": "Write fits_inside to count axis-aligned smaller rectangles that fit in a larger rectangle without rotation. Use a whole count along each dimension, not an area ratio. All four inputs will be positive.",
+        "starter": "def fits_inside(width, height, small_width, small_height):\n    pass\n\nprint(fits_inside(9, 5, 2, 2))",
+        "tests": [
+          {
+            "label": "Use whole dimension counts",
+            "code": "assert fits_inside(9, 5, 2, 2) == 8"
+          },
+          {
+            "label": "Handle an oversized item",
+            "code": "assert fits_inside(3, 4, 5, 2) == 0"
+          },
+          {
+            "label": "Handle an exact fit",
+            "code": "assert fits_inside(6, 4, 3, 2) == 4"
+          }
+        ],
+        "solution": "def fits_inside(width, height, small_width, small_height):\n    return (width // small_width) * (height // small_height)"
+      }
+    },
+    {
+      "slug": "lesson-11",
+      "title": "Linear data structures",
+      "description": "Compare arrays, linked lists, stacks and queues.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Choose a structure from required operations\nA data structure organizes values to support particular operations. A Python list is a resizable array of references: indexing is constant time and appending is amortized constant time. Inserting or removing at the front shifts other entries and takes linear time. This difference matters when processing thousands of requests.\n\nA linked list stores nodes connected by references. Finding a position requires traversal. Inserting after an already-known node can be constant time, but finding that node may take linear time. Include lookup cost when comparing approaches rather than quoting only the final reference change.\n\n## Stack and queue express removal policies\nA stack removes the most recently added item first: last in, first out. Undo history and pending nested work naturally use this order. append and pop at the end of a Python list implement a stack efficiently.\n\nA queue removes the oldest item first: first in, first out. Training requests waiting for processing commonly need this policy. collections.deque supports efficient append and popleft. Repeated list.pop(0) works but shifts all remaining entries.\n\n## Worked example: the same arrivals, different policies\n```\nfrom collections import deque\n\narrivals = [\"request-A\", \"request-B\", \"request-C\"]\nstack = list(arrivals)\nreversed_requests = []\nwhile stack:\n    reversed_requests.append(stack.pop())\n\nqueue = deque(arrivals)\nprocessed = []\nwhile queue:\n    processed.append(queue.popleft())\n\nprint(reversed_requests)\nprint(processed)\nprint(arrivals)\n```\n\nThe first output is ['request-C', 'request-B', 'request-A']. The second and third are ['request-A', 'request-B', 'request-C']. Copying input into a stack leaves arrivals unchanged. The containers start with the same values but implement different processing orders.\n\n## Linked-list changes need boundary handling\nFor deletion, track previous and current nodes. Removing the head changes the head reference. Removing an interior node reconnects its predecessor to the following node. Removing the final node may require updating a maintained tail. Define a consistent result for an absent value.\n\nAn empty list and a one-node list expose assumptions hidden by larger examples. Draw references before and after an operation. A detached node should no longer be reachable through the list's head. Losing the reference to the remaining chain is a different error from merely returning the wrong value.\n\n## Coding workshop and complexity discussion\nImplement reverse_items using a stack and return a new list. Test empty input, one item and repeated values. Save a copy of input and verify it is unchanged. Do not sort: reversal uses positions, while sorting orders values.\n\nExtend the project with linked-list append, find and delete. Test head, middle, tail and absent deletion. State time and additional memory costs for your reversal. Explain why arrival-order processing does not automatically provide thread safety or durability; those are separate requirements of a production queue.",
+      "legacyContentHash": "4a8a3c1db2e5444b62c9802c0c881808dd74cd5914234f23fdeb677c7e345cd0",
+      "quiz": [
+        [
+          "Which phrase describes a queue?",
+          [
+            "First in, first out",
+            "Last in, first out",
+            "Always sorted"
+          ],
+          0
+        ],
+        [
+          "What connects nodes in a linked list?",
+          [
+            "Their displayed colors",
+            "References to other nodes",
+            "Equal numeric values"
+          ],
+          1
+        ],
+        [
+          "What does append(x) followed by pop() at a list's end retrieve?",
+          [
+            "The first item ever added",
+            "Every item",
+            "The most recently appended item"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete reverse_items using a stack. Return the input values in reverse order without mutating the original list.",
+        "starter": "def reverse_items(items):\n    stack = list(items)\n    result = []\n    # Pop from stack until it is empty.\n    return result\n\nprint(reverse_items([1, 2, 3]))",
+        "tests": [
+          {
+            "label": "Reverse the order",
+            "code": "assert reverse_items([1, 2, 3]) == [3, 2, 1]"
+          },
+          {
+            "label": "Handle an empty stack",
+            "code": "assert reverse_items([]) == []"
+          },
+          {
+            "label": "Do not mutate input",
+            "code": "items = ['a', 'b']\nreverse_items(items)\nassert items == ['a', 'b']"
+          }
+        ],
+        "solution": "def reverse_items(items):\n    stack = list(items)\n    result = []\n    while stack:\n        result.append(stack.pop())\n    return result"
+      }
+    },
+    {
+      "slug": "lesson-12",
+      "title": "Project: hash table",
+      "description": "Store key-value pairs using hashing and collision handling.",
+      "durationMinutes": 35,
+      "completionPercent": 90,
+      "content": "## Map keys into buckets\nA hash table uses a hash function to choose where a key might be stored. Taking a hash modulo bucket count produces a valid bucket index. Different keys can select the same bucket. This collision is an expected condition rather than an exceptional failure.\n\nSeparate chaining stores multiple key-value entries in each bucket. A lookup first selects the bucket, then compares original keys inside it. Equal hashes do not establish equal keys. Updating an existing key must replace its value rather than create contradictory duplicate records.\n\n## Separate table lookup from bucket updates\nThe editor focuses on bucket_put(bucket, key, value). Its caller has already selected a bucket. Search the entries, replace the tuple when its key matches and otherwise append a new tuple. Distinct keys must coexist even in one bucket.\n\nFor a full table, create independent bucket lists with a comprehension. Writing [[]] * 5 repeats references to the same list. An insertion then appears in every bucket because they share one object. This is the aliasing issue from mutable sequences in another form.\n\n## Worked example: deliberately colliding keys\n```\ndef index_for(key, size):\n    return sum(ord(char) for char in key) % size\n\ndef put(buckets, key, value):\n    bucket = buckets[index_for(key, len(buckets))]\n    for index, (stored_key, _) in enumerate(bucket):\n        if stored_key == key:\n            bucket[index] = (key, value)\n            return\n    bucket.append((key, value))\n\nbuckets = [[] for _ in range(5)]\nput(buckets, \"ab\", 10)\nput(buckets, \"ba\", 20)\nput(buckets, \"ab\", 15)\nprint(index_for(\"ab\", 5) == index_for(\"ba\", 5))\nprint(buckets[index_for(\"ab\", 5)])\n```\n\nOutput is True followed by [('ab', 15), ('ba', 20)]. Both strings have the same character sum. Updating ab preserves ba and does not append a second ab entry.\n\n## Performance and security boundaries\nExpected near-constant lookup assumes a suitable hash distribution and controlled load factor: entries divided by buckets. A heavily populated bucket requires a linear scan. Resizing requires redistributing entries, not merely extending the outer list, because the modulo calculation changes.\n\nThis character-sum hash is educational. It is unsuitable for passwords, integrity checks or defending against adversarial keys. Use Python dict for ordinary application storage. Built-in hash values are not persistent business identifiers and can vary between processes for types such as strings.\n\n## Coding workshop and acceptance checks\nImplement bucket_put and test insertion, replacement and distinct colliding keys. Assert that replacement keeps the bucket length unchanged and preserves other entries. Do not compare hashes in place of keys.\n\nExtend the full table with get and remove, using KeyError for missing keys. Test removal from the start and end of a chain. Explain why independent lists matter and what happens to lookup time when every key selects the same bucket.",
+      "legacyContentHash": "060934e2b7fa03159ccb147e1a3b9f6cc9c095c225b50e9d57cffa11d32ab04a",
+      "quiz": [
+        [
+          "What is a hash collision?",
+          [
+            "A Python syntax error",
+            "Two keys selecting the same bucket",
+            "A class without a constructor"
+          ],
+          1
+        ],
+        [
+          "Which built-in mapping is usually appropriate instead of a classroom hash table?",
+          [
+            "dict",
+            "tuple",
+            "str"
+          ],
+          0
+        ],
+        [
+          "What must a bucket lookup compare after selecting the bucket?",
+          [
+            "Only the bucket length",
+            "Only the memory size",
+            "The original keys"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete bucket_put for a separate-chaining bucket represented as a list of (key, value) tuples. Replace an existing key's value, or append a new key. Distinct keys in the same bucket must coexist.",
+        "starter": "def bucket_put(bucket, key, value):\n    pass\n\nbucket = []\nbucket_put(bucket, 'mode', 'dark')\nprint(bucket)",
+        "tests": [
+          {
+            "label": "Insert a new entry",
+            "code": "bucket = []\nbucket_put(bucket, 'a', 3)\nassert bucket == [('a', 3)]"
+          },
+          {
+            "label": "Update without duplicating",
+            "code": "bucket = [('a', 3)]\nbucket_put(bucket, 'a', 5)\nassert bucket == [('a', 5)]"
+          },
+          {
+            "label": "Keep colliding keys independent",
+            "code": "bucket = [('a', 3)]\nbucket_put(bucket, 'b', 7)\nassert dict(bucket) == {'a': 3, 'b': 7}"
+          }
+        ],
+        "solution": "def bucket_put(bucket, key, value):\n    for index, (stored_key, _) in enumerate(bucket):\n        if stored_key == key:\n            bucket[index] = (key, value)\n            return\n    bucket.append((key, value))"
+      }
+    },
+    {
+      "slug": "lesson-13",
+      "title": "Recursion and the call stack",
+      "description": "Solve smaller versions of a problem and identify a stopping condition.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Define a smaller version of the problem\nA recursive function calls itself on a smaller input. It needs a base case that returns without recursion and a recursive case that progresses toward the base. Name both cases before coding so termination is an argument you can explain.\n\nFor summing a sequence, the empty sequence has sum zero. A nonempty sequence has its first value plus the sum of its remainder. For summing integers from zero to n, the next input can be n minus one. Reject negative n if the stopping condition is n equals zero; otherwise calls move away from the base case.\n\n## The call stack stores unfinished work\nEach call has its own parameters and local names. When total_to(3) requests total_to(2), it waits to add three to the nested result. Calls descend toward zero, then results return outward. Call order and return order differ.\n\nTrace the pending expression as 3 + (2 + (1 + 0)). Returning zero resolves the innermost call, followed by one, three and six. A print before the recursive call observes descent; a print afterwards observes unwinding.\n\n## Worked example: progress and a stopping case\n```\ndef total_to(n):\n    if type(n) is not int or n < 0:\n        raise ValueError(\"Use a nonnegative integer\")\n    if n == 0:\n        return 0\n    return n + total_to(n - 1)\n\nprint(total_to(0))\nprint(total_to(3))\nprint(total_to(4))\n```\n\nThe output is 0, 6 and 10. Every valid recursive call decreases n until zero. Removing the base case or calling total_to(n) again prevents the termination argument from holding.\n\n## Recognize implementation costs\nThe workshop uses recursive_sum(values[1:]). This closely follows the definition, but each slice copies references into a new list. Across calls, those copies add quadratic copying work for a linear-length input. An index-based recursive helper avoids slicing but still creates one stack frame per element.\n\nPython limits recursive depth and does not generally eliminate tail calls. Raising the limit is not a substitute for a suitable algorithm. For long linear sums, a loop or built-in sum avoids stack growth. Recursion is often more natural when data branches, such as a tree.\n\n## Coding workshop and debugging exercise\nImplement recursive_sum with zero for an empty list and first-plus-rest otherwise. Test [], [5], [2, -3, 7] and repeated zeros. Negative values inside the list do not threaten termination: its length, rather than its numeric contents, decreases.\n\nTrace recursive_sum([2, 4, 6]) with a row per call and a row per return. Write an iterative version and compare answers. Extend the project with an inclusive recursive range builder, defining equal and reversed endpoints. State which input measure decreases on each call and compare memory needs with iteration.",
+      "legacyContentHash": "efc327353026ea43a316bd2aac536cb3c6acc525296ccd2e0c46bb2004ddc75a",
+      "quiz": [
+        [
+          "What is the base case in recursive_sum([])?",
+          [
+            "Calling itself forever",
+            "Returning zero",
+            "Sorting the list"
+          ],
+          1
+        ],
+        [
+          "What stores the pending recursive calls?",
+          [
+            "The call stack",
+            "A stylesheet",
+            "An HTTP cookie"
+          ],
+          0
+        ],
+        [
+          "What problem can very deep recursion cause in Python?",
+          [
+            "Automatic sorting",
+            "A change from lists to sets",
+            "A recursion-limit error"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Write recursive_sum for a list of numbers. Use zero as the result for an empty list, then add the first number to a recursive call on the remaining numbers.",
+        "starter": "def recursive_sum(values):\n    pass\n\nprint(recursive_sum([2, 4, 6]))",
+        "tests": [
+          {
+            "label": "Sum several values",
+            "code": "assert recursive_sum([2, 4, 6]) == 12"
+          },
+          {
+            "label": "Stop on empty input",
+            "code": "assert recursive_sum([]) == 0"
+          },
+          {
+            "label": "Include negative values",
+            "code": "assert recursive_sum([-3, 8]) == 5"
+          }
+        ],
+        "solution": "def recursive_sum(values):\n    if not values:\n        return 0\n    return values[0] + recursive_sum(values[1:])"
+      }
+    },
+    {
+      "slug": "lesson-14",
+      "title": "Searching and sorting algorithms",
+      "description": "Choose an algorithm based on input order and the work it performs.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Check algorithm preconditions\nLinear search checks candidates in sequence and works without sorting. Binary search halves a sorted interval. Its logarithmic comparison count is useful only when data is ordered and indexed access is efficient. Sorting a list solely for one lookup can cost more than a linear scan.\n\nDefine the result: this workshop returns a matching index or -1. With duplicates, any matching index is acceptable. Returning the first occurrence requires an adjusted algorithm; stopping at an equal midpoint does not guarantee it.\n\n## Maintain a shrinking interval\nUse inclusive bounds lo and hi. While lo is at most hi, inspect the midpoint. A smaller midpoint value eliminates that position and everything below it: set lo to mid + 1. A larger value sets hi to mid - 1. Excluding the checked midpoint ensures progress with even one or two candidates.\n\nEmpty input starts with hi equal to -1, so the loop never runs. This handles the boundary without indexing an empty list. Trace bounds on small inputs to find off-by-one errors before measuring performance.\n\n## Worked example: present and absent values\n```\ndef locate(values, target):\n    lo, hi = 0, len(values) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if values[mid] == target:\n            return mid\n        if values[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\nscores = [2, 5, 8, 12]\nprint(locate(scores, 8))\nprint(locate(scores, 7))\nprint(locate([], 7))\n```\n\nThe output is 2, -1 and -1. Searching for seven inspects five, then eight. The remaining interval becomes empty, proving absence under the sorted-input precondition.\n\n## Compare sorting strategies and growth\nSelection sort repeatedly chooses the smallest remaining value and uses quadratic comparisons. Merge sort divides and merges sorted halves, typically using O(n log n) time and additional storage. Quicksort partitions around a pivot: typical performance is O(n log n), but poor partitions can produce quadratic work.\n\nBig O describes growth rather than exact seconds. Constants and data distribution still matter. Use sorted or list.sort for ordinary application code. sorted returns a new list; list.sort mutates the list and returns None.\n\n## Related numeric and validation algorithms\nBisection narrows an interval containing a root of a continuous function. Check the bracket and stop with a tolerance or iteration limit instead of expecting exact floating equality. A Luhn checksum is a separate validation task: double alternating digits from the right, starting with the second-to-last digit, and subtract nine from doubled results above nine. It detects some transcription errors, not identity or authorization.\n\n## Coding workshop and acceptance checks\nImplement binary_find. Test empty input, first and last positions, absent targets and duplicates. Trace bound changes on a two-item input to demonstrate termination. Extend with selection sort and merge sort, comparing results with sorted for repeated and negative values. Document whether your sort mutates its input and assert that behavior.",
+      "legacyContentHash": "98f0c179608c9afa5abd0cb469e695d6ea314f051dbf9b089f0e114e3fa4d15f",
+      "quiz": [
+        [
+          "Which search discards about half the remaining sorted interval per comparison?",
+          [
+            "Binary search",
+            "Linear search",
+            "Selection sort"
+          ],
+          0
+        ],
+        [
+          "Which growth rate describes selection sort's usual comparison count?",
+          [
+            "Constant",
+            "Quadratic",
+            "Logarithmic"
+          ],
+          1
+        ],
+        [
+          "Which condition is needed when using bisection to locate a root?",
+          [
+            "All function values must be positive",
+            "The interval must have integer length",
+            "A continuous function with a root bracketed by the endpoints"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete binary_find for an ascending sorted list. Return the index of a matching target or -1 when absent. Shrink the interval on every unsuccessful comparison.",
+        "starter": "def binary_find(values, target):\n    low, high = 0, len(values) - 1\n    # Search while the interval is nonempty.\n    return -1\n\nprint(binary_find([1, 4, 7, 10], 7))",
+        "tests": [
+          {
+            "label": "Locate an existing value",
+            "code": "assert binary_find([1, 4, 7, 10], 7) == 2"
+          },
+          {
+            "label": "Report an absent value",
+            "code": "assert binary_find([1, 4, 7, 10], 6) == -1"
+          },
+          {
+            "label": "Handle empty input",
+            "code": "assert binary_find([], 1) == -1"
+          }
+        ],
+        "solution": "def binary_find(values, target):\n    low, high = 0, len(values) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if values[mid] == target:\n            return mid\n        if values[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1"
+      }
+    },
+    {
+      "slug": "lesson-15",
+      "title": "Project: Tower of Hanoi",
+      "description": "Express a constrained puzzle using a recursive strategy.",
+      "durationMinutes": 35,
+      "completionPercent": 90,
+      "content": "## Translate puzzle rules into constraints\nTower of Hanoi has three pegs and disks of different sizes. Move only the top disk, one disk at a time, and never place a larger disk on a smaller one. The goal is to move an ordered stack from source to target using the spare peg.\n\nSeparate a move generator from a simulator. The generator proposes source-target pairs. The simulator checks that the source is nonempty and the destination can accept the disk, then changes state. A correct move count alone does not prove the moves are legal.\n\n## Derive the recursive strategy\nTo move n disks, move n minus one from source to spare, using target temporarily. Move the largest disk from source to target. Then move the smaller stack from spare to target, using source temporarily. Peg names change roles; argument positions describe those roles.\n\nZero disks require no moves. For two disks, the moves are A to B, A to C and B to C. Trace these before trying larger inputs. Swapping target and spare in the wrong recursive call can generate a convincing-looking but incorrect plan.\n\n## Worked example: generate a small plan\n```\ndef hanoi(n, source, target, spare):\n    if type(n) is not int or n < 0:\n        raise ValueError(\"Use a nonnegative integer\")\n    if n == 0:\n        return []\n    return (hanoi(n - 1, source, spare, target)\n            + [(source, target)]\n            + hanoi(n - 1, spare, target, source))\n\nprint(hanoi(2, \"A\", \"C\", \"B\"))\nprint(len(hanoi(3, \"A\", \"C\", \"B\")))\n```\n\nOutput is [('A', 'B'), ('A', 'C'), ('B', 'C')] followed by 7. Both smaller plans are computed before the outer function returns its full list. Concatenation is convenient for this small demonstration but creates additional copying.\n\n## Count without generating the plan\nThe recurrence is T(0) = 0 and T(n) = 2 * T(n - 1) + 1. Counts for zero through four disks are 0, 1, 3, 7 and 15. The closed form is 2**n - 1. A compact formula describes an exponentially growing number of actual moves.\n\nThe workshop's move_count makes one recursive call and doubles its result. That differs from generating two actual subplans. It still has recursion-depth limits. A generator can reduce plan storage but cannot remove the number of moves needed to execute it.\n\n## Coding workshop and verification\nComplete move_count for nonnegative integers. Test zero, one, three and four disks. Explain why adding one represents the largest disk's move. Do not use a base case of one without handling zero.\n\nBuild a simulator using a list per peg, with the largest disk first and top disk last. For three disks, assert every move is legal, source and spare finish empty, target contains [3, 2, 1] and seven moves occurred. Keep demonstrations small enough to remain responsive.",
+      "legacyContentHash": "ba48a5eeaf064faf7efb095aea05701d301ff080cd9f5ad6b94cae3cf3a8ccbd",
+      "quiz": [
+        [
+          "How many pegs are used in the standard Hanoi puzzle?",
+          [
+            "Two",
+            "Three",
+            "Four"
+          ],
+          1
+        ],
+        [
+          "What growth rate describes the minimum move count as disks increase?",
+          [
+            "Constant",
+            "Linear",
+            "Exponential"
+          ],
+          2
+        ],
+        [
+          "Why separate move generation from applying moves?",
+          [
+            "To make legal-move validation easier to test",
+            "To remove all puzzle rules",
+            "To avoid needing a base case"
+          ],
+          0
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete move_count using the Hanoi recurrence: zero disks need zero moves; n disks need twice the moves for n-1 disks, plus one. Inputs will be nonnegative integers.",
+        "starter": "def move_count(n):\n    pass\n\nprint(move_count(4))",
+        "tests": [
+          {
+            "label": "Zero disks need no moves",
+            "code": "assert move_count(0) == 0"
+          },
+          {
+            "label": "One disk needs one move",
+            "code": "assert move_count(1) == 1"
+          },
+          {
+            "label": "Four disks need fifteen moves",
+            "code": "assert move_count(4) == 15"
+          }
+        ],
+        "solution": "def move_count(n):\n    if n == 0:\n        return 0\n    return 2 * move_count(n - 1) + 1"
+      }
+    },
+    {
+      "slug": "lesson-16",
+      "title": "Graphs and trees",
+      "description": "Represent connections and traverse them without revisiting nodes.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Represent connections explicitly\nA graph contains vertices and edges. Training prerequisites, rooms connected by corridors and service dependencies all form graphs. An adjacency list maps each vertex to its neighbors and suits sparse connections. An adjacency matrix uses a fixed vertex order and a grid, requiring quadratic space even when few pairs connect.\n\nState whether edges are directed. A prerequisite from A to B does not imply the reverse. An undirected connection usually appears in both adjacency lists. The workshop guarantees that every referenced neighbor also has a graph entry.\n\n## Breadth-first search explores layers\nBreadth-first search uses a queue. Remove the oldest queued vertex and enqueue its unseen neighbors. Mark a vertex seen when enqueuing it, rather than waiting for removal. Otherwise two parents can queue the same vertex before either copy is processed.\n\nThe seen set prevents cycles from repeating forever. List-valued neighbors give predictable traversal order. Set-valued neighbors may produce different, equally valid orders; tests should match the promised contract.\n\n## Worked example: learning-topic connections\n```\nfrom collections import deque\n\ndef traverse(graph, start):\n    queue = deque([start])\n    seen = {start}\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbor in graph[node]:\n            if neighbor not in seen:\n                seen.add(neighbor)\n                queue.append(neighbor)\n    return order\n\ngraph = {\"A\": [\"B\", \"C\"], \"B\": [\"D\"],\n         \"C\": [\"D\", \"A\"], \"D\": []}\nprint(traverse(graph, \"A\"))\n```\n\nThe output is ['A', 'B', 'C', 'D']. D is discovered from B and not queued again from C. A is already seen when C references it. Unreachable vertices would not appear.\n\n## Distinguish traversal, shortest paths and trees\nBreadth-first search finds shortest paths by number of edges in an unweighted graph. Record each newly discovered vertex's parent to reconstruct a path. It does not minimize arbitrary edge costs. Dijkstra's algorithm handles nonnegative weighted edges; negative weights require other algorithms and reasoning.\n\nDepth-first search follows a branch before returning, using recursion or a stack. A tree is a connected acyclic undirected graph; rooting it adds parent-child relationships. Binary search trees add an ordering invariant, beyond merely having at most two children.\n\n## Coding workshop and extensions\nImplement reachable using queue order and seen-on-enqueue. Test one vertex, a cycle, multiple routes to one vertex and an unreachable vertex. Return only vertices reachable from the start, not all dictionary keys.\n\nExtend breadth-first search to reconstruct a shortest unweighted path. Compare depth-first order on the same graph. As a backtracking exercise, place four queens one row at a time, rejecting occupied columns and diagonals and undoing choices before alternatives. Explain how tracking visited graph vertices differs from undoing tentative placements.",
+      "legacyContentHash": "9b7378dbebc1818f8051f3d1f251bffbc3e1128e978cf47d8def44a4cdb10315",
+      "quiz": [
+        [
+          "What does an adjacency list store for a vertex?",
+          [
+            "Its neighbors",
+            "Only its display color",
+            "A sorted Python installation log"
+          ],
+          0
+        ],
+        [
+          "What is an undirected tree?",
+          [
+            "A graph with every possible edge",
+            "A connected graph without cycles",
+            "A queue with no values"
+          ],
+          1
+        ],
+        [
+          "Which method explores a choice and undoes it when constraints fail?",
+          [
+            "String formatting",
+            "Integer casting",
+            "Backtracking"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete reachable using breadth-first search. Return the visited vertex names in queue order. Mark vertices when enqueuing so a cycle cannot repeat them. Every neighbor will have an entry in graph.",
+        "starter": "from collections import deque\n\ndef reachable(graph, start):\n    pass\n\nprint(reachable({'A': ['B'], 'B': ['A']}, 'A'))",
+        "tests": [
+          {
+            "label": "Visit breadth-first layers",
+            "code": "assert reachable({'A': ['B', 'C'], 'B': ['D'], 'C': [], 'D': []}, 'A') == ['A', 'B', 'C', 'D']"
+          },
+          {
+            "label": "Stop repeated visits in a cycle",
+            "code": "assert reachable({'A': ['B'], 'B': ['A']}, 'A') == ['A', 'B']"
+          },
+          {
+            "label": "Handle an isolated vertex",
+            "code": "assert reachable({'A': []}, 'A') == ['A']"
+          }
+        ],
+        "solution": "from collections import deque\ndef reachable(graph, start):\n    queue, seen, order = deque([start]), {start}, []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbor in graph[node]:\n            if neighbor not in seen:\n                seen.add(neighbor)\n                queue.append(neighbor)\n    return order"
+      }
+    },
+    {
+      "slug": "lesson-17",
+      "title": "Dynamic programming",
+      "description": "Reuse overlapping subproblem results with memoization or tabulation.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Identify repeated subproblems\nDynamic programming stores results of overlapping subproblems for reuse. Fibonacci is a small example: F(n) depends on F(n-1) and F(n-2), and naive recursion repeatedly computes the same values. Identify the state, recurrence, base cases and dependency order before choosing an implementation.\n\nNot every recursive algorithm benefits from caching, and not every loop is dynamic programming. Without repeated subproblems, a cache may only add overhead. Its key must capture everything affecting the answer; omitting part of the state can produce incorrect reuse.\n\n## Memoization and tabulation\nMemoization starts with the requested problem and caches results during recursive evaluation. It computes only reached states but retains stack costs. Tabulation starts at base cases and fills later results in dependency order. Both should agree under the same contract.\n\nFor Fibonacci, F(0) is zero and F(1) is one. When only the final value matters, keep the previous two values instead of the whole sequence. Retaining a table is appropriate when callers need intermediate values too.\n\n## Worked example: two running values\n```\ndef fibonacci(n):\n    if type(n) is not int or n < 0:\n        raise ValueError(\"Use a nonnegative integer\")\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n\nprint(fibonacci(0))\nprint(fibonacci(1))\nprint(fibonacci(10))\nprint(fibonacci(25))\n```\n\nThe output is 0, 1, 55 and 75025. Before each iteration, a and b hold consecutive values. Simultaneous assignment evaluates both expressions using the old values. Setting a = b and then b = a + b separately would use the updated a and produce an incorrect sequence.\n\n## State complexity assumptions precisely\nThere are n iterations and a constant number of integer variables. This is linear arithmetic operations and constant auxiliary slots. However, Python integers grow with the result: bit storage and addition cost are not constant for arbitrarily large n. Explain the model behind a complexity claim.\n\nNaive recursive Fibonacci creates an exponentially growing call tree. Memoization reduces repeated states to a linear number for this recurrence, while retaining cache and stack storage. Use a fresh cache for independent experiments to avoid misleading warm-cache timings.\n\n## Coding workshop and investigation\nComplete fib using two running values. Test zero and one before larger values; off-by-one loops may accidentally pass one sample. Compare results for zero through twenty with a memoized implementation.\n\nInstrument naive and memoized recursion for a small input. Report answers and evaluation counts, distinguishing actual uncached computations from wrapper calls. Extend with a bottom-up minimum-coin solver and an explicit unreachable state. Explain its state and recurrence instead of mechanically copying the Fibonacci loop.",
+      "legacyContentHash": "8131dccc7d493242ce733f2f1c33bc52cdd89a492786b7d18d3ab1df1cffe054",
+      "quiz": [
+        [
+          "Which property makes caching useful in dynamic programming?",
+          [
+            "Every result is a string",
+            "Subproblems overlap",
+            "There are no base cases"
+          ],
+          1
+        ],
+        [
+          "What is tabulation?",
+          [
+            "Filling results from smaller cases upward",
+            "Opening a new browser tab",
+            "Removing all previous results before each calculation"
+          ],
+          0
+        ],
+        [
+          "Compared with naive Fibonacci recursion, caching reduces what?",
+          [
+            "The accuracy of the result",
+            "The need for valid input",
+            "Repeated computation of the same subproblem"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Complete fib using two running values. Use F(0)=0 and F(1)=1. Inputs are nonnegative integers.",
+        "starter": "def fib(n):\n    a, b = 0, 1\n    # Advance the pair n times.\n    return a\n\nprint(fib(10))",
+        "tests": [
+          {
+            "label": "Respect the base cases",
+            "code": "assert fib(0) == 0\nassert fib(1) == 1"
+          },
+          {
+            "label": "Compute the tenth value",
+            "code": "assert fib(10) == 55"
+          },
+          {
+            "label": "Compute a larger value without repeated recursion",
+            "code": "assert fib(25) == 75025"
+          }
+        ],
+        "solution": "def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a"
+      }
+    },
+    {
+      "slug": "lesson-18",
+      "title": "Python review and capstone",
+      "description": "Connect the course topics in a small, testable Python application.",
+      "durationMinutes": 25,
+      "completionPercent": 90,
+      "content": "## Build a coherent learning catalogue\nThe capstone supports employee upskilling: store profiles, summarize skills, search courses and process enrollment requests. Begin with input and output contracts. Choose structures from required operations rather than adding complexity merely to demonstrate terminology.\n\nSeparate validation, core logic and presentation. Validation decides whether records are acceptable. Core functions calculate from valid data. Presentation formats results. This separation makes tests clear and prevents display decisions from changing calculations.\n\n## Count employees rather than repeated labels\nThe workshop receives records containing skills lists. Count an employee at most once per skill. Converting each employee's skills to a set removes duplicates within that employee. Do not deduplicate the whole dataset: that would discard contributions from other employees.\n\nPython and python are distinct strings unless a boundary deliberately normalizes them. Keep the workshop's exact-input contract unchanged. Introduce a documented capitalization and whitespace policy in the larger project's validator.\n\n## Worked example: aggregate a cohort\n```\ndef skill_counts(records):\n    counts = {}\n    for record in records:\n        for skill in set(record[\"skills\"]):\n            counts[skill] = counts.get(skill, 0) + 1\n    return counts\n\nemployees = [\n    {\"name\": \"Mira\", \"skills\": [\"Python\", \"SQL\", \"Python\"]},\n    {\"name\": \"Dev\", \"skills\": [\"Python\", \"Git\"]},\n]\ncounts = skill_counts(employees)\nfor skill in sorted(counts):\n    print(skill, counts[skill])\nprint(skill_counts([]))\n```\n\nThe output is Git 1, Python 2, SQL 1 and {} on separate lines. Mira contributes only one Python count. Sorting for presentation makes the report deterministic without depending on set iteration order.\n\n## Connect structures to requirements\nUse a dictionary keyed by employee ID for lookup, a set for per-profile skill deduplication and a deque for requests processed in arrival order. Binary search fits a maintained sorted title list; document how additions preserve sorting.\n\nUse classes when state-changing operations need invariants, such as enrollment capacity. A graph can represent prerequisites; detect cycles if they would make completion impossible. Recursion and dynamic programming should address real needs rather than appear in every project.\n\n## Deliverables and acceptance checks\nProvide source, fictional sample records, run instructions and at least eight assertions. Cover empty input, duplicate skills, shared skills, missing fields, invalid field types, absent searches, queue order and rejected operations preserving state. The public validator should reject malformed records before calling core helpers.\n\nComplete the browser's supplied skill_counts contract. Run the larger project locally in your selected environment. Include a design note explaining structures, complexity assumptions and limitations. Avoid real employee information in demonstrations.\n\n## Review and completion\nReview values, collections, exceptions, objects, algorithms, graphs and dynamic programming through project decisions. Explain why each approach fits its constraints and what its tests demonstrate.\n\nBrowser practice feedback supports learning; knowledge checks and secured assignments track assessment separately. Complete the final three-module assignment through the existing flow. Shimento records its own course completion and does not confer an external provider's certification.",
+      "legacyContentHash": "bbe4bb33a35864224191d0d73e85165f6b8fd261a72e90eb53536d39bd2a0e7f",
+      "quiz": [
+        [
+          "Which structure suits lookup by a named course ID?",
+          [
+            "A dictionary",
+            "A plain boolean",
+            "A floating-point number"
+          ],
+          0
+        ],
+        [
+          "What does an assertion document?",
+          [
+            "The current browser theme",
+            "An expected condition",
+            "An encrypted password"
+          ],
+          1
+        ],
+        [
+          "Which course topics are combined in the skill-counting helper?",
+          [
+            "Only CSS and HTML",
+            "Only interpreter installation",
+            "Loops, dictionaries and sets"
+          ],
+          2
+        ]
+      ],
+      "practice": {
+        "instructions": "Finish the catalogue capstone helper skill_counts. Count employees per skill, counting repeated skill names only once within one employee record. Every record contains a skills list.",
+        "starter": "def skill_counts(records):\n    counts = {}\n    # Visit each employee and each unique skill.\n    return counts\n\nprint(skill_counts([{'skills': ['Python', 'Python', 'SQL']}]))",
+        "tests": [
+          {
+            "label": "Count each employee once per skill",
+            "code": "assert skill_counts([{'skills': ['Python', 'Python']}]) == {'Python': 1}"
+          },
+          {
+            "label": "Combine several employee records",
+            "code": "assert skill_counts([{'skills': ['SQL', 'Python']}, {'skills': ['SQL']}]) == {'SQL': 2, 'Python': 1}"
+          },
+          {
+            "label": "Handle no employees",
+            "code": "assert skill_counts([]) == {}"
+          }
+        ],
+        "solution": "def skill_counts(records):\n    counts = {}\n    for record in records:\n        for skill in set(record['skills']):\n            counts[skill] = counts.get(skill, 0) + 1\n    return counts"
+      }
+    }
+  ],
+  "assignments": [
+    {
+      "title": "Assignment 1: Build a training-score report",
+      "instructions": "Modules 1–3: Python basics, installation, loops and sequences. Review a small training-score script, choose valid terminal commands, and complete its calculations and iteration logic. Answer all eight questions in this page; running an external editor is not required during the timed assignment.",
+      "questions": [
+        {
+          "prompt": "The report stores a score as score = 80. Which expression produces a number equal to 90?",
+          "options": [
+            "score + 10",
+            "str(score) + '10'",
+            "'score' + '10'",
+            "score == 90"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What does this discount helper return?",
+          "code": "def fee(amount, percent):\n    return amount * (1 - percent / 100)\n\nfee(200, 25)",
+          "options": [
+            "150.0",
+            "175.0",
+            "50.0",
+            "It only prints 150"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "You saved report.py on Windows. Which command runs it from the terminal?",
+          "options": [
+            "py report.py",
+            "print(report.py)",
+            "import report.py",
+            "run-python = report.py"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Why create a virtual environment for this reporting project?",
+          "options": [
+            "To isolate its package dependencies",
+            "To turn Python into JavaScript",
+            "To automatically fix all syntax errors",
+            "To encrypt the source code"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which slice selects only 72 and 90?",
+          "code": "scores = [60, 72, 90, 95]",
+          "options": [
+            "scores[1:3]",
+            "scores[1:2]",
+            "scores[2:4]",
+            "scores[0:3]"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What list is produced by the report filter?",
+          "code": "scores = [60, 72, 90, 95]\npassed = [s for s in scores if s >= 75]",
+          "options": [
+            "[90, 95]",
+            "[60, 72]",
+            "[72, 90, 95]",
+            "[True, True]"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Choose the output for this numbered report.",
+          "code": "for number, score in enumerate([72, 90], start=1):\n    print(number, score)",
+          "options": [
+            "1 72, then 2 90",
+            "0 72, then 1 90",
+            "72 1, then 90 2",
+            "1 90, then 2 72"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "An employee has no scores yet. Which change prevents division by zero?",
+          "code": "average = sum(scores) / len(scores)",
+          "options": [
+            "Check that scores is nonempty before dividing",
+            "Always divide by zero instead",
+            "Convert scores to a string",
+            "Replace / with // and keep an empty list"
+          ],
+          "correct": 0
+        }
+      ],
+      "id": "shimento-python-developer-assignment-01",
+      "afterLesson": 3,
+      "lessonIds": [
+        "shimento-python-developer-lesson-01",
+        "shimento-python-developer-lesson-02",
+        "shimento-python-developer-lesson-03"
+      ]
+    },
+    {
+      "title": "Assignment 2: Validate an employee settings record",
+      "instructions": "Modules 4–6: dictionaries, sets and modules; configuration manager; error handling. Complete and debug a settings validator. Focus on duplicate keys, data validation, safe updates and narrow exception handling.",
+      "questions": [
+        {
+          "prompt": "Which result removes duplicate skills while preserving all distinct skill values?",
+          "code": "skills = ['Python', 'SQL', 'Python']",
+          "options": [
+            "set(skills)",
+            "len(skills)",
+            "skills[0]",
+            "str(skills)"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which lookup returns 'light' when the theme key is absent without adding the key?",
+          "options": [
+            "settings.get('theme', 'light')",
+            "settings['theme']",
+            "settings.append('theme')",
+            "settings.remove('theme')"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What does the second call return when add_setting normalizes keys and refuses duplicates?",
+          "code": "settings = {}\nadd_setting(settings, 'Theme', 'dark')\nadd_setting(settings, 'theme', 'light')",
+          "options": [
+            "False, keeping the original value",
+            "True, always replacing dark",
+            "A new independent dictionary",
+            "The integer 2"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which update correctly leaves a missing key unchanged?",
+          "options": [
+            "Check key in settings, then assign only if present",
+            "Assign settings[key] without a membership check",
+            "Clear the dictionary before every update",
+            "Always insert the missing key twice"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which exception should this conversion handler catch for text equal to 'many'?",
+          "code": "count = int(text)",
+          "options": [
+            "ValueError",
+            "KeyError",
+            "IndexError",
+            "ZeroDivisionError"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "The conversion int('0') succeeds. What additional check is needed for a positive count?",
+          "options": [
+            "Reject count <= 0",
+            "Catch KeyError instead",
+            "Accept every integer including zero",
+            "Check that text is a dictionary"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which validation rejects both a missing name and a non-string name?",
+          "options": [
+            "isinstance(record.get('name'), str)",
+            "'name' in record",
+            "bool(record)",
+            "len(record) > 0"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "A helper lives in checks.py as valid_record. Which statement imports that function?",
+          "options": [
+            "from checks import valid_record",
+            "import checks.py.valid_record",
+            "include checks",
+            "using checks.valid_record"
+          ],
+          "correct": 0
+        }
+      ],
+      "id": "shimento-python-developer-assignment-02",
+      "afterLesson": 6,
+      "lessonIds": [
+        "shimento-python-developer-lesson-04",
+        "shimento-python-developer-lesson-05",
+        "shimento-python-developer-lesson-06"
+      ]
+    },
+    {
+      "title": "Assignment 3: Review a budget and media model",
+      "instructions": "Modules 7–9: classes and objects; budget ledger; object-oriented programming. Review per-instance state, transaction accounting, transfer behavior and shared interfaces. Select the implementation decisions that preserve each model's invariants.",
+      "questions": [
+        {
+          "prompt": "Where should a Budget create its mutable entries list so different accounts are independent?",
+          "options": [
+            "self.entries = [] inside __init__",
+            "entries = [] once in the class body",
+            "In a shared global list for all budgets",
+            "Inside __str__ after every display"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What quantity is printed?",
+          "code": "item = StockItem('Mouse', 2)\nitem.receive(4)\nprint(item.count)",
+          "options": [
+            "6",
+            "4",
+            "2",
+            "8"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "A ledger stores integer cents. What is the balance in cents?",
+          "code": "entries = [(2500, 'deposit'), (-650, 'lunch')]\nbalance = sum(c for c, note in entries)",
+          "options": [
+            "1850",
+            "3150",
+            "18.5",
+            "650"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "A transfer lacks enough funds. What should happen?",
+          "options": [
+            "Return failure and leave both ledgers unchanged",
+            "Credit the recipient before checking funds",
+            "Erase both ledgers",
+            "Withdraw the full amount anyway"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which design supports encapsulation of salary changes?",
+          "options": [
+            "A property setter that rejects negative pay",
+            "Let every caller bypass all validation",
+            "Store all salaries in one unrelated global variable",
+            "Delete __init__ from every class"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Audio and Video both implement duration(). Calling duration on either through the same interface demonstrates what?",
+          "options": [
+            "Polymorphism",
+            "Integer division",
+            "List slicing",
+            "Exception suppression"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What happens when a subclass does not implement a required abstract method?",
+          "options": [
+            "Instantiating that incomplete subclass raises TypeError",
+            "Python silently supplies the correct method",
+            "The method becomes a dictionary key",
+            "Every method automatically returns zero"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Why use integer cents for the practice budget?",
+          "options": [
+            "To avoid binary floating-point rounding surprises in money calculations",
+            "To prevent all possible input errors without validation",
+            "To make negative transactions impossible",
+            "To make transaction descriptions unnecessary"
+          ],
+          "correct": 0
+        }
+      ],
+      "id": "shimento-python-developer-assignment-03",
+      "afterLesson": 9,
+      "lessonIds": [
+        "shimento-python-developer-lesson-07",
+        "shimento-python-developer-lesson-08",
+        "shimento-python-developer-lesson-09"
+      ]
+    },
+    {
+      "title": "Assignment 4: Design a shape inventory and lookup table",
+      "instructions": "Modules 10–12: polygon calculator; linear data structures; hash table. Check shape invariants and fitting calculations, choose stack or queue behavior, and handle hash collisions without losing records.",
+      "questions": [
+        {
+          "prompt": "How many 2 by 2 rectangles fit into an 8 by 3 rectangle without rotation?",
+          "options": [
+            "4",
+            "6",
+            "12",
+            "3"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "A Square exposes a side setter. What invariant must it preserve?",
+          "options": [
+            "Width and height remain equal and positive",
+            "Width must always be zero",
+            "Only height changes",
+            "Every square must have the same area"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which value is removed from this stack?",
+          "code": "stack = ['draft', 'review']\nremoved = stack.pop()",
+          "options": [
+            "review",
+            "draft",
+            "Both items",
+            "Neither item"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Enrollment requests must be processed in arrival order. Which structure and operation are appropriate?",
+          "options": [
+            "deque with popleft()",
+            "list with pop() at the end",
+            "set with arbitrary removal",
+            "A string with upper()"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What special case must a singly linked list handle when deleting its first node?",
+          "options": [
+            "Update the head reference to the next node",
+            "Always delete its tail instead",
+            "Sort all node values first",
+            "Require a predecessor that does not exist"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Two distinct keys map to the same hash-table bucket. What should separate chaining do?",
+          "options": [
+            "Keep both entries and compare original keys during lookup",
+            "Overwrite the older key unconditionally",
+            "Treat equal bucket indexes as equal keys",
+            "Reject every second entry in the table"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Putting an existing key with a new value should do what?",
+          "options": [
+            "Update that key's entry without creating a duplicate",
+            "Always append a duplicate key",
+            "Delete all buckets",
+            "Change every key in the table"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Why create buckets with a comprehension rather than [[]] * size?",
+          "options": [
+            "Each bucket must own a separate mutable list",
+            "A comprehension encrypts the keys",
+            "Multiplication always sorts lists",
+            "All buckets must share exactly one list"
+          ],
+          "correct": 0
+        }
+      ],
+      "id": "shimento-python-developer-assignment-04",
+      "afterLesson": 12,
+      "lessonIds": [
+        "shimento-python-developer-lesson-10",
+        "shimento-python-developer-lesson-11",
+        "shimento-python-developer-lesson-12"
+      ]
+    },
+    {
+      "title": "Assignment 5: Trace a search and recursive move planner",
+      "instructions": "Modules 13–15: recursion; searching and sorting; Tower of Hanoi. Trace call results, choose stopping conditions, verify a binary search interval and check the move count and legal-move constraints of a recursive puzzle solver.",
+      "questions": [
+        {
+          "prompt": "What is the result of total_to(3)?",
+          "code": "def total_to(n):\n    if n == 0:\n        return 0\n    return n + total_to(n - 1)",
+          "options": [
+            "6",
+            "3",
+            "0",
+            "9"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which two properties make this recursion terminate for nonnegative integers?",
+          "options": [
+            "A base case at zero and decreasing n on each call",
+            "Printing the function name repeatedly",
+            "Adding one to n on each call without a stop",
+            "Removing the return statement"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What input requirement does binary search depend on?",
+          "options": [
+            "The values are sorted in the ordering used for comparisons",
+            "Every value is a string",
+            "All values are different",
+            "The list length is a power of two"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "When values[mid] is less than the target in ascending binary search, which update is correct?",
+          "options": [
+            "lo = mid + 1",
+            "hi = mid - 1",
+            "lo = 0 forever",
+            "Delete the entire list"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which description matches merge sort?",
+          "options": [
+            "Divide the input and merge sorted halves",
+            "Always select a random unsorted answer",
+            "Check only the first element",
+            "Use a queue without comparing values"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What is the minimum number of moves to solve Tower of Hanoi with three disks?",
+          "options": [
+            "7",
+            "3",
+            "6",
+            "9"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which move violates Tower of Hanoi rules?",
+          "options": [
+            "Put a larger disk on a smaller disk",
+            "Move one disk to an empty peg",
+            "Put a smaller disk on a larger disk",
+            "Move one top disk at a time"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Before moving the largest disk from source to target, where must the smaller n-1 disks go?",
+          "options": [
+            "Onto the spare peg",
+            "Under the largest disk on the source",
+            "Onto the target and remain there",
+            "They must be removed from the puzzle"
+          ],
+          "correct": 0
+        }
+      ],
+      "id": "shimento-python-developer-assignment-05",
+      "afterLesson": 15,
+      "lessonIds": [
+        "shimento-python-developer-lesson-13",
+        "shimento-python-developer-lesson-14",
+        "shimento-python-developer-lesson-15"
+      ]
+    },
+    {
+      "title": "Assignment 6: Plan routes and verify a learning catalogue",
+      "instructions": "Modules 16–18: graphs and trees; dynamic programming; review and capstone. Choose graph traversal behavior, reuse overlapping results and review catalogue validation and skill-counting tests. Passing this final assignment is required for course completion.",
+      "questions": [
+        {
+          "prompt": "Which traversal finds a shortest path measured in number of edges in an unweighted graph?",
+          "options": [
+            "Breadth-first search",
+            "Any depth-first path is always shortest",
+            "Selection sort",
+            "A hash function alone"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Why mark a vertex visited when it is enqueued during breadth-first search?",
+          "options": [
+            "To prevent duplicate queue entries and repeated visits through cycles",
+            "To ensure the graph has no edges",
+            "To sort all vertices alphabetically",
+            "To make every graph into a tree"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What does memoization add to a recursive solution?",
+          "options": [
+            "A cache of previously computed subproblem results",
+            "Repeated execution of every subproblem",
+            "A requirement to use global mutable lists",
+            "Removal of all base cases"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "What does fibonacci(6) return?",
+          "code": "def fibonacci(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a",
+          "options": [
+            "8",
+            "6",
+            "13",
+            "5"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Why can this iterative Fibonacci calculation keep only two running values?",
+          "options": [
+            "Each next value depends only on its two predecessors",
+            "All Fibonacci values are identical",
+            "It never performs addition",
+            "Python stores an invisible full table automatically"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "A catalogue counts employees per skill. Why convert each employee's skill list to a set first?",
+          "options": [
+            "To count a repeated skill only once for that employee",
+            "To count each duplicate twice",
+            "To discard all employees",
+            "To convert skill names to numbers"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which test set best covers a skill-counting helper?",
+          "options": [
+            "Normal records, empty records, duplicate skills and invalid records",
+            "Only one successful record",
+            "Only printed output with no expected value",
+            "No checks because dictionaries cannot contain mistakes"
+          ],
+          "correct": 0
+        },
+        {
+          "prompt": "Which architecture keeps the capstone easier to test?",
+          "options": [
+            "Separate input validation, core logic and presentation",
+            "Mix every input prompt into each calculation",
+            "Catch every exception and silently ignore it",
+            "Use one shared variable for all unrelated state"
+          ],
+          "correct": 0
+        }
+      ],
+      "id": "shimento-python-developer-assignment-06",
+      "afterLesson": 18,
+      "lessonIds": [
+        "shimento-python-developer-lesson-16",
+        "shimento-python-developer-lesson-17",
+        "shimento-python-developer-lesson-18"
+      ]
+    }
+  ]
+}

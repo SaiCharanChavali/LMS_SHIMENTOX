@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.000
+Start with a simple idea
+Python follows instructions you write. Use print() to display a message. Text inside quotation marks is called a string.
+
+00:00:12.000 --> 00:00:24.000
+Read the result
+Python evaluates the expression inside print(), then displays its value. Adding two numbers produces a number.
+
+00:00:24.000 --> 00:00:36.000
+Text and numbers behave differently
+Quotes matter. The first statement adds numbers. The second displays a string exactly as written.
+
+00:00:36.000 --> 00:00:48.000
+Ready to practice?
+Exercise 1 asks you to recognize print() and evaluate a simple addition. Remember: parentheses hold the value and quotation marks identify text.

@@ -1,0 +1,103 @@
+{
+  "id": "retrieval-augmented-generation",
+  "version": 1,
+  "title": "Retrieval-Augmented Generation (RAG)",
+  "category": "Artificial Intelligence",
+  "difficulty": "beginner",
+  "durationMinutes": 30,
+  "visibility": "everyone",
+  "status": "published",
+  "pageLayout": "article",
+  "description": "Learn how Retrieval-Augmented Generation connects large language models to trusted documents: its components, the six-step workflow, Dense Passage Retrieval, FiD and FiE, advantages, and a company-policy example, with a scored knowledge check.",
+  "source": {
+    "title": "RAG Architecture, GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/nlp/rag-architecture/"
+  },
+  "finalAssessment": {
+    "id": "retrieval-augmented-generation-check",
+    "title": "RAG knowledge check",
+    "description": "Six questions on RAG components, Dense Passage Retrieval, FiD and FiE, embeddings, vector databases and advantages.",
+    "passPercent": 70,
+    "maxAttempts": 5,
+    "timeLimitMinutes": 10,
+    "questionCount": 6,
+    "questions": [
+      [
+        "Which two core components of a RAG architecture does the reference article describe?",
+        [
+          "A retrieval component and a generative component",
+          "A tokenizer component and a grammar component",
+          "A training component and a fine-tuning component",
+          "A web crawler component and a ranking component"
+        ],
+        0,
+        "RAG pairs a retrieval component, which finds relevant information, with a generative component, which writes the answer using that information."
+      ],
+      [
+        "What does Dense Passage Retrieval (DPR) do in a RAG system?",
+        [
+          "It shortens each document so the model reads faster",
+          "It encodes the question and passages as vectors and returns the closest passages",
+          "It removes repeated words from documents before storage",
+          "It checks the final answer for spelling mistakes"
+        ],
+        1,
+        "DPR turns both the question and the stored passages into dense vectors, then returns the passages whose vectors are most similar to the question."
+      ],
+      [
+        "According to the reference, how does Fusion-in-Decoder (FiD) differ from Fusion-in-Encoder (FiE)?",
+        [
+          "FiD works without retrieved passages, while FiE needs them",
+          "FiD is used for images, while FiE is used for text",
+          "FiD combines retrieved information during decoding, while FiE merges it with the query at encoding",
+          "FiD retrains the model for each question, while FiE never does"
+        ],
+        2,
+        "FiD keeps retrieval and generation separate and fuses the passages while decoding. FiE merges the query and passages before decoding, which the article describes as faster but less flexible."
+      ],
+      [
+        "Why does a RAG system convert text into embeddings?",
+        [
+          "To translate every document into a single language",
+          "To encrypt documents so that they cannot be read",
+          "To cut every document to the same number of words",
+          "So that text with similar meaning can be found by comparing vectors"
+        ],
+        3,
+        "An embedding is a list of numbers that represents meaning. Comparing vectors finds passages about the same idea even when they use different words."
+      ],
+      [
+        "What is the main role of a vector database in RAG?",
+        [
+          "Storing embeddings and finding those most similar to the question",
+          "Writing the final answer that the user reads",
+          "Recording which employees asked which questions",
+          "Training the language model from the beginning"
+        ],
+        0,
+        "The vector database stores the embeddings of document passages and runs similarity searches to return the passages closest to the question."
+      ],
+      [
+        "Which statement about the advantages of RAG is accurate?",
+        [
+          "It guarantees that every generated answer is correct",
+          "It can use updated documents without retraining and lowers hallucination risk",
+          "It removes the need for any source documents at all",
+          "It only uses facts the model learned during training"
+        ],
+        1,
+        "RAG grounds answers in current documents without retraining the model. It reduces the risk of hallucinations but does not eliminate it."
+      ]
+    ]
+  },
+  "lessons": [
+    {
+      "slug": "what-is-rag",
+      "title": "What is Retrieval-Augmented Generation (RAG)",
+      "description": "What RAG is, its components, how the six-step workflow turns a question into a grounded answer, FiD and FiE, its advantages, and a company knowledge-assistant example.",
+      "durationMinutes": 30,
+      "usesFinalAssessment": true,
+      "content": "Retrieval-Augmented Generation (RAG) is a way to make AI answers more reliable by letting a language model look things up before it responds. Instead of answering only from what it memorised during training, a RAG system first searches trusted sources, such as company documents or a knowledge base, and then uses what it finds to write the answer.\n\n- Brings in current information, so answers can reflect documents that changed after the model was trained\n- Grounds answers in real sources, which lowers the risk of made-up facts\n- Works well with specialised content such as internal policies, product manuals or legal text\n- Lets you update what the assistant knows by updating documents, without retraining the model\n\n:::acronym What is RAG? | Find relevant information, add it to the prompt, then generate a grounded answer.\nR | Retrieve | Search trusted sources for passages related to the question\nA | Augment | Add the most relevant passages to the prompt as context\nG | Generate | Let the language model write an answer from that context\n:::\n\n## Understanding RAG in plain language\n\nA large language model (LLM) learns from a very large snapshot of text, and then its training stops. It can write fluently about almost anything, but it only \"knows\" what was in that snapshot. RAG adds a lookup step: before the model answers, the system retrieves passages from a chosen set of documents and hands them to the model together with the question.\n\nThe name describes the three moves: **retrieval** (looking up relevant information), **augmentation** (adding that information to the prompt) and **generation** (writing the answer).\n\n### Why RAG is useful for large language models\n\n- **Training has a cut-off.** Anything published or changed after training is unknown to the model.\n- **Private knowledge is missing.** The model has never seen your organisation's policies, contracts or internal guides.\n- **Gaps get filled with guesses.** When the model lacks information it may still produce a confident, fluent answer that is wrong. This is called a *hallucination*.\n\n### How external knowledge makes answers more relevant\n\nWhen the prompt contains passages that are directly about the question, the model no longer has to rely on general knowledge. It can quote the exact rule, figure or step from the source, and the answer matches your organisation rather than \"most organisations\".\n\n### How RAG helps reduce hallucinations\n\nA RAG prompt usually tells the model to answer *only* from the supplied passages and to say so when they do not contain the answer. Because the facts are in front of the model, it has less reason to invent them, and the system can show which documents it used so people can check.\n\n### Why RAG suits information that changes often\n\nPrices, policies, product details and procedures change. With RAG you update the documents, and the next answer uses the new version. There is no need to retrain the model each time something changes.\n\n:::example Example: asking an AI assistant about a company policy\nAn employee asks the internal assistant: *\"Can I carry over unused annual leave into next year?\"*\n- **Without RAG:** the model has never seen your policy, so it may describe a typical rule from elsewhere, or invent one.\n- **With RAG:** the assistant searches the HR policy library, finds the paragraph about carrying over leave, and answers from that text, pointing to the section it used.\n:::\n\n## Components of RAG architecture\n\nThe reference article describes two core parts: a **retrieval component** that finds information and a **generative component** that writes the answer. Retrieval depends on an embedding model and a vector database, so this lesson looks at five parts to make each job clear.\n\n### 1. Retrieval component\n\nFinds the information that is most relevant to the user's question. In the article's description it works in three steps: it encodes the query, encodes the stored passages, and then compares the two to pick the closest matches.\n\n### 2. Embedding model\n\nTurns text into an *embedding*: a list of numbers (a vector) that represents meaning. Texts about the same idea get similar vectors even when they use different words, so \"time off\" and \"annual leave\" end up close together.\n\n### 3. Vector database\n\nStores the embeddings of all your document passages and supports *similarity search*: given the question's vector, it quickly returns the stored vectors that are closest to it, along with the passages they came from.\n\n### 4. Retrieved context\n\nThe handful of passages selected by the search. They are added to the prompt so the language model can read them before answering. Good context is short, relevant and up to date.\n\n### 5. Generative component\n\nThe language model that reads the question together with the retrieved context and writes the final response. The article mentions models such as BART and GPT as examples.\n\n### The role of Dense Passage Retrieval (DPR)\n\nThe article names **Dense Passage Retrieval (DPR)** as a common model for the retrieval component. DPR represents text as dense vectors, so it finds passages by meaning rather than by matching exact keywords:\n\n1. **Query encoding:** the question is converted into a vector that captures its meaning.\n2. **Passage encoding:** every document passage is converted into a vector in advance and stored for fast lookup.\n3. **Retrieval:** the query vector is compared with the stored passage vectors, and the most similar passages are returned.\n\n## How RAG works\n\nThe article describes the workflow in six steps. The example question used throughout is: *\"How many days of annual leave can I carry over?\"*\n\n### Step 1: Query processing\n\n- **What happens:** the user's question is received and prepared for the next step, for example by tidying the text.\n- **Example:** the question is taken exactly as the employee typed it in the assistant.\n- **Role in the workflow:** it is the starting point that everything else is built on.\n\n### Step 2: Embedding generation\n\n- **What happens:** the embedding model converts the question into a vector that represents its meaning.\n- **Example:** the question becomes a list of numbers close to the vectors of passages about leave carry-over.\n- **Role in the workflow:** it makes the question comparable with the stored documents.\n\n### Step 3: Vector database retrieval\n\n- **What happens:** the vector database compares the question's vector with the stored passage vectors and finds the most similar ones.\n- **Example:** the search returns passages from the leave policy and the HR frequently asked questions.\n- **Role in the workflow:** it locates the knowledge the model does not have on its own.\n\n### Step 4: Retrieved context selection\n\n- **What happens:** the closest passages are selected and passed to the generative model as context.\n- **Example:** the top three passages, including the paragraph on carrying over leave, are kept.\n- **Role in the workflow:** it decides exactly what evidence the model will see.\n\n### Step 5: LLM response generation\n\n- **What happens:** the language model reads the question and the retrieved passages together and writes an answer.\n- **Example:** the model writes the carry-over limit and the deadline exactly as the policy states them.\n- **Role in the workflow:** it turns raw passages into a clear, direct answer.\n\n### Step 6: Final response\n\n- **What happens:** the answer is returned to the user. It combines the model's language skills with the retrieved facts.\n- **Example:** the employee sees the rule and the name of the policy section it came from.\n- **Role in the workflow:** it delivers a useful answer that can be checked against its source.\n\n## RAG architecture illustration\n\nThe diagram follows one question through the system. The first four steps retrieve knowledge; the last two generate the answer.\n\n:::flow From question to grounded answer\nUser Question | \"How many leave days can I carry over?\"\nQuery Embedding | The question is converted into a vector\nVector Database Search | Find the stored vectors closest to it\nRelevant Documents | Top passages from the leave policy\nLLM + Retrieved Context | The prompt holds the question and the passages\nFinal Answer | A grounded reply that names its source\n:::\n\n## FiD vs. FiE\n\nAfter retrieval, the generative component has to combine several passages with the question. The article compares two ways of doing this: **Fusion-in-Decoder (FiD)** and **Fusion-in-Encoder (FiE)**.\n\n| Aspect | Fusion-in-Decoder (FiD) | Fusion-in-Encoder (FiE) |\n|---|---|---|\n| Where retrieved information is combined | During decoding, while the answer is being generated | At the encoding stage, before decoding starts |\n| How processing differs | Retrieval and generation are kept as separate steps | The query and passages are processed together |\n| Relative efficiency | Slower, because the steps are separate | Faster, because everything is processed at once |\n| Complexity and flexibility | More complex, but more flexible | Simpler, but less flexible |\n| Typical strength | Higher-quality responses | Quicker responses |\n\nThis table follows the reference article's description. In real systems the trade-off also depends on the model, the number of passages and how the pipeline is built.\n\n## Advantages of RAG\n\n- **Access to up-to-date information:** answers can use documents that changed after the model was trained.\n- **Better grounding in facts:** the model works from real passages instead of memory alone.\n- **Reduced risk of hallucinations:** with relevant evidence in the prompt, the model has less reason to invent details.\n- **Domain-specific knowledge:** the same model can answer questions about HR, finance or engineering by searching the right documents.\n- **No retraining when documents change:** you update the documents instead of the model, which the article notes is a cost-effective alternative to frequent fine-tuning.\n\n:::note RAG reduces hallucination risk; it does not remove it\nThe model can still misread a passage, combine two passages incorrectly, or fill gaps when retrieval returns nothing useful. Important answers should be checked against the sources the assistant cites.\n:::\n\n## Practical example: a company knowledge assistant\n\nAn employee opens the internal knowledge assistant and asks: *\"What is our company's leave policy?\"* The policy extracts below are a fictional illustration.\n\n1. **Process the question.** The assistant receives the question and converts it into an embedding.\n2. **Search the indexed policy documents.** Every section of the HR policy library was split into passages and embedded in advance; the vector database compares the question with those passages.\n3. **Retrieve the relevant passages.** The closest matches are the sections on annual leave, sick leave and requesting time off.\n4. **Supply the passages to the LLM.** The passages are placed in the prompt with clear instructions.\n5. **Generate a grounded answer.** The model summarises the policy from the extracts and names the sections it used.\n\n```\nAnswer the employee's question using only the policy extracts below.\nIf the extracts do not contain the answer, say so and suggest contacting HR.\n\nQuestion: What is our company's leave policy?\n\nExtract 1 (Leave Policy, section 2.1): Full-time employees receive 20 days of paid annual leave per year.\nExtract 2 (Leave Policy, section 2.4): Up to 5 unused days may be carried over until 31 March.\nExtract 3 (Leave Policy, section 3.1): Leave requests are submitted in the HR portal at least 10 working days in advance.\n```\n\nThe answer can only be as good as what was retrieved:\n\n- **Relevance:** if the search returns the travel policy instead of the leave policy, the answer will miss the point.\n- **Accuracy:** if a document contains an error, the assistant will repeat it confidently.\n- **Freshness:** if last year's policy is still indexed, employees may receive outdated rules. Keep the document collection current and remove superseded versions.\n\n## Knowledge check\n\nSix questions test the key ideas of this lesson. The pass mark is 70%, which means at least 5 of 6 correct. The order of the answers changes on every attempt, and each answer is explained after you submit. Your score and attempts are saved to your learning record.\n\n:::slot knowledge-check\n\n## Learning reference\n\nThe technical concepts and the structure of this lesson are based on the article below. The explanations, examples, diagrams and questions in this lesson are original.\n\n- [RAG Architecture, GeeksforGeeks](https://www.geeksforgeeks.org/nlp/rag-architecture/)\n"
+    }
+  ]
+}

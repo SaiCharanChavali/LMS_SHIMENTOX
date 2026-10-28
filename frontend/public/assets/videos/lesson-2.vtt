@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.000
+Give a value a name
+An assignment stores a value under a variable name. Use the name later to access the current value.
+
+00:00:12.000 --> 00:00:24.000
+Recognize the common types
+A string is text, an integer is a whole number, a float has a decimal part, and a boolean is True or False.
+
+00:00:24.000 --> 00:00:36.000
+Update a variable
+The right side is evaluated first. Python takes the old score, adds five, and assigns the new value to score.
+
+00:00:36.000 --> 00:00:48.000
+Ready to practice?
+Exercise 2 checks strings and variable updates. For the exam, also review integers, booleans, and multiplication.

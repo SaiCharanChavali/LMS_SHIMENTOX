@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.000
+Text is a string
+Quotation marks surround a string. Use a variable to keep a message and print it whenever you need it.
+
+00:00:12.000 --> 00:00:24.000
+Change the case
+The upper() method returns an uppercase version of a string. It does not change the original string.
+
+00:00:24.000 --> 00:00:36.000
+Insert a value into text
+Start a string with f to make an f-string. Expressions inside braces are evaluated and inserted into the text.
+
+00:00:36.000 --> 00:00:48.000
+Ready to practice?
+Exercise 1 checks upper() and f-strings. A regular string without the f prefix keeps the braces as ordinary text.

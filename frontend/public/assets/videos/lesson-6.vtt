@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.000
+Name a reusable action
+Use def to define a function. Put parameters in parentheses and indent the body. Call the function by its name.
+
+00:00:12.000 --> 00:00:24.000
+Send a result back
+return sends a value back to the calling code. It does not print the value automatically.
+
+00:00:24.000 --> 00:00:36.000
+Follow the input and output
+The caller supplies 3 as n. Inside the function, n * 2 evaluates to 6. return gives that value back to the caller.
+
+00:00:36.000 --> 00:00:48.000
+Ready for your final set exam?
+Exercise 2 checks def and return. Review conditions, loops, indentation, and function results before the final exam.

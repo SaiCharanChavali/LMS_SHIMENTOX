@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:12.000
+Store several values together
+A list is an ordered collection. Use square brackets and separate the items with commas.
+
+00:00:12.000 --> 00:00:24.000
+Positions start at zero
+Use an index in square brackets to access an item. Index 0 is the first item; index 1 is the second.
+
+00:00:24.000 --> 00:00:36.000
+Add an item
+The append() method adds a single item at the end. The len() function counts how many items are in the list.
+
+00:00:36.000 --> 00:00:48.000
+Ready to practice?
+Exercise 2 asks you to select list items and append a skill. Review zero-based indexing and length for the exam.

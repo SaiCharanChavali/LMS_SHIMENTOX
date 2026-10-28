@@ -1,0 +1,9 @@
+{
+  "pythonExecution": true,
+  "savedDraft": true,
+  "serverQuiz": true,
+  "timeout": true,
+  "portalIsolation": true,
+  "mobileOverflow": false,
+  "pageErrors": []
+}

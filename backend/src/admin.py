@@ -38,11 +38,12 @@ def optional_id(db, data, field, table, label, condition=''):
     return value
 
 
-def role_input(data, actor):
+def role_input(data, current=None):
+    """Only the Employee role can be assigned. An existing account may keep the role it already has."""
     role=data.get('role','employee')
     if role=='candidate':role='employee'  # Accept the pre-v3 API value.
     check(role in ROLES,'Invalid role.')
-    check(actor['role']=='admin' or role!='admin','Only administrators can grant administrator access.',403)
+    check(role in ('employee',current),'Only the Employee role can be assigned.',403)
     return role
 
 
@@ -59,7 +60,7 @@ def org_fields(db, data, identity=None):
 def provision(db, actor, data):
     name, email, password = text(data,'name',2,100), text(data,'email').casefold(), text(data,'password',8,128)
     check(re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email) is not None,'Enter a valid email address.')
-    role=role_input(data,actor)
+    role=role_input(data)
     department,job_role,manager,title=org_fields(db,data)
     check(db.execute('SELECT 1 FROM candidates WHERE email=?',(email,)).fetchone() is None,'This email is already assigned.',409)
     identity,timestamp=uid(),now()
@@ -71,7 +72,7 @@ def provision(db, actor, data):
 
 def update_profile(db, actor, target, data):
     name=text(data,'name',2,100)
-    role=role_input(data,actor)
+    role=role_input(data,target['role'])
     check(target['id']!=actor['id'] or role==target['role'],'You cannot change your own role.')
     department,job_role,manager,title=org_fields(db,data,target['id'])
     db.execute('UPDATE candidates SET full_name=?,role=?,department_id=?,job_role_id=?,manager_id=?,job_title=?,updated_at=? WHERE id=?',(name,role,department,job_role,manager,title,now(),target['id']))

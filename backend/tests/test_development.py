@@ -49,9 +49,13 @@ class DevelopmentTests(PortalFixture):
     def account(self, role='employee', name='Team Member', **org):
         client = Client(self.base)
         client.email = f'{uuid.uuid4().hex}@shimentox.com'
-        result = self.admin.request('admin/candidates', {'name': name, 'email': client.email, 'password': 'Temporary123!', 'role': role, **org})
+        result = self.admin.request('admin/candidates', {'name': name, 'email': client.email, 'password': 'Temporary123!', **org})
         self.assertEqual(result[0], 200, result[1])
         client.id = result[1]['candidate']['id']
+        # Only Employee can be assigned through the API; other roles are set directly for permission tests.
+        if role != 'employee':
+            with closing(connect(self.db_path)) as db, db:
+                db.execute('UPDATE candidates SET role=? WHERE id=?', (role, client.id))
         client.request('auth/login', {'email': client.email, 'password': 'Temporary123!'})
         self.assertEqual(client.request('auth/password', {'currentPassword': 'Temporary123!', 'password': 'Learning123!'})[0], 200)
         return client
@@ -107,6 +111,20 @@ class DevelopmentTests(PortalFixture):
             self.assertEqual(status, 404, route)
             self.assertIn(expected, payload['error'])
         self.assertEqual(self.admin.request('manage/paths')[0], 200)
+
+    def test_only_the_employee_role_can_be_assigned(self):
+        for role in ('admin', 'hr', 'trainer', 'manager'):
+            created = self.admin.request('admin/candidates', {'name': 'New Hire', 'email': f'{uuid.uuid4().hex}@x.com', 'password': 'Temporary123!', 'role': role})
+            self.assertEqual(created[0], 403, role)
+        employee = self.account()
+        for role in ('admin', 'hr', 'trainer', 'manager'):
+            self.assertEqual(self.admin.request(f'admin/candidates/{employee.id}/profile', {'name': 'Team Member', 'role': role})[0], 403, role)
+        self.assertEqual(employee.request('session')[1]['user']['role'], 'employee')
+        # Existing accounts keep their role when their profile is edited, and can still sign in.
+        manager = self.account('manager', 'Existing Manager')
+        edited = self.admin.request(f'admin/candidates/{manager.id}/profile', {'name': 'Existing Manager', 'role': 'manager', 'jobTitle': 'Lead'})
+        self.assertEqual((edited[0], edited[1]['candidate']['role']), (200, 'manager'))
+        self.assertEqual(manager.request('session')[1]['user']['role'], 'manager')
 
     def test_role_permissions_are_enforced_on_the_server(self):
         employee = self.account()

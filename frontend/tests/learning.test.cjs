@@ -155,6 +155,7 @@ async function main() {
   server.user=testAdmin;context.testAdmin=testAdmin;run('currentUser=testAdmin');await run('loadCandidate()');
   context.location.hash='#dashboard';run('render()');assert.ok(app.innerHTML.includes('ADMINISTRATOR WORKSPACE'));
   context.location.hash='#admin-users';run('render()');assert.ok(app.innerHTML.includes('id="create-candidate-form"'));
+  const roleSelect=app.innerHTML.match(/<select id="new-candidate-role">(.*?)<\/select>/)[1];assert.deepEqual([...roleSelect.matchAll(/<option value="([^"]*)"/g)].map(m=>m[1]),['employee'],'Employee is the only role that can be assigned.');
   element('new-candidate-name').value='New Learner';element('new-candidate-email').value='learner@shimentox.com';element('new-candidate-role').value='employee';element('new-candidate-password').value='Assigned123!';
   await element('create-candidate-form').onsubmit({preventDefault(){}});
   assert.ok(requests.some(r=>r.path==='admin/candidates'&&r.data.email==='learner@shimentox.com'&&r.data.role==='employee'));

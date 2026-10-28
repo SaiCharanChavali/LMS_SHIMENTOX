@@ -503,7 +503,9 @@ class ImportWorkflowTests(PortalFixture):
         token = self.preview('https://docs.example-university.org/guide/advanced')[1]['token']
         hr = Client(self.base)
         email = f'{uuid.uuid4().hex}@shimentox.com'
-        self.admin.request('admin/candidates', {'name': 'HR Person', 'email': email, 'password': 'Temporary123!', 'role': 'hr'})
+        created = self.admin.request('admin/candidates', {'name': 'HR Person', 'email': email, 'password': 'Temporary123!'})[1]['candidate']
+        with closing(connect(self.db_path)) as db, db:
+            db.execute("UPDATE candidates SET role='hr' WHERE id=?", (created['id'],))
         hr.request('auth/login', {'email': email, 'password': 'Temporary123!'})
         hr.request('auth/password', {'currentPassword': 'Temporary123!', 'password': 'Learning123!'})
         status, error, _ = hr.request('manage/import/save', {'token': token, 'mode': 'full', 'rightsConfirmed': True, 'title': 'Taken', 'category': 'Technical Skills'})

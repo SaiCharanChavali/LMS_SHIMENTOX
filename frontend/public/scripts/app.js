@@ -15,7 +15,7 @@ function pageTitle(page){
   return item?item[2]:PAGE_TITLES[page]||'Dashboard';
 }
 function pageContent(page){
-  const pages={courses:candidateCourses,course:()=>lesson()+(currentCourseInfo.id&&!activeExam?courseExtras():''),certificates:()=>certificates(),account:accountPage,paths:pathsPage,skills:skillsPage,calendar:calendarPage,assessments:assessmentsPage,reports:()=>reportsPage(),'cert-records':()=>reportsPage('certificates'),history:historyPageView,'course-preview':coursePreviewPage};
+  const pages={courses:candidateCourses,course:()=>lesson()+(currentCourseInfo.id&&!examActive()?courseExtras():''),certificates:()=>certificates(),account:accountPage,paths:pathsPage,skills:skillsPage,calendar:calendarPage,assessments:assessmentsPage,reports:()=>reportsPage(),'cert-records':()=>reportsPage('certificates'),history:historyPageView,'course-preview':coursePreviewPage};
   if(pages[page])return pages[page]();
   if(page.startsWith('admin-'))return adminPage(page);
   return ['admin','hr'].includes(currentUser.role)?adminDashboard():candidateDashboard();
@@ -33,4 +33,4 @@ function render(){if(!portalReady)return;const route=location.hash.slice(1);cons
   bindAccount();bindAdmin();const search=document.getElementById('search');if(search)search.oninput=()=>{document.querySelectorAll('[data-course-card]').forEach(card=>card.classList.toggle('hidden',!card.dataset.courseCard.includes(search.value.toLowerCase().trim())));}}
 
 window.addEventListener('click',event=>{if(event.target.closest('[data-print-certificate]')&&location.hash==='#certificates'&&learning.certificates.length>0)window.print()});
-window.addEventListener('hashchange',()=>{if(typeof terminateExam==='function')terminateExam('Attempt terminated: you navigated away from the exam.');notificationState.open=false;refreshOnNavigate();render();window.scrollTo(0,0)});
+window.addEventListener('hashchange',()=>{if(typeof endAttempts==='function')endAttempts('Attempt terminated: you navigated away from the exam.');notificationState.open=false;refreshOnNavigate();render();window.scrollTo(0,0)});

@@ -101,7 +101,7 @@ class GenerativeAICourseTests(PortalFixture):
             rows = db.execute('SELECT status,percent FROM assessment_attempts WHERE assessment_id=? AND employee_id=? ORDER BY attempt_number', (check, client.id)).fetchall()
         self.assertEqual([tuple(r) for r in rows], [('failed', 0), ('passed', 100)])
         info = next(a for a in client.request('learning?courseId=' + COURSE)[1]['assessments'] if a['id'] == check)
-        self.assertEqual((info['passed'], info['best'], info['attemptsLeft']), (True, 100, 3))
+        self.assertEqual((info['passed'], info['best'], info['attemptsLeft']), (True, 100, 1), 'Two of the three attempts are used.')
 
     def test_mark_complete_and_resume_at_last_lesson(self):
         client, data = self.enrolled()

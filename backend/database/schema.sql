@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS assessments (
     skill_id TEXT REFERENCES skills(id) ON DELETE SET NULL,
     skill_level INTEGER CHECK(skill_level BETWEEN 1 AND 4),
     pass_percent INTEGER NOT NULL DEFAULT 70 CHECK(pass_percent BETWEEN 1 AND 100),
-    max_attempts INTEGER NOT NULL DEFAULT 3 CHECK(max_attempts BETWEEN 1 AND 10),
+    max_attempts INTEGER NOT NULL DEFAULT 3 CHECK(max_attempts BETWEEN 1 AND 3),
     question_count INTEGER NOT NULL CHECK(question_count BETWEEN 1 AND 100),
     time_limit_minutes INTEGER NOT NULL DEFAULT 15 CHECK(time_limit_minutes BETWEEN 1 AND 240),
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
@@ -338,7 +338,7 @@ CREATE TABLE IF NOT EXISTS assessment_attempts (
     employee_id TEXT NOT NULL REFERENCES candidates(id),
     attempt_number INTEGER NOT NULL,
     question_ids_json TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('in-progress','passed','failed','expired')),
+    status TEXT NOT NULL CHECK(status IN ('in-progress','passed','failed','expired','terminated')),
     started_at TEXT NOT NULL,
     deadline REAL NOT NULL,
     finished_at TEXT,
@@ -347,6 +347,7 @@ CREATE TABLE IF NOT EXISTS assessment_attempts (
     percent INTEGER,
     answers_json TEXT,
     option_orders_json TEXT NOT NULL DEFAULT '',
+    reason TEXT NOT NULL DEFAULT '',
     UNIQUE(assessment_id, employee_id, attempt_number)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS one_active_assessment ON assessment_attempts(assessment_id, employee_id) WHERE status='in-progress';

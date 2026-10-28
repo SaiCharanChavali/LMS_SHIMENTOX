@@ -16,7 +16,7 @@ from analytics import (LEVELS, UNITS, assignment_index, dashboard, employee_path
                        progress_index, recommendations, report, role_targets, skill_levels, today)
 from notifications import announce
 import course_import
-from database import BACKEND, VIDEO_ROOT, public_curriculum
+from database import BACKEND, MAX_EXAM_ATTEMPTS, VIDEO_ROOT, public_curriculum
 from services import allowed, can_view_course, check, current_run, issue_certificate, notify, now, require, text, uid
 
 VIDEO_TYPES = {'.mp4': 'video/mp4', '.webm': 'video/webm', '.vtt': 'text/vtt; charset=utf-8', '.jpg': 'image/jpeg'}
@@ -592,7 +592,7 @@ def store_assessment(db, user, data):
     skill = ref(db, data, 'skillId', 'skills', 'skill', required=kind == 'skill')
     skill_level = integer(data, 'skillLevel', 1, 4, 'Validated skill level') if kind == 'skill' else None
     pass_percent = integer(data, 'passPercent', 1, 100, 'Passing score')
-    attempts = integer(data, 'maxAttempts', 1, 10, 'Attempts allowed')
+    attempts = integer(data, 'maxAttempts', 1, MAX_EXAM_ATTEMPTS, 'Attempts allowed')
     limit = integer(data, 'timeLimitMinutes', 1, 240, 'Time limit')
     status = choice(data, 'status', ('draft', 'published', 'archived'), 'status', 'draft')
     questions = questions_input(data)
@@ -657,7 +657,7 @@ def my_assessments(db, user):
     expire_assessments(db, user['id'])
     result = []
     for a in visible_assessments(db):
-        attempts = [dict(r) for r in db.execute('SELECT id,attempt_number,status,percent,started_at,finished_at FROM assessment_attempts WHERE assessment_id=? AND employee_id=? ORDER BY attempt_number', (a['id'], user['id']))]
+        attempts = [dict(r) for r in db.execute('SELECT id,attempt_number,status,percent,reason,started_at,finished_at FROM assessment_attempts WHERE assessment_id=? AND employee_id=? ORDER BY attempt_number', (a['id'], user['id']))]
         active = db.execute("SELECT * FROM assessment_attempts WHERE assessment_id=? AND employee_id=? AND status='in-progress'", (a['id'], user['id'])).fetchone()
         result.append({'id': a['id'], 'title': a['title'], 'description': a['description'], 'kind': a['kind'], 'course': a['course_title'], 'courseId': a['course_id'],
                        'skill': a['skill_name'], 'skillLevel': LEVELS.get(a['skill_level'] or 0), 'passPercent': a['pass_percent'], 'maxAttempts': a['max_attempts'],
@@ -671,10 +671,10 @@ def start_assessment(db, user, identity):
     expire_assessments(db, user['id'])
     a = next((r for r in visible_assessments(db) if r['id'] == identity), None)
     check(a is not None, 'This assessment is not available.', 404)
-    active = db.execute("SELECT * FROM assessment_attempts WHERE assessment_id=? AND employee_id=? AND status='in-progress'", (identity, user['id'])).fetchone()
-    if active:
-        return {'attempt': active_attempt_view(db, active)}
-    used = db.execute('SELECT COUNT(*) FROM assessment_attempts WHERE assessment_id=? AND employee_id=?', (identity, user['id'])).fetchone()[0]
+    # Attempts cannot be resumed: one still open was interrupted (page closed or reloaded), so it ends and counts as used.
+    db.execute("UPDATE assessment_attempts SET status='terminated',reason=?,finished_at=? WHERE assessment_id=? AND employee_id=? AND status='in-progress'",
+               ('The attempt was interrupted before it was submitted.', now(), identity, user['id']))
+    used =db.execute('SELECT COUNT(*) FROM assessment_attempts WHERE assessment_id=? AND employee_id=?', (identity, user['id'])).fetchone()[0]
     check(used < a['max_attempts'], f'All {a["max_attempts"]} attempts have been used for this assessment.', 409)
     if a['kind'] == 'skill':
         # A passed skill assessment is already recorded as evidence; post-training checks may be retaken for a new course run.
@@ -691,6 +691,19 @@ def start_assessment(db, user, identity):
     db.execute('INSERT INTO assessment_attempts(id,assessment_id,employee_id,attempt_number,question_ids_json,option_orders_json,status,started_at,deadline,total) VALUES (?,?,?,?,?,?,?,?,?,?)',
                (attempt, identity, user['id'], used + 1, json.dumps(chosen), json.dumps(orders), 'in-progress', now(), time.time() + a['time_limit_minutes'] * 60, len(chosen)))
     return {'attempt': active_attempt_view(db, db.execute('SELECT * FROM assessment_attempts WHERE id=?', (attempt,)).fetchone())}
+
+
+def terminate_assessment(db, user, identity, data):
+    """End an attempt that broke the exam rules (left full screen, switched tabs or windows, navigated away). It counts as used."""
+    attempt = db.execute('SELECT * FROM assessment_attempts WHERE id=? AND assessment_id=? AND employee_id=?', (data.get('attemptId'), identity, user['id'])).fetchone()
+    check(attempt is not None, 'Attempt was not found.', 404)
+    reason = data.get('reason') if isinstance(data.get('reason'), str) and data['reason'].strip() else 'The attempt was ended before it was submitted.'
+    if attempt['status'] == 'in-progress':
+        db.execute("UPDATE assessment_attempts SET status='terminated',reason=?,finished_at=? WHERE id=?", (reason[:200], now(), attempt['id']))
+        a = db.execute('SELECT title FROM assessments WHERE id=?', (identity,)).fetchone()
+        notify(db, [user['id']], 'assessment', f'Assessment attempt terminated: {a["title"]}', reason[:200], 'assessments', f'assessment:{attempt["id"]}')
+    ended = db.execute('SELECT status,reason FROM assessment_attempts WHERE id=?', (attempt['id'],)).fetchone()
+    return {'result': {'status': ended['status'], 'reason': ended['reason'], 'percent': None, 'details': []}}
 
 
 def submit_assessment(db, user, identity, data):
@@ -1148,7 +1161,7 @@ def development_action(db, user, method, route, query, data):
 
 
 def employee_action(db, user, method, p, query, data):
-    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'read') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read') else '*' for i, x in enumerate(p)))
     handlers = {
         ('GET', 'dashboard'): lambda: my_dashboard(db, user),
         ('GET', 'paths'): lambda: my_paths(db, user),
@@ -1160,6 +1173,7 @@ def employee_action(db, user, method, p, query, data):
         ('GET', 'assessments'): lambda: my_assessments(db, user),
         ('POST', 'assessments/*/start'): lambda: start_assessment(db, user, p[1]),
         ('POST', 'assessments/*/submit'): lambda: submit_assessment(db, user, p[1], data),
+        ('POST', 'assessments/*/terminate'): lambda: terminate_assessment(db, user, p[1], data),
         ('GET', 'notifications'): lambda: my_notifications(db, user),
         ('POST', 'notifications/read'): lambda: read_notifications(db, user, data),
         ('GET', 'history'): lambda: my_history(db, user, query),

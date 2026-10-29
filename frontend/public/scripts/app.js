@@ -15,7 +15,7 @@ function pageTitle(page){
   return item?item[2]:PAGE_TITLES[page]||'Dashboard';
 }
 function pageContent(page){
-  const pages={courses:candidateCourses,course:()=>lesson()+(currentCourseInfo.id&&!examActive()?courseExtras():''),certificates:()=>certificates(),account:accountPage,paths:pathsPage,skills:skillsPage,calendar:calendarPage,assessments:assessmentsPage,reports:()=>reportsPage(),'cert-records':()=>reportsPage('certificates'),history:historyPageView,'course-preview':coursePreviewPage};
+  const pages={courses:candidateCourses,course:()=>lesson()+(currentCourseInfo.id&&!examActive()?courseExtras():''),certificates:()=>certificates(),account:accountPage,calendar:calendarPage,assessments:assessmentsPage,reports:()=>reportsPage(),'cert-records':()=>reportsPage('certificates'),history:historyPageView,'course-preview':coursePreviewPage};
   if(pages[page])return pages[page]();
   if(page.startsWith('admin-'))return adminPage(page);
   return ['admin','hr'].includes(currentUser.role)?adminDashboard():candidateDashboard();

@@ -117,8 +117,10 @@ async function main() {
   assert.equal(context.document.title,'My Learning • ShimentoX');
   assert.ok(!app.innerHTML.includes('href="#admin-users"'));
   assert.ok(app.innerHTML.includes('My Profile'));
-  assert.equal(run('portalNavigation().length'),7);
-  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Learning','My Dashboard','Learning Paths','Skills & Goals','Training Calendar','My Certificates','My Profile']));
+  assert.equal(run('portalNavigation().length'),5);
+  for(const removed of ['#paths','#skills']){context.location.hash=removed;run('render()');assert.equal(context.document.title,'My Learning • ShimentoX','Learning Paths and Skills pages are removed.');}
+  context.location.hash='#courses';run('render()');
+  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Learning','My Dashboard','Training Calendar','My Certificates','My Profile']));
   context.location.hash='';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
   context.location.hash='#dashboard';run('render()');assert.ok(app.innerHTML.includes('Welcome back, Sai'),'The dashboard is still one click away.');
   context.location.hash='#admin-courses';run('render()');
@@ -267,11 +269,15 @@ async function main() {
   assert.ok(app.innerHTML.includes('Export CSV')&&app.innerHTML.includes('=HYPERLINK(&quot;x&quot;)'));
   const csv=run(`toCSV([{key:'a',label:'Name'},{key:'b',label:'Note'}],[{a:'=SUM(A1)',b:'Hello, "team"'}])`);
   assert.equal(csv.split('\r\n')[1],`'=SUM(A1),"Hello, ""team"""`);
+  // Learning paths, skills and goals were removed from the admin screens as well.
+  assert.ok(!run("REPORT_TYPES.some(([type])=>type==='skills')"),'No skill-gap report.');
+  assert.ok(!run("Object.values(ROLE_NAV).flat().some(item=>['paths','skills'].includes(item[0]))"),'No role has Learning Paths or Skills in the sidebar.');
+  assert.ok(!app.innerHTML.includes('learning plans')&&!app.innerHTML.includes('Skills developed'));
   console.log('PASS role navigation, organisation dashboard metrics, reports and safe CSV export');
   // A backend process started before an update reports an older (or no) API version: admins get restart guidance, employees a neutral message.
   server.apiVersion=null;server.user={...testAdmin};server.setupRequired=false;await run('initializePortal()');
   assert.equal(run('serverOutdated'),true);
-  context.location.hash='#paths';run('render()');assert.ok(app.innerHTML.includes('older version of the portal')&&app.innerHTML.includes('npm start'));
+  context.location.hash='#calendar';run('render()');assert.ok(app.innerHTML.includes('older version of the portal')&&app.innerHTML.includes('npm start'));
   context.empUser={id:'employee-one',name:'Sai Charan',email:'sai@shimentox.com',role:'employee',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};run('currentUser=empUser');run('render()');
   assert.ok(app.innerHTML.includes('temporarily unavailable')&&!app.innerHTML.includes('npm start'));
   server.apiVersion=9;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));

@@ -41,6 +41,7 @@ RAG_COURSE = BACKEND / 'data/rag-course.json'
 POSH_COURSE = BACKEND / 'data/posh-course.json'
 PHISHING_COURSE = BACKEND / 'data/phishing-cybersecurity-awareness-course.json'
 AGILE_COURSE = BACKEND / 'data/agile-scrum-course.json'
+DATA_PRIVACY_COURSE = BACKEND / 'data/data-privacy-course.json'
 ADMIN_SEED = BACKEND / 'data/admin-seed.json'
 # Exam security rule for every scored attempt: no more than three attempts (module exams, assignments, knowledge checks and assessments).
 MAX_EXAM_ATTEMPTS = 3
@@ -108,6 +109,7 @@ def initialize(path):
         seed_lesson_course(db, POSH_COURSE, stamp)
         seed_lesson_course(db, PHISHING_COURSE, stamp)
         seed_lesson_course(db, AGILE_COURSE, stamp)
+        seed_lesson_course(db, DATA_PRIVACY_COURSE, stamp)
         seed_lesson_course(db, PYTHON_PATH, stamp)
         # Rename the packaged course in existing installs without changing its ID or learner history.
         db.execute('UPDATE courses SET title=? WHERE id=? AND title=?',

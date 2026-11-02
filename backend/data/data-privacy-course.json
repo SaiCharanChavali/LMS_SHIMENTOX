@@ -1,0 +1,510 @@
+{
+  "id": "data-privacy-protection",
+  "version": 1,
+  "title": "Data Privacy and Protection",
+  "category": "Cybersecurity and Data Protection",
+  "difficulty": "beginner",
+  "durationMinutes": 60,
+  "visibility": "everyone",
+  "status": "published",
+  "description": "Learn the fundamentals of data privacy and data protection and how to handle personal and sensitive information responsibly: key privacy principles, secure data handling, common privacy risks, data breaches and incident reporting, and practical steps every employee can take to protect organisational and customer information.",
+  "knowledgeCheck": {
+    "passPercent": 70,
+    "maxAttempts": 3,
+    "timeLimitMinutes": 10
+  },
+  "finalAssessment": {
+    "id": "data-privacy-protection-final",
+    "title": "Data Privacy and Protection: Final Assessment",
+    "description": "Ten questions covering the whole course. Score 70% or more to earn your certificate.",
+    "passPercent": 70,
+    "maxAttempts": 3,
+    "timeLimitMinutes": 20,
+    "questionCount": 10,
+    "questions": [
+      [
+        "Which statement best describes data privacy?",
+        [
+          "Encrypting every file",
+          "The right way to collect, use and share personal data",
+          "Backing up databases",
+          "Installing antivirus software"
+        ],
+        1,
+        "Data privacy is about how personal data should be collected, used and shared. Protection is about keeping it safe."
+      ],
+      [
+        "Which of these is sensitive personal data?",
+        [
+          "A team meeting agenda",
+          "A product brochure",
+          "An office floor plan",
+          "An employee's medical certificate"
+        ],
+        3,
+        "Health information is sensitive personal data that needs extra protection."
+      ],
+      [
+        "A feedback form asks for date of birth even though it is never used. Which principle does this break?",
+        [
+          "Data minimisation",
+          "Accuracy",
+          "Accountability",
+          "Availability"
+        ],
+        0,
+        "Data minimisation means collecting only the data you actually need."
+      ],
+      [
+        "Customer emails collected for order updates are added to a marketing list without permission. Which principle is broken?",
+        [
+          "Accuracy",
+          "Storage limitation",
+          "Purpose limitation",
+          "Security"
+        ],
+        2,
+        "Purpose limitation means using data only for the purpose it was collected for."
+      ],
+      [
+        "What is the safest way to share a confidential report with a colleague?",
+        [
+          "Email it to their personal address",
+          "Share it with them by name through an approved tool",
+          "Post the link in a public channel",
+          "Print it and leave it on their desk"
+        ],
+        1,
+        "Share with named people through approved tools."
+      ],
+      [
+        "Which password practice is strongest?",
+        [
+          "A short password with symbols",
+          "The same password for all work accounts",
+          "A long, unique passphrase with multi-factor authentication",
+          "Your name followed by the year"
+        ],
+        2,
+        "Long, unique passphrases with MFA protect each account separately."
+      ],
+      [
+        "An email says your account will be closed today unless you confirm your password through a link. What is this most likely to be?",
+        [
+          "A routine IT update",
+          "A system error",
+          "A message from your manager",
+          "A phishing attempt"
+        ],
+        3,
+        "Urgency and a request for your password are classic phishing signs."
+      ],
+      [
+        "Which of these is a data breach?",
+        [
+          "A laptop containing customer data is stolen",
+          "You read a published company newsletter",
+          "You change your own password",
+          "IT schedules a backup"
+        ],
+        0,
+        "Loss or theft of personal data is a breach, even when no hacker is involved."
+      ],
+      [
+        "You realise you sent customer data to the wrong external contact. What should you do?",
+        [
+          "Say nothing and hope they ignore it",
+          "Try to recall it and report it to IT or security immediately",
+          "Ask the contact to forward it to the right person",
+          "Delete your sent copy"
+        ],
+        1,
+        "Contain it if you can, then report straight away so the response team can act."
+      ],
+      [
+        "What does the principle of least privilege mean?",
+        [
+          "Every employee gets full access to avoid delays",
+          "Only senior staff may access any data",
+          "Access is shared between team members",
+          "People get only the access their role needs, only while they need it"
+        ],
+        3,
+        "Least privilege limits access to what each role requires, for as long as it is needed."
+      ]
+    ]
+  },
+  "lessons": [
+    {
+      "slug": "lesson-01",
+      "title": "Introduction to Data Privacy and Protection",
+      "description": "Understand the difference between data privacy and data protection, and why protecting personal and organisational data matters to everyone.",
+      "durationMinutes": 8,
+      "content": "## Learning objectives\n- Explain the difference between data privacy and data protection.\n- Describe why personal and organisational data needs protecting.\n- Recognise that every employee handles data that someone trusted us with.\n\n## Data privacy and data protection\nThe two terms are often used together, but they answer different questions.\n\n| | Data privacy | Data protection |\n|---|---|---|\n| **The question it answers** | *Should* we collect and use this data, and how? | *How* do we keep this data safe? |\n| **Focus** | People's rights and expectations about their information | Controls that prevent loss, misuse or exposure |\n| **Examples** | Telling customers why we collect their phone number; using it only for that reason | Encryption, access control, backups, locked cabinets |\n\nA simple way to remember it: **privacy decides the rules, protection enforces them.** A company can have strong security and still break privacy rules, for example by collecting data it has no reason to hold. And good privacy rules mean little if the data is left on an unlocked laptop.\n\n## Why protecting data matters\n- **People can be harmed.** Leaked personal data can lead to fraud, identity theft, harassment or embarrassment.\n- **Trust is hard to rebuild.** Customers and employees share data because they trust us to look after it.\n- **The law requires it.** Data protection laws, such as India's Digital Personal Data Protection Act, 2023 and the EU's General Data Protection Regulation (GDPR), set rules for how personal data is handled and allow penalties when it is mishandled.\n- **Business information has value.** Pricing, contracts, source code and plans can damage the company if they reach competitors or attackers.\n\n## Everyone handles data\nData privacy is not only a job for IT or legal teams. HR handles employee records, sales handles customer contacts, engineers handle production databases, and almost everyone sends files and emails every day. Each of those moments is a chance to protect data, or to expose it.\n\n:::example Example: one spreadsheet, two questions\nA team lead exports a list of customers, with names, phone numbers and purchase history, to plan a campaign. **Privacy asks:** are we allowed to use this data for marketing, and do we need the purchase history at all? **Protection asks:** where is the file stored, who can open it, and when will it be deleted?\n:::\n\n## Key takeaways\n- Data privacy is about the right way to collect and use data; data protection is about keeping it safe.\n- Mishandled data can harm people, damage trust, break the law and hurt the business.\n- Every employee who touches data shares responsibility for protecting it.",
+      "knowledgeCheck": [
+        [
+          "What is the main difference between data privacy and data protection?",
+          [
+            "They mean exactly the same thing",
+            "Privacy decides how data should be collected and used; protection keeps it safe",
+            "Privacy is only about passwords; protection is only about paper files",
+            "Protection applies only to IT teams"
+          ],
+          1,
+          "Privacy is about the right way to collect and use data. Protection is about the controls that keep it safe."
+        ],
+        [
+          "Which is an example of a data protection measure?",
+          [
+            "Telling customers why their phone number is collected",
+            "Deciding not to collect date of birth",
+            "Encrypting a laptop",
+            "Asking for consent"
+          ],
+          2,
+          "Encryption is a control that keeps data safe. The others are privacy decisions about collecting and using data."
+        ],
+        [
+          "Who is responsible for protecting data in an organisation?",
+          [
+            "Only the IT team",
+            "Only the legal team",
+            "Only managers",
+            "Every employee who handles data"
+          ],
+          3,
+          "Everyone who handles data, from HR to sales to engineering, shares responsibility for protecting it."
+        ],
+        [
+          "Why does mishandling personal data matter?",
+          [
+            "It can harm people, damage trust and break the law",
+            "It only matters if a hacker is involved",
+            "It only affects the IT budget",
+            "It never has consequences for the company"
+          ],
+          0,
+          "Mishandled data can lead to fraud or harm, loss of trust, legal penalties and business damage."
+        ]
+      ]
+    },
+    {
+      "slug": "lesson-02",
+      "title": "Understanding Personal and Sensitive Data",
+      "description": "Learn to identify personal data, sensitive personal data and confidential business information, with practical workplace examples.",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- Define personal data, sensitive personal data and confidential business information.\n- Identify each type in everyday workplace situations.\n- Explain why sensitive data needs extra care.\n\n## Personal data\n**Personal data** is any information that identifies a person, or could identify them when combined with other information.\n\n- Name, email address, phone number, home address\n- Employee ID, customer account number\n- Photographs, voice recordings, IP addresses and device identifiers\n- Location data, such as delivery addresses or GPS history\n\nInformation does not need a name on it to be personal data. \"The only female engineer on the Pune night shift\" can identify someone just as clearly.\n\n## Sensitive personal data\nSome personal data can cause serious harm if it is exposed or misused, so it needs **extra protection**. Treat these as sensitive:\n\n- **Financial details:** bank account numbers, card numbers, salary\n- **Government identifiers:** Aadhaar, PAN, passport numbers\n- **Health information:** medical records, sick-leave reasons, disability information\n- **Biometric data:** fingerprints, face scans\n- **Passwords and security answers**\n- Information about religion, caste, political opinions or sexual orientation\n\n## Confidential business information\nNot all valuable data is about people. **Confidential business information** is company information that is not meant to be public:\n\n- Contracts, pricing and financial results before they are announced\n- Product plans, source code and system designs\n- Customer lists and supplier terms\n- Internal reports, audit findings and legal matters\n\n## Practical workplace examples\n| Situation | Type of data |\n|---|---|\n| A candidate's CV sent to the hiring manager | Personal data |\n| A scan of an employee's PAN card for payroll | Sensitive personal data |\n| A doctor's note attached to a leave request | Sensitive personal data (health) |\n| A customer's email and order history in the CRM | Personal data |\n| Next quarter's pricing proposal for a client | Confidential business information |\n| A database export with customer card numbers | Sensitive personal data, and confidential |\n\n:::example Example: the shared drive folder\nWhile looking for a template, you find a shared folder named \"HR Misc\" that anyone in the company can open. It contains salary sheets and copies of ID cards. This is sensitive personal data in the wrong place. Do not open or download the files: report the folder to HR or IT so its access can be fixed.\n:::\n\n## Key takeaways\n- Personal data is anything that can identify a person, directly or indirectly.\n- Sensitive personal data, such as financial, health, biometric and government ID data, needs extra protection.\n- Confidential business information is valuable to the company even when it is not about people.",
+      "knowledgeCheck": [
+        [
+          "Which of these is personal data?",
+          [
+            "A company press release",
+            "An employee ID number",
+            "The office address of a public building",
+            "A weather forecast"
+          ],
+          1,
+          "An employee ID identifies a specific person, so it is personal data."
+        ],
+        [
+          "Which is sensitive personal data that needs extra protection?",
+          [
+            "A work email signature",
+            "A team name",
+            "A scan of an employee's PAN card",
+            "A public job advertisement"
+          ],
+          2,
+          "Government identifiers such as PAN and Aadhaar are sensitive personal data."
+        ],
+        [
+          "Next quarter's pricing proposal for a client is an example of:",
+          [
+            "Sensitive personal data",
+            "Public information",
+            "Health data",
+            "Confidential business information"
+          ],
+          3,
+          "Pricing plans are not about people, but they are confidential business information."
+        ],
+        [
+          "You find salary sheets in a shared folder that everyone can open. What should you do?",
+          [
+            "Report the folder to HR or IT without opening the files",
+            "Download the files to check them",
+            "Share the link with your manager on chat",
+            "Ignore it"
+          ],
+          0,
+          "Do not open or download the files. Report the folder so its access can be fixed."
+        ]
+      ]
+    },
+    {
+      "slug": "lesson-03",
+      "title": "Data Privacy Principles",
+      "description": "Learn the principles behind responsible data handling: lawful collection, purpose limitation, data minimisation, accuracy, storage limitation, security and accountability.",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- Describe what lawful and responsible data collection means.\n- Explain purpose limitation, data minimisation, accuracy, security and accountability.\n- Apply these principles to everyday decisions about data.\n\n## Lawful and responsible collection\nPersonal data should be collected **for a legitimate reason, openly and fairly**. People should know what is being collected and why, and where the law requires it, they should give their consent. Collecting data secretly, or tricking people into sharing it, is never acceptable.\n\n## The core principles\nMost data protection laws and company policies are built on the same core principles.\n\n### Purpose limitation\nUse data only for the purpose it was collected for. Phone numbers collected for delivery updates should not be used for marketing calls without permission.\n\n### Data minimisation\nCollect and keep only the data you actually need. If a feedback form only needs a rating and a comment, do not ask for a date of birth.\n\n### Accuracy\nKeep personal data correct and up to date, and fix errors when you find them. Wrong data can lead to wrong decisions, such as a payment sent to an old bank account.\n\n### Storage limitation\nDo not keep data longer than needed. When the purpose is complete and any legal retention period has passed, delete or anonymise it.\n\n### Security\nProtect data against loss, theft and unauthorised access, using measures that match how sensitive it is.\n\n### Accountability\nThe organisation must be able to **show** that it follows these principles, through policies, records, training and reviews. Each employee is accountable for following them in their own work.\n\n:::flow Applying the principles to a new form\nWhy do we need it? | Purpose\nWhat is the least we need? | Minimisation\nIs it correct? | Accuracy\nHow long do we keep it? | Storage limitation\nWho can see it? | Security\nCan we show it? | Accountability\n:::\n\n:::example Example: the event registration form\nA colleague designs a registration form for an internal workshop and includes fields for home address and blood group \"just in case\". Applying data minimisation, only name, team and email are needed. Fewer fields mean less data to protect and less harm if the list is ever exposed.\n:::\n\n## Key takeaways\n- Collect personal data openly, fairly and for a clear, legitimate reason.\n- Use it only for that purpose, collect only what is needed and keep it accurate.\n- Delete it when it is no longer needed, protect it while you have it, and be able to show you did.",
+      "knowledgeCheck": [
+        [
+          "Phone numbers collected for delivery updates are used for marketing calls without permission. Which principle is broken?",
+          [
+            "Accuracy",
+            "Purpose limitation",
+            "Security",
+            "Accountability"
+          ],
+          1,
+          "Purpose limitation means using data only for the purpose it was collected for."
+        ],
+        [
+          "What does data minimisation mean?",
+          [
+            "Compressing files to save space",
+            "Deleting all data every month",
+            "Collecting and keeping only the data you actually need",
+            "Using smaller fonts in reports"
+          ],
+          2,
+          "Collect and keep only what the purpose requires. Less data means less to protect."
+        ],
+        [
+          "Which principle requires personal data to be kept correct and up to date?",
+          [
+            "Accountability",
+            "Purpose limitation",
+            "Data minimisation",
+            "Accuracy"
+          ],
+          3,
+          "Accuracy means keeping data correct and fixing errors when you find them."
+        ],
+        [
+          "What does accountability mean in data privacy?",
+          [
+            "Being able to show that the principles are followed",
+            "Keeping data forever in case it is needed",
+            "Letting each team set its own rules",
+            "Collecting as much data as possible"
+          ],
+          0,
+          "Accountability means the organisation can demonstrate compliance through policies, records, training and reviews."
+        ]
+      ]
+    },
+    {
+      "slug": "lesson-04",
+      "title": "Secure Data Handling",
+      "description": "Learn how to collect, store, share and dispose of data safely, with the basics of password security and access control.",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- Handle data safely at each stage: collecting, storing, sharing and disposing.\n- Create and protect strong passwords.\n- Explain the basics of access control and least privilege.\n\n## The data lifecycle\nData needs protecting at every stage of its life, not just while it sits in a database.\n\n:::flow The data lifecycle\nCollect | Only what is needed, through approved forms and systems\nStore | In approved, access-controlled locations\nUse and share | With the right people, through approved tools\nDispose | Securely, when it is no longer needed\n:::\n\n## Collecting and storing data\n- Use the company's approved systems and forms, not personal notebooks, phones or private cloud accounts.\n- Store files in approved shared drives or applications that have access controls, not on your desktop or USB drives.\n- Lock your screen whenever you step away (**Windows key + L** on Windows).\n- Keep paper documents with personal data in locked drawers, and follow a clear-desk habit.\n\n## Sharing data safely\n- Share with **named people who need it**, not \"anyone with the link\".\n- Use approved file-sharing tools instead of personal email or messaging apps.\n- Double-check the recipient before you press send, especially when email auto-completes a name.\n- Send only what is needed: a summary, or a file with sensitive columns removed, is often enough.\n- Do not paste confidential or personal data into unapproved websites or AI tools.\n\n## Disposing of data\n- Delete files you no longer need from shared drives, downloads folders and email attachments.\n- Shred paper records that contain personal or confidential information.\n- Return old laptops, phones and drives to IT so they can be wiped securely. Deleting files yourself is not enough.\n\n## Password security\n- Use a **long passphrase** of several unrelated words, rather than a short, complex password.\n- Use a **different password for every account**, so one leak does not unlock everything.\n- Use a password manager approved by the company to remember them.\n- Turn on **multi-factor authentication (MFA)** wherever it is available.\n- Never share your password, even with IT. IT will never ask for it.\n\n## Access control basics\n**Access control** decides who can see or change data. It follows the principle of **least privilege**: people get only the access their role requires, for only as long as they need it.\n\n- Request only the access you need for your work.\n- Tell your manager or IT when you no longer need access, for example after changing projects.\n- Never use someone else's account, or let them use yours.\n\n:::example Example: the project hand-over\nPriya moves from the payments team to the marketing team. She still has access to the payments database. Under least privilege, that access should be removed. She raises a request to remove it, so a lost laptop or a compromised account cannot expose payment data.\n:::\n\n## Key takeaways\n- Protect data when you collect, store, share and dispose of it.\n- Use long, unique passphrases, a password manager and multi-factor authentication.\n- Access should follow least privilege: only what your role needs, only while you need it.",
+      "knowledgeCheck": [
+        [
+          "What is the safest way to share a file with personal data with two colleagues?",
+          [
+            "Set the link to \"anyone with the link\"",
+            "Share it with the two named colleagues through an approved tool",
+            "Email it to their personal addresses",
+            "Copy it to a USB drive"
+          ],
+          1,
+          "Share with named people who need it, using approved tools."
+        ],
+        [
+          "Which is the best password practice?",
+          [
+            "One strong password for every account",
+            "A short password with symbols, changed daily",
+            "A long, unique passphrase for each account, with MFA",
+            "Writing passwords on a sticky note"
+          ],
+          2,
+          "Long, unique passphrases with multi-factor authentication protect each account separately."
+        ],
+        [
+          "What does the principle of least privilege mean?",
+          [
+            "Everyone gets administrator access",
+            "Only managers can access data",
+            "Access is given only after a year of service",
+            "People get only the access their role needs, only while they need it"
+          ],
+          3,
+          "Least privilege limits access to what each role requires, for as long as it is needed."
+        ],
+        [
+          "How should you dispose of an old laptop that held company data?",
+          [
+            "Return it to IT so it can be wiped securely",
+            "Delete your files and sell it",
+            "Throw it away with general waste",
+            "Give it to a family member"
+          ],
+          0,
+          "Deleting files is not enough. IT can wipe the device securely."
+        ]
+      ]
+    },
+    {
+      "slug": "lesson-05",
+      "title": "Common Data Privacy Risks",
+      "description": "Recognise the most common privacy risks: phishing, unauthorised access, weak passwords, insecure sharing and accidental data exposure.",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- Recognise the most common ways personal and company data is exposed.\n- Explain how phishing, weak passwords and insecure sharing lead to data loss.\n- Take simple steps that reduce each risk.\n\n## Phishing and social engineering\n**Phishing** messages pretend to come from someone you trust, such as a bank, a colleague or IT, to make you click a link, open a file or share information. **Social engineering** uses the same tricks in person or over the phone.\n\nWarning signs:\n- Urgency or threats: \"Your account will be closed today\"\n- Requests for passwords, one-time codes or payment details\n- Sender addresses or links that do not match the organisation\n- Unexpected attachments or invoices\n\n## Unauthorised access\nData is exposed when people who should not see it can reach it: a shared account, a former employee whose access was never removed, an unlocked screen in a meeting room, or a visitor following you through a secure door.\n\n## Weak and reused passwords\nShort or common passwords can be guessed in seconds. Reused passwords are even riskier: when one website is breached, attackers try the same email and password on other services, including work accounts.\n\n## Insecure sharing\n- Links set to \"anyone with the link can view\"\n- Sending files to a personal email address to work from home\n- Discussing customer details in public places or open-plan areas\n- Uploading company or customer data to unapproved apps or AI tools\n\n## Accidental data exposure\nMany incidents are honest mistakes:\n- Emailing a spreadsheet to the wrong \"Rahul\"\n- Using **CC** instead of **BCC** for an external mailing list, revealing every address\n- Sharing your whole screen in a call while a confidential document is open\n- Leaving printed reports on the printer\n\n| Risk | Simple protection |\n|---|---|\n| Phishing | Pause, check the sender and link, report suspicious messages |\n| Unauthorised access | Lock your screen, remove access you no longer need |\n| Weak passwords | Long, unique passphrases, a password manager and MFA |\n| Insecure sharing | Named recipients, approved tools only |\n| Accidental exposure | Check recipients, use BCC, share one window, not the whole screen |\n\n:::example Example: the urgent invoice\nAn email that appears to come from a supplier says their bank details have changed and asks you to pay an overdue invoice today. The urgency and the change of bank details are classic warning signs. Verify by calling the supplier on a number you already have, not one in the email, and report the message.\n:::\n\n## Key takeaways\n- Phishing and social engineering trick people into handing over data or access.\n- Weak, reused passwords and unremoved access give attackers an easy way in.\n- Many exposures are accidents; checking before you send or share prevents most of them.",
+      "knowledgeCheck": [
+        [
+          "Which is a typical warning sign of a phishing email?",
+          [
+            "It comes from a colleague you were expecting to hear from",
+            "It urgently asks you to confirm your password",
+            "It has your company logo in the signature",
+            "It arrives during working hours"
+          ],
+          1,
+          "Urgency and requests for passwords or codes are classic phishing signs."
+        ],
+        [
+          "Why is reusing the same password on several sites risky?",
+          [
+            "It makes passwords harder to remember",
+            "It slows down your computer",
+            "A breach of one site lets attackers try it on your other accounts",
+            "It is not risky if the password is long"
+          ],
+          2,
+          "Attackers try leaked email and password pairs on other services, including work accounts."
+        ],
+        [
+          "You email an external mailing list using CC instead of BCC. What is the risk?",
+          [
+            "The email will not be delivered",
+            "The attachments will be removed",
+            "Nothing, CC and BCC are the same",
+            "Every recipient can see everyone else's email address"
+          ],
+          3,
+          "CC reveals every address to all recipients, which is an accidental data exposure."
+        ],
+        [
+          "A supplier emails new bank details and asks for urgent payment. What should you do?",
+          [
+            "Verify by calling the supplier on a number you already have, and report the email",
+            "Pay quickly to avoid a late fee",
+            "Reply to the email to ask if it is genuine",
+            "Forward it to the whole team"
+          ],
+          0,
+          "Verify through a trusted channel, not the contact details in the suspicious email, and report it."
+        ]
+      ]
+    },
+    {
+      "slug": "lesson-06",
+      "title": "Data Breaches and Incident Reporting",
+      "description": "Understand what a data breach is and what to do when you suspect a privacy or security incident.",
+      "durationMinutes": 8,
+      "content": "## Learning objectives\n- Explain what a data breach is, with examples.\n- Know what to do, and what not to do, when you suspect an incident.\n- Understand why reporting quickly matters.\n\n## What is a data breach?\nA **data breach** is any event where personal or confidential data is lost, stolen, destroyed, changed, or accessed or shared without authorisation. It does not have to involve hackers.\n\nExamples:\n- A laptop or phone with company data is lost or stolen\n- An email with customer details is sent to the wrong person\n- An attacker gains access to an account through a phishing link\n- Ransomware encrypts files and makes them unavailable\n- A file with employee salaries is shared with the whole company by mistake\n\nA **security incident** is anything that might lead to a breach, such as clicking a suspicious link, even if no data has been exposed yet. Report incidents too.\n\n## What to do if you suspect an incident\n:::flow If you suspect a privacy or security incident\nStop | Do not continue the action, such as entering details or forwarding the email\nContain | If safe, unsend the email, disconnect from the network or ask the recipient to delete it\nReport | Tell your IT or security team and your manager immediately\nRecord | Note what happened, when, and what data was involved\nCooperate | Follow the response team's instructions\n:::\n\n## What not to do\n- **Do not hide it** or hope nobody notices. Delays make the harm worse.\n- **Do not investigate on your own**, for example by logging into systems to \"check\" or contacting the attacker.\n- **Do not delete evidence**, such as the suspicious email or log messages.\n- **Do not discuss it publicly** or on social media.\n\n## Why speed matters\nThe sooner an incident is reported, the sooner passwords can be reset, access can be blocked and affected people can be protected. Data protection laws can also require organisations to notify regulators and affected people within strict timelines, which is only possible when employees report straight away.\n\nReporting a mistake is the responsible thing to do. Organisations deal with honest mistakes far better than with incidents that are discovered late.\n\n:::example Example: the wrong recipient\nYou send a file with 200 customers' phone numbers to an external contact with a similar name. You realise a minute later. Try to recall the message, then report it to IT or security straight away with the time, the recipient and what the file contained. They can ask the recipient to delete it and decide whether anyone needs to be notified.\n:::\n\n## Key takeaways\n- A data breach is any loss, theft or unauthorised access or sharing of personal or confidential data, including accidents.\n- If you suspect an incident: stop, contain if safe, report immediately, record the details and cooperate.\n- Never hide or investigate an incident on your own; fast reporting limits the harm.",
+      "knowledgeCheck": [
+        [
+          "Which of these is a data breach?",
+          [
+            "A colleague reads a public annual report",
+            "An email with customer details is sent to the wrong person",
+            "You update your own phone number in the HR system",
+            "IT installs a security update"
+          ],
+          1,
+          "Sending personal data to the wrong person is unauthorised sharing, which is a breach even if it is accidental."
+        ],
+        [
+          "You clicked a suspicious link and entered your password. What should you do first?",
+          [
+            "Wait to see if anything happens",
+            "Delete the email so nobody knows",
+            "Stop, and report it to IT or security immediately",
+            "Try to find out who sent it yourself"
+          ],
+          2,
+          "Report straight away so your password can be reset and access blocked before harm is done."
+        ],
+        [
+          "Why should you NOT delete a suspicious email after reporting an incident?",
+          [
+            "It takes up little space",
+            "It might contain a discount",
+            "Deleted emails cannot be recovered",
+            "It is evidence the response team may need"
+          ],
+          3,
+          "Keep evidence such as the email so the response team can investigate."
+        ],
+        [
+          "Why does reporting an incident quickly matter?",
+          [
+            "It limits the harm and allows required notifications on time",
+            "It guarantees nobody will be told",
+            "It is only needed if a hacker was involved",
+            "It does not matter when you report"
+          ],
+          0,
+          "Fast reporting lets the team contain the incident and meet any legal notification timelines."
+        ]
+      ]
+    },
+    {
+      "slug": "lesson-07",
+      "title": "Employee Responsibilities and Best Practices",
+      "description": "Practical everyday rules for protecting company and customer data, including remote work, new tools and speaking up.",
+      "durationMinutes": 8,
+      "content": "## Learning objectives\n- Apply practical, everyday rules for protecting company and customer data.\n- Recognise your responsibilities when working remotely and using new tools.\n- Know where to go when you are unsure.\n\n## Your everyday rules\n1. **Collect only what you need**, and use it only for its purpose.\n2. **Store data in approved systems**, not on personal devices or accounts.\n3. **Lock your screen** whenever you leave your desk.\n4. **Share with named people**, through approved tools, and check recipients before sending.\n5. **Use strong, unique passphrases** with multi-factor authentication, and never share them.\n6. **Think before you click** on links and attachments, and report suspicious messages.\n7. **Delete and shred** what you no longer need.\n8. **Report incidents immediately**, including your own mistakes.\n\n## Working remotely and in public\n- Use company devices and a secure network; avoid public Wi-Fi for work, or use the company VPN.\n- Make sure family members and others cannot see your screen or hear confidential calls.\n- Do not print confidential documents at home or in shared print shops.\n- Keep devices with you or locked away when travelling.\n\n## Using new tools, including AI tools\nBefore using a new app, website or AI assistant for work:\n- Check that it is **approved** by the company.\n- Never paste personal data, customer information, passwords or confidential documents into an unapproved tool.\n- Remember that data entered into external services may be stored or used by that provider.\n\n## Speaking up\nIf you see something that puts data at risk, such as a folder open to everyone, a colleague sharing passwords, or a process that collects more data than it needs, raise it with your manager, IT or the data protection contact. Asking \"Should we be doing this?\" is part of protecting data.\n\n:::example Example: the helpful colleague\nA colleague on leave asks you to log in with their password to send a report for them. Sharing accounts breaks access control and makes it impossible to know who did what. Instead, ask for the file to be shared with you, or ask your manager to arrange temporary access.\n:::\n\n## Quick self-check\nCan you say yes to each of these?\n- I know which data in my role is personal, sensitive or confidential.\n- I store and share it only through approved tools.\n- My passwords are unique, and MFA is on.\n- I know how to report an incident.\n\n## Key takeaways\n- Small daily habits, like locking screens, checking recipients and using approved tools, prevent most data incidents.\n- Only use approved tools, including AI tools, for company and customer data.\n- When in doubt, ask; when something goes wrong, report it straight away.",
+      "knowledgeCheck": [
+        [
+          "Before using a new AI tool with work data, what should you check?",
+          [
+            "Whether it is free",
+            "Whether the company has approved it",
+            "Whether colleagues like it",
+            "Whether it has a dark mode"
+          ],
+          1,
+          "Only use approved tools for company and customer data."
+        ],
+        [
+          "A colleague on leave asks you to log in with their password to send a report. What should you do?",
+          [
+            "Log in, since it is urgent",
+            "Share your own password instead",
+            "Ask for the file to be shared with you, or ask your manager to arrange access",
+            "Write the password down for next time"
+          ],
+          2,
+          "Never share or use someone else's account. Ask for proper access instead."
+        ],
+        [
+          "Which habit best protects data when you step away from your desk?",
+          [
+            "Turning off the monitor",
+            "Closing your email",
+            "Putting your phone face down",
+            "Locking your screen"
+          ],
+          3,
+          "Locking your screen stops anyone from using your session while you are away."
+        ],
+        [
+          "When working in a public place, what is the safest practice?",
+          [
+            "Use the company VPN and keep your screen and calls private",
+            "Use any free Wi-Fi without a VPN",
+            "Print documents at a shared print shop",
+            "Leave your laptop at the table while you order"
+          ],
+          0,
+          "Use a secure connection and make sure others cannot see your screen or hear confidential calls."
+        ]
+      ]
+    }
+  ]
+}

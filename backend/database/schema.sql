@@ -477,7 +477,7 @@ CREATE TABLE IF NOT EXISTS lesson_activity_attempts (
     submitted_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS lesson_activity_attempts_run ON lesson_activity_attempts(run_id, lesson_id);
-PRAGMA user_version = 6;
+PRAGMA user_version = 7;
 -- Courses removed in Manage Courses; packaged courses listed here are not re-created at startup.
 CREATE TABLE IF NOT EXISTS deleted_courses (
     course_id TEXT PRIMARY KEY,

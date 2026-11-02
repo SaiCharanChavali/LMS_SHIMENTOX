@@ -115,6 +115,30 @@ MANIFEST = '''<?xml version="1.0" encoding="UTF-8"?>
 <resources><resource identifier="r1" href="content/a1.html"/><resource identifier="r2" href="content/a2.html"/><resource identifier="r3" href="content/wrap.html"/></resources></manifest>'''
 
 
+# A Data Privacy and Protection course published as a table of contents, and a single privacy guide modelled on
+# the FTC's "Protecting Personal Information" page (headings h2-h4, a CMS tag list, lists and a table).
+PRIVACY = 'https://privacy.example-agency.org/'
+PRIVACY_WORDS = ' '.join(['Personal data must be collected for a clear purpose, kept accurate, protected and deleted when it is no longer needed.'] * 3)
+
+
+def privacy_page(title, body):
+    return f'''<html><head><title>{title} | Example Privacy Agency</title></head><body><nav class="site-nav"><a href="/news/">News</a></nav>
+<main><article><div class="field--name-field-tags-view"><p>Tags:</p><ul><li><a href="/terms/privacy">Privacy and Security</a></li><li><a href="/terms/small-business">Small Business</a></li></ul></div>
+<h1>{title}</h1>{body}</article></main><footer>Example Privacy Agency</footer></body></html>'''
+
+
+PRIVACY_COURSE = f'''<html><head><title>Data Privacy and Protection | Example Privacy Agency</title><meta name="description" content="Handle personal and company information responsibly."></head><body>
+<main><h1>Data Privacy and Protection</h1><p>{PRIVACY_WORDS}</p><div class="toc"><ol>
+<li><a href="/course/introduction">Introduction to data privacy</a></li>
+<li><a href="/course/types-of-data/">Types of data</a><ol><li><a href="/course/types-of-data/personal">Personal information</a></li><li><a href="/course/types-of-data/sensitive">Sensitive information</a></li></ol></li>
+<li><a href="/course/secure-handling">Secure data handling</a></li></ol></div></main></body></html>'''
+PRIVACY_GUIDE = privacy_page('Protecting Personal Information: A Guide for Business', f'''<p>{PRIVACY_WORDS}</p><p>A sound data security plan is built on 5 key principles:</p>
+<ol><li>Take stock.</li><li>Scale down.</li><li>Lock it.</li><li>Pitch it.</li><li>Plan ahead.</li></ol>
+<h2>1. TAKE STOCK. Know what personal information you have.</h2><p>Inventory every computer and file.</p><h4>SECURITY CHECK</h4><p>Do you know who sends you personal information?</p>
+<h2>3. LOCK IT. Protect the information that you keep.</h2><h3>Physical Security</h3><ul><li>Store paper records in a locked room.</li><li>Limit access to employees who need it.</li></ul>
+<h3>Electronic Security</h3><h4>Authentication</h4><p>Require strong passwords.</p><table><tr><th>Control</th><th>Purpose</th></tr><tr><td>Encryption</td><td>Protects data in transit</td></tr></table>''')
+
+
 def simple_page(title):
     return f'<html><body><main><h1>{title}</h1><p>{WORDS}</p></main></body></html>'
 
@@ -159,6 +183,13 @@ SITE = {
     'https://huge.example-site.org/streamed': (200, {'content-type': 'text/html'}, '<p>' + 'x' * (fetch.MAX_PAGE_BYTES + 10) + '</p>'),
     'https://huge.example-site.org/bomb': (200, {'content-type': 'text/html', 'content-encoding': 'gzip'}, gzip.compress(b'<p>' + b'x' * (fetch.MAX_PAGE_BYTES + 10))),
     'https://huge.example-site.org/gzipped': (200, {'content-type': 'text/html', 'content-encoding': 'gzip'}, gzip.compress(simple_page('Compressed page').encode())),
+    PRIVACY + 'course/': PRIVACY_COURSE,
+    PRIVACY + 'course/introduction': privacy_page('Introduction to data privacy', f'<p>{PRIVACY_WORDS}</p><h2>What data privacy means</h2><p>Privacy is about how personal data is used.</p><h2>Privacy and data security</h2><p>Security protects data; privacy governs its use.</p>'),
+    PRIVACY + 'course/types-of-data/': privacy_page('Types of data', f'<p>{PRIVACY_WORDS}</p><h2>Customer and employee data</h2><p>Both need protection.</p>'),
+    PRIVACY + 'course/types-of-data/personal': privacy_page('Personal information', f'<p>{PRIVACY_WORDS}</p><h2>Examples</h2><ul><li>Name</li><li>Email address</li></ul>'),
+    PRIVACY + 'course/types-of-data/sensitive': privacy_page('Sensitive information', f'<p>{PRIVACY_WORDS}</p><h2>Special categories</h2><p>Health and financial data.</p>'),
+    PRIVACY + 'course/secure-handling': privacy_page('Secure data handling', f'<p>{PRIVACY_WORDS}</p><h2>Access control</h2><h3>Least privilege</h3><p>Grant only the access a role needs.</p><h2>Secure disposal</h2><p>Shred paper and wipe drives.</p>'),
+    PRIVACY + 'guide/protecting-personal-information': PRIVACY_GUIDE,
     'https://bad.example-site.org/doctype/imsmanifest.xml': (200, {'content-type': 'text/xml'}, '<?xml version="1.0"?><!DOCTYPE m [<!ENTITY a "aaaa">]><manifest>&a;</manifest>'),
 }
 DNS = {'intranet.example-site.org': ['10.0.0.7'], 'rebind.example-site.org': [PUBLIC_IP, '127.0.0.1'], 'cgnat.example-site.org': ['100.64.1.1'],
@@ -345,6 +376,22 @@ SELECT 2;</code></pre></li><li>Five</li></ol><table><thead><tr><th>A</th><th>B</
         for text in ('¶', 'Hidden draft', 'Share on social', 'Copyright', 'Basics'):
             self.assertNotIn(text, md)
 
+    def test_data_privacy_article_keeps_heading_hierarchy_without_page_tags(self):
+        with internet():
+            result = run_import(PRIVACY + 'guide/protecting-personal-information')
+        self.assertEqual((result['kind'], result['title'], result['policy']['fullContent']), ('article', 'Protecting Personal Information: A Guide for Business', True))
+        [lesson] = lessons_of(result)
+        md = lesson['content']
+        self.assertEqual([(s['level'], s['title']) for s in lesson['sections']],
+                         [(1, '1. TAKE STOCK. Know what personal information you have.'), (3, 'SECURITY CHECK'), (1, '3. LOCK IT. Protect the information that you keep.'),
+                          (2, 'Physical Security'), (2, 'Electronic Security'), (3, 'Authentication')])
+        self.assertIn('## 3. LOCK IT. Protect the information that you keep.\n\n### Physical Security\n\n- Store paper records in a locked room.', md)
+        self.assertIn('### Electronic Security\n\n#### Authentication', md)
+        self.assertIn('1. Take stock.\n2. Scale down.', md)
+        self.assertIn('| Encryption | Protects data in transit |', md)
+        for text in ('Tags:', 'Small Business', 'News', 'Example Privacy Agency'):
+            self.assertNotIn(text, md)
+
     def test_course_manifest_and_unsafe_manifest(self):
         with internet():
             result = run_import('https://packages.example-site.org/safety/imsmanifest.xml')
@@ -461,6 +508,70 @@ class ImportWorkflowTests(PortalFixture):
         self.assertEqual([(l['moduleTitle'], l['title']) for l in page['courseLessons']],
                          [('', 'Syllabus'), ('Lecture Notes', 'Lecture Notes'), ('Lecture Notes', 'Lecture 1'), ('Lecture Notes', 'Lecture 2'), ('', 'Assignments')])
         self.assertIn('| Problem sets | 50% |', page['courseLessons'][0]['content'])
+
+    def test_data_privacy_course_import_end_to_end(self):
+        """Import a Data Privacy and Protection course from a URL, review it, add a knowledge check, publish, and learn."""
+        status, data, _ = self.preview(PRIVACY + 'course/')
+        self.assertEqual(status, 200, data)
+        self.assertEqual([(i['type'], i['title']) for i in data['preview']['items']],
+                         [('lesson', 'Introduction to data privacy'), ('module', 'Types of data'), ('lesson', 'Secure data handling')])
+        description = 'Learn the fundamental principles of data privacy and data protection.'
+        status, saved, _ = self.save(data['token'], title='Data Privacy and Protection', category='Cybersecurity and Data Protection', description=description)
+        self.assertEqual(status, 200, saved)
+        course = saved['course']
+        self.assertEqual((course['status'], course['category'], course['source']['platform'], course['source']['importStatus']),
+                         ('draft', 'Cybersecurity and Data Protection', 'privacy.example-agency.org', 'complete'))
+        expected = [(None, '', 'Introduction to data privacy'), (0, 'Types of data', 'Types of data'), (0, 'Types of data', 'Personal information'),
+                    (0, 'Types of data', 'Sensitive information'), (None, '', 'Secure data handling')]
+        with closing(connect(self.db_path)) as db:
+            row = db.execute('SELECT title,description,category,status,source_url,source_platform FROM courses WHERE id=?', (course['id'],)).fetchone()
+            self.assertEqual(tuple(row), ('Data Privacy and Protection', description, 'Cybersecurity and Data Protection', 'draft', PRIVACY + 'course', 'privacy.example-agency.org'))
+            rows = db.execute('SELECT position,module_index,module_title,title,content,video_url,source_url FROM course_lessons WHERE course_id=? ORDER BY position', (course['id'],)).fetchall()
+        self.assertEqual([(r['module_index'], r['module_title'], r['title']) for r in rows], expected)
+        self.assertEqual([r['position'] for r in rows], [0, 1, 2, 3, 4])
+        self.assertIn('## Access control\n\n### Least privilege\n\nGrant only the access a role needs.\n\n## Secure disposal', rows[4]['content'])
+        self.assertEqual(rows[2]['source_url'], PRIVACY + 'course/types-of-data/personal')
+        self.assertTrue(all(r['video_url'] == '' and 'Tags:' not in r['content'] for r in rows), 'Text-only lessons without page tags.')
+        self.assertNotIn(course['id'], self.employee_catalog_ids(), 'Drafts stay hidden until reviewed and published.')
+        # Review in the course builder: add a knowledge check with four options per question and a 70% pass mark, then publish.
+        lessons = self.admin.request(f'manage/courses/{course["id"]}/builder')[1]['lessons']
+        questions = [{'prompt': 'Which principle means keeping only the personal data you need?', 'options': ['Data minimisation', 'Encryption', 'Backup', 'Logging'], 'correct': 0,
+                      'explanation': 'Collect and keep only what the purpose requires.'},
+                     {'prompt': 'What does least privilege mean?', 'options': ['Everyone gets admin access', 'Grant only the access a role needs', 'Share passwords with the team', 'Disable passwords'], 'correct': 1,
+                      'explanation': 'Access is limited to what each role needs.'}]
+        body = {'id': course['id'], 'format': 'lessons', 'title': course['title'], 'category': course['category'], 'description': description, 'status': 'published', 'lessons': lessons,
+                'assessment': {'passPercent': 70, 'maxAttempts': 3, 'timeLimitMinutes': 10, 'questions': questions}}
+        published = self.admin.request('admin/courses', body)
+        self.assertEqual(published[0], 200, published[1])
+        # Employees find it in the catalog and learn the lessons in the source's order, grouped by module.
+        learner = self.employee()
+        listed = next(c for c in learner.request('courses')[1]['courses'] if c['id'] == course['id'])
+        self.assertEqual((listed['title'], listed['category'], listed['lessonCount']), ('Data Privacy and Protection', 'Cybersecurity and Data Protection', 5))
+        self.assertEqual(learner.request('learning/enroll', {'courseId': course['id']})[0], 200)
+        page = learner.request(f'learning?courseId={course["id"]}')[1]
+        self.assertEqual([(l['moduleIndex'], l['moduleTitle'], l['title']) for l in page['courseLessons']], expected)
+        self.assertTrue(all((l['videoUrl'], l['videoSeconds']) == ('', 0) for l in page['courseLessons']))
+        for lesson in page['courseLessons']:
+            self.assertEqual(learner.action('lesson', lessonId=lesson['id'])[0], 200)
+        self.assertEqual(next(c for c in learner.request('courses')[1]['courses'] if c['id'] == course['id'])['progress'], 100)
+        with closing(connect(self.db_path)) as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM lesson_progress p JOIN course_lessons l ON l.id=p.lesson_id WHERE l.course_id=?', (course['id'],)).fetchone()[0], 5)
+        # The knowledge check: 50% fails the 70% pass mark, 100% passes; explanations are shown and attempts are saved.
+        check_id = self.admin.request(f'manage/courses/{course["id"]}/builder')[1]['course']['postAssessmentId']
+        self.assertIn(check_id, [p['id'] for p in learner.request('me/dashboard')[1]['pendingAssessments']])
+        right = {q['prompt']: q['options'][q['correct']] for q in questions}
+        for wrong, outcome in ((1, ('failed', 50)), (0, ('passed', 100))):
+            attempt = learner.request(f'me/assessments/{check_id}/start', {})[1]['attempt']
+            self.assertTrue(all(len(q['options']) == 4 and 'correct' not in q for q in attempt['questions']))
+            answers = [q['options'].index(right[q['prompt']]) for q in attempt['questions']]
+            if wrong:
+                answers[0] = (answers[0] + 1) % 4
+            result = learner.request(f'me/assessments/{check_id}/submit', {'attemptId': attempt['id'], 'answers': answers})[1]['result']
+            self.assertEqual((result['status'], result['percent'], result['passPercent']), (*outcome, 70))
+            self.assertTrue(all(d['explanation'] for d in result['details']))
+        with closing(connect(self.db_path)) as db:
+            rows = db.execute('SELECT status,percent FROM assessment_attempts WHERE assessment_id=? ORDER BY attempt_number', (check_id,)).fetchall()
+        self.assertEqual([tuple(r) for r in rows], [('failed', 50), ('passed', 100)])
 
     def test_duplicate_imports_are_prevented(self):
         url = 'https://www.geeksforgeeks.org/python/python-lists/'

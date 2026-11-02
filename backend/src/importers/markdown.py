@@ -15,7 +15,7 @@ INLINE = {'a', 'abbr', 'b', 'bdi', 'bdo', 'cite', 'code', 'data', 'del', 'dfn', 
           'small', 'span', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var', 'wbr', 'br', 'img', 'math', 'nobr'}
 HEADINGS = {'h1': 1, 'h2': 2, 'h3': 3, 'h4': 4, 'h5': 5, 'h6': 6}
 NOISE = re.compile(r'(^|[\s_-])(nav|navbar|navigation|menu|breadcrumbs?|sidebar|share|sharing|social|comments?|related|recommended|newsletter|subscribe|'
-                   r'advert|advertisement|ads?|adsbygoogle|sponsor|promo|cookie|consent|banner|popup|modal|toolbar|feedback|rating|author-bio|'
+                   r'tags|taxonomy|advert|advertisement|ads?|adsbygoogle|sponsor|promo|cookie|consent|banner|popup|modal|toolbar|feedback|rating|author-bio|'
                    r'pagination|pager|print-only|sr-only|visually-hidden|skip-link|edit-link|table-of-contents|toc)($|[\s_-])', re.I)
 BLOCK_START = re.compile(r'^(```|#{2,4} |:::|\||[-*•]\s|\d+[.)]\s)')
 MAX_CONTENT = 100000

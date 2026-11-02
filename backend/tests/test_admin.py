@@ -165,12 +165,28 @@ class AdminTests(PortalFixture):
         self.assertEqual(self.admin.request('admin/courses',{'title':'Invalid','description':'Invalid structure','category':'Test','status':'published','content':{'sets':[],'lessons':[]}})[0],400)
 
 
+    def test_v7_upgrade_adds_the_data_protection_category_once(self):
+        path=Path(self.temp.name)/'v6.sqlite3'
+        initialize(path)
+        with closing(connect(path)) as db, db:
+            db.execute("DELETE FROM course_categories WHERE name='Cybersecurity and Data Protection'")
+            db.execute('PRAGMA user_version=6')
+        initialize(path)
+        def category():
+            with closing(connect(path)) as db:
+                return db.execute("SELECT COUNT(*) FROM course_categories WHERE name='Cybersecurity and Data Protection'").fetchone()[0]
+        self.assertEqual(category(),1)
+        with closing(connect(path)) as db, db:
+            db.execute("DELETE FROM course_categories WHERE name='Cybersecurity and Data Protection'")
+        initialize(path)
+        self.assertEqual(category(),0,'A category an administrator deletes stays deleted.')
+
     def test_v1_migration_preserves_existing_candidate_and_progress(self):
         path=Path(self.temp.name)/'legacy.sqlite3'
         sql=(BACKEND/'database/schema.sql').read_text(encoding='utf-8')
         sql=re.sub(r'last_login_at TEXT,.*?\n\);','last_login_at TEXT\n);',sql,count=1,flags=re.S)
         sql=re.sub(r'version INTEGER NOT NULL,.*?\n\);','version INTEGER NOT NULL\n);',sql,count=1,flags=re.S)
-        sql=re.sub(r'CREATE TABLE IF NOT EXISTS admin_events \(.*?\n\);','',sql,flags=re.S).replace('PRAGMA user_version = 6','PRAGMA user_version = 1')
+        sql=re.sub(r'CREATE TABLE IF NOT EXISTS admin_events \(.*?\n\);','',sql,flags=re.S).replace('PRAGMA user_version = 7','PRAGMA user_version = 1')
         with closing(sqlite3.connect(path)) as db, db:
             db.executescript(sql)
             db.execute('INSERT INTO candidates VALUES (?,?,?,?,?,?,NULL)',('legacy','Legacy User','legacy@test.com',password_hash('Legacy123!'),now(),now()))
@@ -180,7 +196,7 @@ class AdminTests(PortalFixture):
         initialize(path)
         initialize(path)
         with closing(connect(path)) as db:
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],6)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],7)
             row=db.execute("SELECT * FROM candidates WHERE id='legacy'").fetchone()
             self.assertEqual(row['role'],'employee')
             self.assertEqual(row['email'],'legacy@test.com')

@@ -19,6 +19,11 @@ phishing, social engineering, deepfake scams and everyday security habits, each 
 knowledge check, plus a 10-question final assessment and a certificate. It is based on
 the free [CyberAID cybersecurity courses](https://www.cyberaid.eu/en/cybersecurity-courses/).
 
+The catalog includes **Agile and Scrum**: six text lessons on the Agile Manifesto, Scrum
+roles, events and artifacts, user stories and estimation, and Kanban, each with a knowledge
+check, plus a 10-question final assessment and a certificate. It is based on
+[Atlassian's Agile Coach](https://www.atlassian.com/agile).
+
 ShimentoX's internal employee learning & development portal. It brings together course and training management, assignments and mandatory deadlines, learning paths, skills and competencies, assessments with question banks, instructor-led sessions, notifications, certificates, and learning analytics. Accounts and progress are stored in SQLite. See [learning & development](docs/learning-and-development.md) for roles, metric definitions, and the API.
 
 ## Run locally

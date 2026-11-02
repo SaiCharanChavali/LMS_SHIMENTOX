@@ -1,0 +1,519 @@
+{
+  "id": "agile-and-scrum",
+  "version": 2,
+  "unchangedFingerprints": [
+    "ff168721b9cd88c2de64887e95db09f9ff4f153c0d43623f94b538ad6e6eb1d7"
+  ],
+  "title": "Agile and Scrum",
+  "category": "Professional Development",
+  "difficulty": "beginner",
+  "durationMinutes": 60,
+  "visibility": "everyone",
+  "status": "published",
+  "description": "Learn how Agile teams work: the Agile Manifesto, Scrum theory and values, the Scrum team, sprints and Scrum events, the three artifacts, user stories and story points, and Kanban, with knowledge checks and a final assessment.",
+  "source": {
+    "title": "What is Agile?, Atlassian",
+    "url": "https://www.atlassian.com/agile"
+  },
+  "knowledgeCheck": {
+    "passPercent": 70,
+    "maxAttempts": 3,
+    "timeLimitMinutes": 10
+  },
+  "finalAssessment": {
+    "id": "agile-and-scrum-final",
+    "title": "Agile and Scrum: Final Assessment",
+    "description": "Ten questions drawn at random from the whole course. Score 70% or more to earn your certificate.",
+    "passPercent": 70,
+    "maxAttempts": 3,
+    "timeLimitMinutes": 20,
+    "questionCount": 10,
+    "questions": [
+      [
+        "What is Agile?",
+        [
+          "An iterative approach that delivers work in small increments and improves through feedback",
+          "A single fixed process every team must follow exactly",
+          "A type of project management software",
+          "A method that delivers everything at the end of the project"
+        ],
+        0,
+        "Agile is an iterative approach and mindset based on the Agile Manifesto."
+      ],
+      [
+        "Which statement reflects the Agile Manifesto?",
+        [
+          "Following a plan over responding to change",
+          "Working software over comprehensive documentation",
+          "Contract negotiation over customer collaboration",
+          "Processes and tools over individuals and interactions"
+        ],
+        1,
+        "The Manifesto values working software over comprehensive documentation."
+      ],
+      [
+        "Which of these is NOT one of the three Scrum accountabilities?",
+        [
+          "Product Owner",
+          "Scrum Master",
+          "Project Manager",
+          "Developers"
+        ],
+        2,
+        "A Scrum team has a Product Owner, a Scrum Master and Developers. Scrum does not define a project manager role."
+      ],
+      [
+        "What is the main purpose of the daily Scrum?",
+        [
+          "To report hours worked to management",
+          "To demonstrate the product to customers",
+          "To write the product backlog",
+          "To inspect progress towards the sprint goal and plan the next 24 hours"
+        ],
+        3,
+        "The daily Scrum aligns the team on the sprint goal and surfaces blockers."
+      ],
+      [
+        "What happens in the sprint review?",
+        [
+          "The team shows the increment to stakeholders and gathers feedback",
+          "The team discusses only how to improve its process",
+          "The Scrum Master assigns tasks",
+          "The sprint length is changed"
+        ],
+        0,
+        "The review inspects the increment with stakeholders and updates the product backlog."
+      ],
+      [
+        "What is the recommended size of a Scrum team?",
+        [
+          "Exactly 2 people",
+          "10 people or fewer",
+          "At least 25 people",
+          "There is no limit at all"
+        ],
+        1,
+        "The Scrum Guide recommends 10 or fewer people, so communication stays effective."
+      ],
+      [
+        "What is the sprint goal?",
+        [
+          "The total number of story points in the backlog",
+          "The list of every feature in the product",
+          "The single objective for the sprint",
+          "A deadline for the whole project"
+        ],
+        2,
+        "The sprint goal is the commitment of the sprint backlog: the sprint's single objective."
+      ],
+      [
+        "A team wants to stop work piling up in code review. Which Kanban practice helps most?",
+        [
+          "Longer sprints",
+          "More meetings",
+          "Removing the review column",
+          "Setting a WIP limit on the code review column"
+        ],
+        3,
+        "A WIP limit makes the team finish reviews before starting new work."
+      ],
+      [
+        "Why do many Agile teams estimate in story points rather than hours?",
+        [
+          "Points measure relative effort and reduce the pressure and bias of exact dates",
+          "Points are required by law",
+          "Hours cannot be written down",
+          "Points tell managers who works hardest"
+        ],
+        0,
+        "Relative estimates handle uncertainty and avoid using estimates to judge people."
+      ],
+      [
+        "How should the product backlog be managed?",
+        [
+          "It is fixed once the project starts",
+          "It is continuously refined and re-ordered by the Product Owner",
+          "Each developer keeps their own private backlog",
+          "It is written once a year by stakeholders"
+        ],
+        1,
+        "The product backlog is a living, ordered list maintained by the Product Owner."
+      ],
+      [
+        "Which pair is correct?",
+        [
+          "Lead time: from start of work to finish",
+          "Cycle time: from request to delivery",
+          "Cycle time: from start of work to finish",
+          "Lead time: the length of a sprint"
+        ],
+        2,
+        "Cycle time is from the start of work to completion; lead time is from request to delivery."
+      ],
+      [
+        "What is planning poker?",
+        [
+          "A game played after the retrospective",
+          "A way to decide who leads the sprint",
+          "A tool for tracking hours",
+          "A team estimation technique where everyone reveals estimates at the same time"
+        ],
+        3,
+        "Everyone reveals their estimate together, then the team discusses differences and agrees."
+      ],
+      [
+        "Which value means team members feel safe to raise problems and try new things?",
+        [
+          "Courage",
+          "Focus",
+          "Commitment",
+          "Respect"
+        ],
+        0,
+        "Courage is the bravery to question the status quo and be open about problems."
+      ],
+      [
+        "What is an epic?",
+        [
+          "The smallest unit of work",
+          "A large body of work broken down into user stories",
+          "A Scrum event",
+          "A type of WIP limit"
+        ],
+        1,
+        "Epics contain stories, and initiatives contain epics."
+      ],
+      [
+        "Which approach combines Scrum's backlog and planning with Kanban's continuous flow?",
+        [
+          "Waterfall",
+          "Extreme Programming",
+          "Scrumban",
+          "Six Sigma"
+        ],
+        2,
+        "Scrumban, or Kanplan, blends Scrum's planning discipline with Kanban's flow."
+      ]
+    ]
+  },
+  "lessons": [
+    {
+      "slug": "lesson-01",
+      "title": "Introduction to Agile",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Explain what Agile is and why teams choose it.\n- State the four values of the Agile Manifesto.\n- Compare Agile with the traditional waterfall approach.\n- Name the most common Agile frameworks.\n\n## What is Agile?\n**Agile** is an iterative approach to managing work. Instead of planning everything up front and delivering once at the end, an Agile team divides work into small pieces, delivers them frequently, gathers feedback, and improves as it goes.\n\nAgile grew out of the **Agile Manifesto**, written in 2001 by a group of software developers. The Manifesto did not prescribe two-week iterations or an ideal team size. It set out values and principles that put people first. Agile is a mindset, not a fixed set of meetings or techniques.\n\n## The four values of the Agile Manifesto\nThe Manifesto says that while there is value in the items on the right, Agile teams value the items on the left more:\n\n| Agile teams value... | ...over |\n|---|---|\n| **Individuals and interactions** | Processes and tools |\n| **Working software** | Comprehensive documentation |\n| **Customer collaboration** | Contract negotiation |\n| **Responding to change** | Following a plan |\n\n:::note \"Over\" does not mean \"instead of\"\nAgile teams still use processes, documentation, contracts and plans. The Manifesto simply says which matters more when the two conflict.\n:::\n\n## Key principles behind the values\nThe Manifesto also lists twelve principles. Some of the most important are:\n- Satisfy the customer through **early and continuous delivery** of valuable work.\n- **Welcome changing requirements**, even late in development.\n- Deliver working results **frequently**, from every couple of weeks to every couple of months, preferring the shorter timescale.\n- Business people and the team **work together daily**.\n- Build work around **motivated individuals**, and trust them to get the job done.\n- At regular intervals, the team **reflects on how to become more effective**, then adjusts.\n\n## Agile versus waterfall\n| | Waterfall | Agile |\n|---|---|---|\n| Planning | Detailed plan for the whole project up front | \"Just enough\" planning, refined as the team learns |\n| Delivery | One large delivery at the end | Small, frequent increments |\n| Teams | Each group finishes its phase, then hands off to the next | Cross-functional teams collaborate throughout |\n| Change | Expensive and disruptive | Expected and welcomed |\n| Feedback | Arrives late, often after release | Arrives early and often |\n\nBecause Agile teams ship in small increments, a change in the market or in customer feedback does not derail a whole year of plans. Each change can be fed into the next piece of work at little cost.\n\n## Common Agile frameworks\n- **Scrum:** work is organised into fixed-length sprints, with defined roles, events and artifacts. Popular in software and product development.\n- **Kanban:** work flows continuously across a visual board, with limits on work in progress. Popular with service teams such as IT, HR and marketing.\n- **Lean:** focuses on delivering value and removing waste.\n- **Extreme Programming (XP):** engineering practices such as pair programming, test-driven development and continuous integration.\n\nMany teams blend practices from several frameworks. Atlassian's own advice is that every team should choose the practices that work for it, review them regularly, and keep what helps.\n\n## The 5 C's of Agile\n**Communication, Collaboration, Commitment, Customer** and **Continuous improvement**: open communication, teamwork, dedication to goals, a focus on the customer, and regular reflection.\n\n## Key takeaways\n- Agile delivers work in small, frequent increments and improves through feedback.\n- The Manifesto values individuals, working results, customer collaboration and responding to change.\n- Scrum, Kanban, Lean and XP are Agile frameworks; teams often combine them.",
+      "knowledgeCheck": [
+        [
+          "In what year was the Agile Manifesto written?",
+          [
+            "2001",
+            "1985",
+            "1995",
+            "2010"
+          ],
+          0,
+          "The Agile Manifesto was written in 2001. Frameworks such as Scrum and Kanban later became the most popular ways of practising it."
+        ],
+        [
+          "Which is one of the four values of the Agile Manifesto?",
+          [
+            "Comprehensive documentation over working software",
+            "Customer collaboration over contract negotiation",
+            "Following a plan over responding to change",
+            "Processes and tools over individuals and interactions"
+          ],
+          1,
+          "The Manifesto values customer collaboration over contract negotiation. The other options reverse the real values."
+        ],
+        [
+          "How does Agile differ from waterfall?",
+          [
+            "Agile delivers everything once at the end",
+            "Agile needs a detailed plan for the whole project up front",
+            "Agile delivers in small, frequent increments and welcomes change",
+            "Agile does not use any planning"
+          ],
+          2,
+          "Agile uses \"just enough\" planning and frequent delivery, so feedback and change can be built in cheaply."
+        ],
+        [
+          "What does \"over\" mean in the Agile Manifesto values?",
+          [
+            "The items on the right are forbidden",
+            "The items on the right are always worthless",
+            "Only the items on the right matter",
+            "The items on the left are valued more, though the right still has value"
+          ],
+          3,
+          "Agile teams still use plans, processes and documentation. The left-hand items matter more when the two conflict."
+        ]
+      ],
+      "description": "What Agile is, the four values and key principles of the Agile Manifesto, how Agile differs from waterfall, and the most common Agile frameworks."
+    },
+    {
+      "slug": "lesson-02",
+      "title": "Scrum Fundamentals",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- Explain what Scrum is and how it differs from Agile.\n- Describe Scrum's foundations: empiricism and lean thinking.\n- Name the three pillars and the five Scrum values.\n\n## What is Scrum?\n**Scrum** is an Agile framework that helps teams organise and manage complex work through values, roles, events and artifacts. Work is broken into short, fixed-length cycles called **sprints**. In each sprint, the team delivers a usable piece of the product, learns from it and improves.\n\nScrum is widely used by software teams, but its ideas work for any kind of teamwork, from marketing to IT.\n\n## Agile and Scrum are not the same\n| Agile | Scrum |\n|---|---|\n| A philosophy and set of values for delivering work | A specific framework for putting Agile values into practice |\n| Defined by the Agile Manifesto | Defined by the Scrum Guide |\n| Says *what matters* | Says *how a team can work* |\n\nYou cannot simply \"go Agile\". It takes a whole team changing how it thinks about delivering value. A framework like Scrum gives the team a structure to practise that every day.\n\n## Scrum's foundations\n- **Empiricism:** knowledge comes from experience, and decisions are based on what is observed.\n- **Lean thinking:** reduce waste and focus on what is essential.\n\nEmpiricism rests on **three pillars**:\n\n| Pillar | What it means |\n|---|---|\n| **Transparency** | The work and the progress are visible to everyone who needs to see them |\n| **Inspection** | The team regularly checks its work and its progress towards goals |\n| **Adaptation** | When something is off track, the team adjusts as soon as possible |\n\n## A brief history\n**Jeff Sutherland** and **Ken Schwaber** developed Scrum in the early 1990s to manage complex software projects. They later wrote the **Scrum Guide**, which defines the framework.\n\n## The five Scrum values\nThe five values were added to the Scrum Guide in 2016. They guide how the team works and behaves.\n\n| Value | What it looks like in practice |\n|---|---|\n| **Commitment** | Team members commit to work they can complete and to the team's goals, without overcommitting |\n| **Focus** | The team concentrates on the work of the sprint and its goal |\n| **Openness** | People are open about their work, progress and blockers |\n| **Respect** | Team members respect each other, the product owner, stakeholders and the Scrum Master |\n| **Courage** | People feel safe to question the status quo, try new things and raise problems early |\n\n:::example Example: the values at work\nIn a daily Scrum, a developer says a task is taking longer than expected and she is blocked by a missing test environment (**openness** and **courage**). The team agrees to swap work so the sprint goal is still met (**commitment** and **focus**), and no one blames her for raising it (**respect**).\n:::\n\n## Key takeaways\n- Agile is the philosophy; Scrum is one framework for practising it.\n- Scrum is based on empiricism and lean thinking, with three pillars: transparency, inspection and adaptation.\n- The five Scrum values are commitment, focus, openness, respect and courage.",
+      "knowledgeCheck": [
+        [
+          "What is the difference between Agile and Scrum?",
+          [
+            "Agile is a philosophy; Scrum is a framework for practising it",
+            "They are exactly the same thing",
+            "Scrum is a philosophy; Agile is a framework",
+            "Agile is only for software, Scrum only for marketing"
+          ],
+          0,
+          "Agile is a set of values and principles; Scrum is a specific framework for putting them into practice."
+        ],
+        [
+          "What are the three pillars of empiricism in Scrum?",
+          [
+            "Planning, coding and testing",
+            "Transparency, inspection and adaptation",
+            "Roles, events and artifacts",
+            "Speed, cost and quality"
+          ],
+          1,
+          "Empiricism relies on transparency, inspection and adaptation."
+        ],
+        [
+          "Which of these is one of the five Scrum values?",
+          [
+            "Speed",
+            "Hierarchy",
+            "Courage",
+            "Perfection"
+          ],
+          2,
+          "The five Scrum values are commitment, focus, openness, respect and courage."
+        ],
+        [
+          "Who developed Scrum in the early 1990s?",
+          [
+            "Taiichi Ohno and Toyota",
+            "Jeff Bezos and Amazon",
+            "The authors of the PMBOK guide",
+            "Jeff Sutherland and Ken Schwaber"
+          ],
+          3,
+          "Jeff Sutherland and Ken Schwaber developed Scrum and later wrote the Scrum Guide."
+        ]
+      ],
+      "description": "What Scrum is and how it differs from Agile, Scrum's foundations in empiricism and lean thinking, the three pillars, and the five Scrum values."
+    },
+    {
+      "slug": "lesson-03",
+      "title": "The Scrum Team",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- Describe the three accountabilities in a Scrum team.\n- Explain what the Product Owner, Scrum Master and Developers each do.\n- Explain why Scrum teams are small, cross-functional and self-managing.\n\n## The Scrum team\nA Scrum team is a small, cross-functional, self-managing unit that delivers a valuable, usable increment every sprint. It has **one Product Owner, one Scrum Master and the Developers**. The Scrum Guide recommends **10 people or fewer**; smaller teams communicate better and are more productive.\n\n:::acronym The three Scrum accountabilities | Each has a clear focus, and together they deliver value every sprint.\nP | Product Owner | Maximises the value of the product and owns the product backlog\nS | Scrum Master | Makes Scrum work by coaching, facilitating and removing impediments\nD | Developers | Turn backlog items into a usable increment every sprint\n:::\n\n## The Product Owner\nThe Product Owner is the champion of the product. They understand business, customer and market needs, and make sure the team works on what delivers the most value.\n\n- Builds, orders and clearly communicates the **product backlog**\n- Makes sure everyone understands the items in the backlog\n- Gives the team clear guidance on what to deliver next\n- Decides when to release, with a preference for frequent delivery\n\nThe Product Owner is **one person**, not a committee, so the team never gets mixed guidance. The Product Owner is not always the same person as the product manager.\n\n## The Scrum Master\nThe Scrum Master is the champion of Scrum within the team. They are a servant-leader, not the team's manager.\n\n- Coaches the team, the Product Owner and the wider organisation on Scrum\n- **Removes impediments** that slow the team down\n- Facilitates Scrum events, such as sprint planning, daily Scrums, reviews and retrospectives, when needed\n- Helps the team improve its transparency and its flow of delivery\n\n## The Developers\nThe Developers are the people who do the work of creating each increment. In Scrum, \"Developers\" means anyone doing that work, not only software engineers; it can include designers, testers, writers and analysts.\n\n- Create the plan for the sprint (the sprint backlog)\n- Meet the **Definition of Done** to ensure quality\n- Adapt their plan each day towards the sprint goal\n- Hold each other accountable as professionals\n\nStrong teams are self-organising, share a clear \"we\" attitude, and have overlapping skills, so no single person becomes a bottleneck. Atlassian notes that many effective development teams have about five to seven members, in line with the \"two-pizza rule\": a team small enough to be fed by two pizzas.\n\n## Key takeaways\n- A Scrum team has one Product Owner, one Scrum Master and the Developers, typically 10 people or fewer.\n- The Product Owner owns value and the product backlog; the Scrum Master coaches and removes impediments.\n- Developers plan and build each increment and are accountable for quality through the Definition of Done.",
+      "knowledgeCheck": [
+        [
+          "Who owns and orders the product backlog?",
+          [
+            "The Product Owner",
+            "The Scrum Master",
+            "The stakeholders",
+            "The newest developer"
+          ],
+          0,
+          "The Product Owner builds, orders and communicates the product backlog to maximise value."
+        ],
+        [
+          "What is a key responsibility of the Scrum Master?",
+          [
+            "Assigning tasks to each developer",
+            "Removing impediments and coaching the team on Scrum",
+            "Writing all the code",
+            "Approving every pay rise"
+          ],
+          1,
+          "The Scrum Master is a servant-leader who coaches, facilitates and removes impediments, not the team's manager."
+        ],
+        [
+          "In Scrum, who counts as a \"Developer\"?",
+          [
+            "Only software engineers",
+            "Only the Scrum Master",
+            "Anyone doing the work of creating the increment",
+            "Only external contractors"
+          ],
+          2,
+          "Developers include anyone who creates the increment: engineers, designers, testers, writers and analysts."
+        ],
+        [
+          "Why should the Product Owner be one person rather than a committee?",
+          [
+            "So the role can rotate daily",
+            "Because committees are forbidden in companies",
+            "So the Scrum Master can do the job",
+            "So the team never gets mixed guidance"
+          ],
+          3,
+          "A single Product Owner gives the team one clear voice on priorities."
+        ]
+      ],
+      "description": "The three Scrum accountabilities: what the Product Owner, Scrum Master and Developers each do, and why Scrum teams are small and self-managing."
+    },
+    {
+      "slug": "lesson-04",
+      "title": "Scrum Events and Artifacts",
+      "durationMinutes": 11,
+      "content": "## Learning objectives\n- Describe the sprint and each Scrum event, with its purpose and timebox.\n- Run an effective daily Scrum.\n- Explain the three Scrum artifacts and the commitment linked to each.\n\n## The sprint\nA **sprint** is a fixed-length period, **one month or less**, in which the team creates a usable increment. Two weeks is the most common length. Every other Scrum event happens inside the sprint, and a new sprint starts as soon as the previous one ends.\n\nKeep the sprint length consistent. A steady rhythm gives the team reliable feedback on how much it can deliver, so its forecasts improve. Scrum.org's advice is that the more complex the work and the more unknowns there are, the shorter the sprint should be.\n\n## The Scrum events\n:::flow One sprint, from plan to improvement\nSprint planning | Agree the sprint goal and choose the backlog items to deliver\nDaily Scrum | 15 minutes each day to inspect progress towards the goal\nDevelopment work | Build the increment and meet the Definition of Done\nSprint review | Show the increment to stakeholders and gather feedback\nSprint retrospective | Decide how to work better in the next sprint\n:::\n\n| Event | Purpose | Maximum timebox for a one-month sprint |\n|---|---|---|\n| **Sprint planning** | Decide why the sprint is valuable (the sprint goal), what can be done, and how | 8 hours |\n| **Daily Scrum** | Inspect progress towards the sprint goal and plan the next 24 hours | 15 minutes, every day |\n| **Sprint review** | Inspect the increment with stakeholders and update the product backlog | 4 hours |\n| **Sprint retrospective** | Inspect how the sprint went and plan improvements | 3 hours |\n\nFor shorter sprints, the planning, review and retrospective are usually shorter too.\n\n## The daily Scrum\nThe daily Scrum (or stand-up) keeps everyone aligned on the sprint goal and surfaces blockers early. Many teams answer three questions:\n1. What did I do yesterday to help meet the sprint goal?\n2. What will I do today?\n3. Is anything blocking me?\n\nIf it turns into people reading out their calendars, change the format. The point is the sprint goal, not a status report. Detailed problem-solving happens after the meeting, with only the people who need to be there.\n\n## Backlog refinement\nRefinement (sometimes called backlog grooming) is an ongoing activity, not a formal event. The Product Owner and the team break down, clarify and estimate backlog items so the top of the backlog is always ready for the next sprint planning.\n\n## The three Scrum artifacts\n| Artifact | What it is | Its commitment |\n|---|---|---|\n| **Product backlog** | The single, ordered list of everything that might be needed in the product, owned by the Product Owner | **Product goal:** the long-term objective the team is working towards |\n| **Sprint backlog** | The sprint goal, the items chosen for the sprint, and the plan for delivering them | **Sprint goal:** the single objective for the sprint |\n| **Increment** | A usable step towards the product goal; each sprint adds to the previous increments | **Definition of Done:** the quality standard every increment must meet |\n\n:::note Sprint goal and increment are different things\nAtlassian notes that some teams loosely call the increment the \"sprint goal\". In the Scrum Guide, the sprint goal is the sprint's objective, and the increment is the usable work produced. The sprint backlog can change during a sprint, but the sprint goal should not be compromised.\n:::\n\n## Key takeaways\n- A sprint lasts one month or less, most often two weeks, and contains every other event.\n- The events are sprint planning, the daily Scrum, the sprint review and the sprint retrospective.\n- The artifacts are the product backlog, the sprint backlog and the increment, committed to the product goal, sprint goal and Definition of Done.",
+      "knowledgeCheck": [
+        [
+          "What is the maximum length of a sprint?",
+          [
+            "One month",
+            "Two days",
+            "Six months",
+            "One year"
+          ],
+          0,
+          "A sprint lasts one month or less. Two weeks is the most common length."
+        ],
+        [
+          "What is the timebox for the daily Scrum?",
+          [
+            "1 hour",
+            "15 minutes",
+            "4 hours",
+            "There is no timebox"
+          ],
+          1,
+          "The daily Scrum is a 15-minute event to inspect progress towards the sprint goal."
+        ],
+        [
+          "Which artifact is linked to the Definition of Done?",
+          [
+            "The product backlog",
+            "The sprint backlog",
+            "The increment",
+            "The burndown chart"
+          ],
+          2,
+          "The increment's commitment is the Definition of Done, the quality standard every increment must meet."
+        ],
+        [
+          "What happens in the sprint retrospective?",
+          [
+            "The team demonstrates the increment to customers",
+            "The Product Owner writes new stories alone",
+            "The team chooses the next sprint's backlog items",
+            "The team inspects how the sprint went and plans improvements"
+          ],
+          3,
+          "The retrospective is for improving how the team works. The review is where the increment is shown to stakeholders."
+        ]
+      ],
+      "description": "The sprint, sprint planning, the daily Scrum, the sprint review and the retrospective, with their timeboxes, plus the three artifacts and their commitments."
+    },
+    {
+      "slug": "lesson-05",
+      "title": "User Stories, Epics and Estimation",
+      "durationMinutes": 11,
+      "content": "## Learning objectives\n- Write a clear user story with acceptance criteria.\n- Explain how stories, epics and initiatives fit together.\n- Estimate work with story points and planning poker.\n- Use velocity responsibly for forecasting.\n\n## User stories\nA **user story** is the smallest unit of work in an Agile framework. It describes an outcome from the user's point of view, in plain language, so the team knows **who** it is building for, **what** they need, and **why**.\n\nThe common format is:\n\n```\nAs a [persona], I want [goal] so that [benefit].\n```\n\n:::example Example: a user story with acceptance criteria\n**As an** employee, **I want** to download my course certificate as a PDF **so that** I can share it with my manager.\n\n**Acceptance criteria:**\n- The download button appears only after the course is completed.\n- The PDF shows my name, the course title and the completion date.\n- The file opens correctly in common PDF readers.\n:::\n\n### The 3 C's of a user story\n| C | Meaning |\n|---|---|\n| **Card** | The short written description of the story |\n| **Conversation** | The discussion that clarifies the details |\n| **Confirmation** | The acceptance criteria that show when the story is complete |\n\nA good story is small enough to finish within one sprint. If it might take weeks, split it into smaller stories.\n\n## Stories, epics and initiatives\n| Level | What it is | Example |\n|---|---|---|\n| **Initiative** | A collection of epics that drive towards a common goal | Improve the employee learning experience |\n| **Epic** | A large body of work broken down into stories | Course certificates |\n| **Story** | A small, user-focused piece of work | Download a certificate as a PDF |\n\nThis structure links the team's day-to-day work to the organisation's larger goals.\n\n## Story points\nA **story point** is a unit for the **relative** effort of a story, considering complexity, risk and amount of work, rather than hours. A simple bug fix might be 1 point; a complex feature might be 8.\n\nMany teams use a Fibonacci-like scale (1, 2, 3, 5, 8, 13, ...). The growing gaps reflect the growing uncertainty in larger items. Teams also use T-shirt sizes (S, M, L, XL).\n\n### Why points instead of hours?\n- Hours ignore the meetings, emails and interruptions that fill every day.\n- Dates carry emotional pressure; relative estimates reduce it.\n- The same story may take two people different amounts of time, but its size stays the same.\n\n## Planning poker\n1. The Product Owner reads a backlog item, and the team discusses it briefly.\n2. Each person privately chooses a card with their estimate.\n3. Everyone reveals their cards at the same time.\n4. If estimates differ widely, the highest and lowest explain their reasoning, and the team estimates again until it agrees.\n\nEstimation is a **team sport**: developers, designers and testers each see different parts of the work, so estimates made by one person are less accurate.\n\n## Velocity\n**Velocity** is the number of story points a team completes in a sprint. Averaged over several sprints, it helps the team forecast how much it can take on.\n\n:::note Use velocity to plan, not to judge\nEvery team estimates on its own scale, so velocity cannot be compared between teams. Story points go wrong when they are used to judge people or measure productivity. Use them to understand the size of the work and to plan.\n:::\n\n## Key takeaways\n- Write stories as \"As a [persona], I want [goal] so that [benefit]\", with clear acceptance criteria.\n- Initiatives contain epics, and epics contain stories.\n- Story points estimate relative effort; planning poker builds a shared estimate; velocity supports forecasting, not comparisons.",
+      "knowledgeCheck": [
+        [
+          "Which is the standard user story format?",
+          [
+            "As a [persona], I want [goal] so that [benefit]",
+            "Build [feature] by [date]",
+            "Fix [bug] in [module]",
+            "The system shall [requirement]"
+          ],
+          0,
+          "A user story describes who needs something, what they want, and why."
+        ],
+        [
+          "What are the 3 C's of a user story?",
+          [
+            "Cost, Code, Customer",
+            "Card, Conversation, Confirmation",
+            "Create, Check, Close",
+            "Commit, Complete, Celebrate"
+          ],
+          1,
+          "Card is the description, Conversation clarifies the details, and Confirmation is the acceptance criteria."
+        ],
+        [
+          "What do story points measure?",
+          [
+            "The exact hours a task takes",
+            "How senior a developer is",
+            "The relative effort of a story, including complexity and risk",
+            "The number of lines of code"
+          ],
+          2,
+          "Story points estimate relative effort, considering complexity, risk and amount of work, not hours."
+        ],
+        [
+          "Why should velocity not be compared between teams?",
+          [
+            "Velocity is secret",
+            "Velocity is always the same for every team",
+            "Only managers can see velocity",
+            "Each team estimates on its own scale"
+          ],
+          3,
+          "Every team sizes work differently, so velocity is only useful for that team's own forecasting."
+        ]
+      ],
+      "description": "How to write user stories with acceptance criteria, how stories, epics and initiatives fit together, and how to estimate with story points, planning poker and velocity."
+    },
+    {
+      "slug": "lesson-06",
+      "title": "Kanban and Choosing a Framework",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Explain what Kanban is and where it came from.\n- Use a Kanban board, cards and work-in-progress (WIP) limits.\n- Track flow with cycle time, lead time and a cumulative flow diagram.\n- Choose between Scrum, Kanban or a hybrid approach.\n\n## What is Kanban?\n**Kanban** is a visual method for managing work. Teams show their work on a board, move it through defined stages, and limit how much work is in progress at once. Instead of fixed-length sprints, work flows continuously, and priorities can change as work progresses.\n\nKanban began at **Toyota in the late 1940s** as part of its just-in-time production system. Toyota modelled it on supermarkets, which restock shelves based on what customers actually buy. The idea later spread to software, IT, operations, marketing and other knowledge work.\n\n## How Kanban works\n1. **Map the workflow** on a board, with columns such as To Do, In Progress, Review and Done.\n2. **Make each task a card** showing what it is, who owns it and its priority.\n3. **Move cards across the board** as work progresses.\n4. **Set WIP limits** on each stage, so work does not pile up.\n5. **Review the board regularly** to spot bottlenecks and improve the flow.\n\n## Work-in-progress (WIP) limits\nTaking on too much at once increases context switching and slows everything down. A **WIP limit** caps the number of cards allowed in a stage.\n\n:::example Example: a WIP limit in code review\nA team's board has four columns: To Do, In Progress, Code Review and Done. They set a WIP limit of 2 for Code Review. When two items are waiting for review, no one starts new work; they review existing work first. This keeps work moving and shortens cycle time.\n:::\n\n## Measuring flow\n| Metric | What it measures |\n|---|---|\n| **Cycle time** | How long an item takes from when work starts to when it is finished |\n| **Lead time** | How long an item takes from when it is requested to when it is delivered |\n| **Cumulative flow diagram** | How many items are in each stage over time; a widening band shows a bottleneck |\n\n## Scrum versus Kanban\n| | Scrum | Kanban |\n|---|---|---|\n| Rhythm | Fixed-length sprints | Continuous flow |\n| Roles | Product Owner, Scrum Master, Developers | No prescribed roles |\n| Events | Planning, daily Scrum, review, retrospective | No prescribed events |\n| Limiting work | The amount of work chosen for the sprint | WIP limits per stage |\n| Changes | The sprint goal stays fixed during the sprint | Priorities can change at any time |\n| Best for | Product and feature development needing structure and predictability | A continuous stream of incoming work, such as support or operations |\n\n### Hybrid approaches\nSome teams combine the two, often called **Scrumban** or **Kanplan** (Kanban with a backlog). They keep Scrum's backlog and planning discipline but use Kanban's continuous flow.\n\n## Choosing your approach\nThere is no single right framework. Start with one, use it consistently for a few sprints or weeks, then review what works and adjust. The key to Agile is a mindset of continuous improvement: experiment, discuss openly, and keep what works for your team.\n\n## Key takeaways\n- Kanban visualises work on a board and limits work in progress to keep it flowing.\n- Cycle time, lead time and cumulative flow diagrams show where work slows down.\n- Choose Scrum for structured, sprint-based delivery, Kanban for continuous incoming work, or a hybrid.",
+      "knowledgeCheck": [
+        [
+          "What is a WIP limit?",
+          [
+            "A cap on how many items can be in a stage at once",
+            "A deadline for a sprint",
+            "The number of people in a team",
+            "A limit on the backlog size"
+          ],
+          0,
+          "A work-in-progress limit stops work piling up in one stage, reducing context switching."
+        ],
+        [
+          "Where did Kanban originate?",
+          [
+            "At NASA in the 1960s",
+            "At Toyota in the late 1940s",
+            "In the Agile Manifesto in 2001",
+            "At Atlassian in 2010"
+          ],
+          1,
+          "Kanban began at Toyota in the late 1940s as part of just-in-time production."
+        ],
+        [
+          "What does cycle time measure?",
+          [
+            "How long the team has existed",
+            "The time between two sprints",
+            "How long an item takes from when work starts to when it is finished",
+            "The length of the daily Scrum"
+          ],
+          2,
+          "Cycle time runs from the start of work to completion. Lead time runs from the request to delivery."
+        ],
+        [
+          "Which kind of team is Kanban especially suited to?",
+          [
+            "A team that needs fixed-length sprints and defined roles",
+            "A team that never receives new work",
+            "A team that delivers everything once a year",
+            "A team with a continuous stream of incoming work, such as support"
+          ],
+          3,
+          "Kanban suits continuous incoming work and frequently changing priorities."
+        ]
+      ],
+      "description": "How Kanban boards, cards and WIP limits keep work flowing, the metrics that measure flow, and how to choose between Scrum, Kanban or a hybrid."
+    }
+  ]
+}

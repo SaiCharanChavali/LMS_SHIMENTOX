@@ -38,12 +38,15 @@ class PhishingCourseTests(PortalFixture):
         self.assertEqual([l['title'] for l in lessons], [l['title'] for l in DATA['lessons']])
         for lesson in lessons:
             self.assertEqual((lesson['videoUrl'], lesson['videoSeconds']), ('', 0))
-            for section in ('## Learning objectives', '## Key takeaways', '## Learning reference'):
+            for section in ('## Learning objectives', '## Key takeaways'):
                 self.assertIn(section, lesson['content'])
-            self.assertIn('(https://www.cyberaid.eu/en/', lesson['content'])
+            # The source is kept in the course data for attribution, not shown on the lesson page.
+            self.assertNotIn('Learning reference', lesson['content'])
+            self.assertNotIn('https://www.cyberaid.eu/en/', lesson['content'])
             self.assertTrue(lesson['assessmentId'])
         self.assertIn(':::flow If you clicked or entered your details', lessons[3]['content'])
         self.assertEqual(data['requiredAssessmentId'], FINAL)
+        self.assertEqual(DATA['source']['url'], 'https://www.cyberaid.eu/en/cybersecurity-courses/')
         kinds = {a['id']: a for a in data['assessments']}
         self.assertEqual(kinds[FINAL]['kind'], 'post')
         self.assertTrue(all((a['passPercent'], a['attemptsLeft']) == (70, 3) for a in data['assessments']), 'Every check: 70% pass mark, three attempts.')

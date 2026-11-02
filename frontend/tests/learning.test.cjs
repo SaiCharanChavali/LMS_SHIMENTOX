@@ -117,11 +117,22 @@ async function main() {
   assert.equal(context.document.title,'My Learning • ShimentoX');
   assert.ok(!app.innerHTML.includes('href="#admin-users"'));
   assert.ok(app.innerHTML.includes('My Profile'));
-  assert.equal(run('portalNavigation().length'),5);
+  assert.equal(run('portalNavigation().length'),6);
   for(const removed of ['#paths','#skills']){context.location.hash=removed;run('render()');assert.equal(context.document.title,'My Learning • ShimentoX','Learning Paths and Skills pages are removed.');}
   context.location.hash='#courses';run('render()');
-  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Learning','My Dashboard','Training Calendar','My Certificates','My Profile']));
+  assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Learning','Courses','My Dashboard','Training Calendar','My Certificates','My Profile']));
   context.location.hash='';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
+  // My Learning shows only started or completed courses; the Courses page lists every published course.
+  run(`courseCatalog=[{...courseCatalog[0],id:'started-course',title:'Started Course',started:true,completed:false},{...courseCatalog[0],id:'done-course',title:'Done Course',started:true,completed:true},{...courseCatalog[0],id:'new-course',title:'New Course',started:false,completed:false,status:'not_started'}]`);
+  context.location.hash='#courses';run('render()');
+  assert.ok(app.innerHTML.includes('Started Course')&&app.innerHTML.includes('Done Course')&&!app.innerHTML.includes('New Course'));
+  assert.ok(app.innerHTML.includes('2 STARTED'));
+  context.location.hash='#catalog';run('render()');
+  assert.equal(context.document.title,'Courses • ShimentoX');
+  assert.ok(['Started Course','Done Course','New Course'].every(t=>app.innerHTML.includes(t)));
+  run(`courseCatalog=courseCatalog.filter(c=>!c.started)`);context.location.hash='#courses';run('render()');
+  assert.ok(app.innerHTML.includes('You have not started a course yet')&&app.innerHTML.includes('href="#catalog"'));
+  await run('loadCandidate()');
   context.location.hash='#dashboard';run('render()');assert.ok(app.innerHTML.includes('Welcome back, Sai'),'The dashboard is still one click away.');
   context.location.hash='#admin-courses';run('render()');
   assert.ok(!app.innerHTML.includes('id="course-editor-form"'));
@@ -177,8 +188,13 @@ async function main() {
   const testAdmin={id:'admin-one',name:'Portal Admin',email:'admin@shimentox.com',role:'admin',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z',certificates:0,courseRuns:0,active:true};
   server.user=testAdmin;context.testAdmin=testAdmin;run('currentUser=testAdmin');await run('loadCandidate()');
   context.location.hash='#dashboard';run('render()');assert.ok(app.innerHTML.includes('ADMINISTRATOR WORKSPACE'));
+  // Architecture: the admin opens on the Admin Dashboard and also has My Learning and Courses.
+  assert.equal(context.document.title,'Admin Dashboard • ShimentoX');
+  assert.equal(run('JSON.stringify(portalNavigation().slice(0,3).map(n=>n[2]))'),JSON.stringify(['Admin Dashboard','My Learning','Courses']));
+  context.location.hash='#courses';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
+  context.location.hash='#dashboard';run('render()');
   context.location.hash='#admin-users';run('render()');assert.ok(app.innerHTML.includes('id="create-candidate-form"'));
-  const roleSelect=app.innerHTML.match(/<select id="new-candidate-role">(.*?)<\/select>/)[1];assert.deepEqual([...roleSelect.matchAll(/<option value="([^"]*)"/g)].map(m=>m[1]),['employee'],'Employee is the only role that can be assigned.');
+  const roleSelect=app.innerHTML.match(/<select id="new-candidate-role">(.*?)<\/select>/)[1];assert.deepEqual([...roleSelect.matchAll(/<option value="([^"]*)"/g)].map(m=>m[1]),['manager','employee'],'Employee and Manager are the roles that can be assigned.');
   element('new-candidate-name').value='New Learner';element('new-candidate-email').value='learner@shimentox.com';element('new-candidate-role').value='employee';element('new-candidate-password').value='Assigned123!';
   await element('create-candidate-form').onsubmit({preventDefault(){}});
   assert.ok(requests.some(r=>r.path==='admin/candidates'&&r.data.email==='learner@shimentox.com'&&r.data.role==='employee'));
@@ -261,6 +277,13 @@ async function main() {
   console.log('PASS knowledge checks open on their own in full screen, without the course content');
   for(const [role,expected] of [['manager','Team Reports'],['trainer','Manage Courses'],['hr','Users & Teams']]){context.roleUser={...server.user,role};run('currentUser=roleUser');assert.ok(run('portalNavigation().map(n=>n[2])').includes(expected),role);}
   run('currentUser=roleUser;currentUser.role="trainer"');assert.ok(!run('portalNavigation().map(n=>n[0])').includes('admin-users'));
+  // Architecture: a manager opens on the Manager View (their team's progress) and also has My Learning.
+  context.mgrUser={...server.user,role:'manager'};run('currentUser=mgrUser');
+  assert.equal(run('JSON.stringify(portalNavigation().slice(0,2).map(n=>n[2]))'),JSON.stringify(['Manager View','My Learning']));
+  assert.equal(run('homePage()'),'dashboard');
+  context.location.hash='#dashboard';run('render()');await new Promise(resolve=>setImmediate(resolve));run('render()');
+  assert.equal(context.document.title,'Manager View • ShimentoX');
+  assert.ok(app.innerHTML.includes('MANAGER WORKSPACE')&&app.innerHTML.includes('Direct reports')&&!app.innerHTML.includes('Welcome back'));
   context.adminUser={...testAdmin};run('currentUser=adminUser');await run('loadCandidate()');
   context.location.hash='#dashboard';run('render()');await new Promise(resolve=>setImmediate(resolve));
   assert.ok(app.innerHTML.includes('Total employees')&&app.innerHTML.includes('>12<')&&app.innerHTML.includes('42%'));

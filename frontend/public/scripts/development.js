@@ -6,7 +6,7 @@ const PERMS={'users.manage':['admin','hr'],'org.manage':['admin','hr'],'courses.
 const KIND_LABELS={pre:'Pre-training',post:'Post-training',knowledge:'Knowledge check',skill:'Skill assessment'};
 const STATUS_TAGS={completed:['Completed','success'],overdue:['Overdue','danger'],in_progress:['In progress',''],not_started:['Not started','gray'],locked:['Locked','gray'],unavailable:['Unavailable','gray']};
 const can=permission=>Boolean(currentUser&&PERMS[permission]?.includes(currentUser.role));
-const isLearner=()=>Boolean(currentUser&&currentUser.role!=='admin');
+const isLearner=()=>Boolean(currentUser);
 let pageCache={},devMessage='',devFilters={dashboard:{},report:{type:'enrollments',page:1}},notificationState={items:[],unread:0,open:false};
 let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,historyPage=1,courseFilter='all',assistantAnswer=null;
 
@@ -118,10 +118,9 @@ function employeeDashboard(){
   if(!entry.data)return head+stateBlock(entry,'your learning',`me-dash`);
   const d=entry.data,p=d.profile;
   const profile=`<p class="profile-line">${esc([p.job_title||p.job_role,p.department,p.manager&&'Manager: '+p.manager].filter(Boolean).join(' · ')||'Ask HR to add your department and job role to receive role-based training.')}</p>`;
-  const team=currentUser.role==='manager'?teamPanel():'';
   return head+profile+`<div class="stats">${kpi('book',d.stats.assigned,'Assigned courses',d.stats.overdue?`${d.stats.overdue} overdue`:'')}${kpi('play',d.stats.inProgress,'Courses in progress')}${kpi('award',d.stats.certificates,'Certificates earned')}</div>
-  ${team}<div class="dash-grid"><div class="dash-main">
-  ${panel('Assigned to me',d.assigned.length?`<div class="tile-grid">${d.assigned.map(courseTile).join('')}</div>`:emptyState('No assigned training','Courses assigned by HR or your manager will appear here with their deadlines.','<a class="btn secondary" href="#courses">Browse all courses</a>'),'<a href="#courses">My Learning &rarr;</a>')}
+  <div class="dash-grid"><div class="dash-main">
+  ${panel('Assigned to me',d.assigned.length?`<div class="tile-grid">${d.assigned.map(courseTile).join('')}</div>`:emptyState('No assigned training','Courses assigned by HR or your manager will appear here with their deadlines.','<a class="btn secondary" href="#catalog">Browse all courses</a>'),'<a href="#courses">My Learning &rarr;</a>')}
   ${d.continue.filter(c=>!c.assignment).length?panel('Continue learning',`<div class="tile-grid">${d.continue.filter(c=>!c.assignment).map(courseTile).join('')}</div>`):''}
   ${panel('Recommended for you',d.recommendations.length?`<div class="tile-grid">${d.recommendations.map(recommendationCard).join('')}</div>`:emptyState('No recommendations yet','Recommendations use your job role and assessment results.'))}
   </div><div class="dash-side">
@@ -130,11 +129,14 @@ function employeeDashboard(){
   ${panel('Learning history',d.history.length?d.history.map(h=>`<div class="activity"><span class="bubble">${icon('check')}</span><p>${esc(h.text)}<br><small>${esc(fmtDate(h.at))}</small></p></div>`).join(''):'<p class="muted">Your completed activities will appear here.</p>','<a href="#history">All history &rarr;</a>')}
   </div></div>`;
 }
-function teamPanel(){
-  const entry=loadData('dash::','manage/dashboard');
-  if(!entry.data)return stateBlock(entry,'team progress','dash::');
-  const k=entry.data.kpis,p=entry.data.progress;
-  return panel('My team',`<div class="mini-stats">${[['Direct reports',k.totalEmployees],['Completion rate',k.completionRate+'%'],['Pending mandatory',k.pendingMandatory],['Overdue',p.overdue]].map(([l,v])=>`<div class="mini-stat"><strong>${esc(v)}</strong><span>${esc(l)}</span></div>`).join('')}</div>`,'<a href="#reports">Team reports &rarr;</a>');
+// Manager View: learning progress of the manager's direct reports; the server scopes the dashboard data to them.
+function managerView(){
+  const entry=loadData('mgr-dash','manage/dashboard');
+  const head=`<div class="intro"><div><h1>Manager View</h1><p>How your team is learning: progress, overdue training and recent activity for your direct reports.</p></div><span class="tag">MANAGER WORKSPACE</span></div><div class="admin-actions quick-actions"><a class="btn" href="#reports">Team reports ${icon('arrow')}</a><a class="btn secondary" href="#courses">My Learning</a></div>`;
+  if(!entry.data)return head+stateBlock(entry,'team progress','mgr-dash');
+  const k=entry.data.kpis;
+  return head+`<div class="stats">${kpi('users',k.totalEmployees,'Direct reports')}${kpi('play',k.activeLearners,'Active learners','Learning activity in the last 30 days')}${kpi('check',k.completionRate+'%','Course completion rate',`${k.completions} of ${k.enrollments} enrollments`)}${kpi('bell',k.pendingMandatory,'Pending mandatory training')}</div>
+  <div class="dash-grid"><div class="dash-main">${progressPanel(entry.data.progress)}</div><div class="dash-side">${activityPanel(entry.data.recent)}</div></div>`;
 }
 
 function calendarPage(){

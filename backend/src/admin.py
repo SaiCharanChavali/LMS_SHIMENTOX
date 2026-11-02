@@ -39,11 +39,12 @@ def optional_id(db, data, field, table, label, condition=''):
 
 
 def role_input(data, current=None):
-    """Only the Employee role can be assigned. An existing account may keep the role it already has."""
+    """Employee and Manager are the roles that can be assigned (the role architecture: Admin, Manager, Employee).
+    An existing account may keep the role it already has."""
     role=data.get('role','employee')
     if role=='candidate':role='employee'  # Accept the pre-v3 API value.
     check(role in ROLES,'Invalid role.')
-    check(role in ('employee',current),'Only the Employee role can be assigned.',403)
+    check(role in ('employee','manager',current),'Only the Employee and Manager roles can be assigned.',403)
     return role
 
 

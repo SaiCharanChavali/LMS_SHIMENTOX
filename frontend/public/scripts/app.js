@@ -8,14 +8,14 @@ const pct=()=>typeof courseProgress==='function'?courseProgress():0;
 function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),4000)}
 let lesson, certificates;
 function login(){return authPage();}
-const PAGE_TITLES={course:'Course',history:'Learning history',assessments:'Assessments','course-preview':'Course preview',certificates:'My Certificates',courses:'My Learning',account:'My Profile'};
+const PAGE_TITLES={course:'Course',history:'Learning history',assessments:'Assessments','course-preview':'Course preview',certificates:'My Certificates',courses:'My Learning',catalog:'Courses',account:'My Profile'};
 function pageTitle(page){
   if(page==='course')return currentCourseInfo.title||'Course';
   const item=portalNavigation().find(([href])=>href===page);
   return item?item[2]:PAGE_TITLES[page]||'Dashboard';
 }
 function pageContent(page){
-  const pages={courses:candidateCourses,course:()=>lesson()+(currentCourseInfo.id&&!examActive()?courseExtras():''),certificates:()=>certificates(),account:accountPage,calendar:calendarPage,assessments:assessmentsPage,reports:()=>reportsPage(),'cert-records':()=>reportsPage('certificates'),history:historyPageView,'course-preview':coursePreviewPage};
+  const pages={courses:myLearningPage,catalog:candidateCourses,course:()=>lesson()+(currentCourseInfo.id&&!examActive()?courseExtras():''),certificates:()=>certificates(),account:accountPage,calendar:calendarPage,assessments:assessmentsPage,reports:()=>reportsPage(),'cert-records':()=>reportsPage('certificates'),history:historyPageView,'course-preview':coursePreviewPage};
   if(pages[page])return pages[page]();
   if(page.startsWith('admin-'))return adminPage(page);
   return ['admin','hr'].includes(currentUser.role)?adminDashboard():candidateDashboard();

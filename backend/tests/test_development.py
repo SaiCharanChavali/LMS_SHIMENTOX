@@ -112,16 +112,20 @@ class DevelopmentTests(PortalFixture):
             self.assertIn(expected, payload['error'])
         self.assertEqual(self.admin.request('manage/paths')[0], 200)
 
-    def test_only_the_employee_role_can_be_assigned(self):
-        for role in ('admin', 'hr', 'trainer', 'manager'):
+    def test_only_the_employee_and_manager_roles_can_be_assigned(self):
+        for role in ('admin', 'hr', 'trainer'):
             created = self.admin.request('admin/candidates', {'name': 'New Hire', 'email': f'{uuid.uuid4().hex}@x.com', 'password': 'Temporary123!', 'role': role})
             self.assertEqual(created[0], 403, role)
         employee = self.account()
-        for role in ('admin', 'hr', 'trainer', 'manager'):
+        for role in ('admin', 'hr', 'trainer'):
             self.assertEqual(self.admin.request(f'admin/candidates/{employee.id}/profile', {'name': 'Team Member', 'role': role})[0], 403, role)
         self.assertEqual(employee.request('session')[1]['user']['role'], 'employee')
+        # An employee can be promoted to manager, and back.
+        for role in ('manager', 'employee'):
+            changed = self.admin.request(f'admin/candidates/{employee.id}/profile', {'name': 'Team Member', 'role': role})
+            self.assertEqual((changed[0], changed[1]['candidate']['role']), (200, role))
         # Existing accounts keep their role when their profile is edited, and can still sign in.
-        manager = self.account('manager', 'Existing Manager')
+        manager = self.account('manager', 'Existing Manager')  # Managers can be created directly.
         edited = self.admin.request(f'admin/candidates/{manager.id}/profile', {'name': 'Existing Manager', 'role': 'manager', 'jobTitle': 'Lead'})
         self.assertEqual((edited[0], edited[1]['candidate']['role']), (200, 'manager'))
         self.assertEqual(manager.request('session')[1]['user']['role'], 'manager')

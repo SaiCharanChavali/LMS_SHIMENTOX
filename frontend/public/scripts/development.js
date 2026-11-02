@@ -8,9 +8,9 @@ const STATUS_TAGS={completed:['Completed','success'],overdue:['Overdue','danger'
 const can=permission=>Boolean(currentUser&&PERMS[permission]?.includes(currentUser.role));
 const isLearner=()=>Boolean(currentUser);
 let pageCache={},devMessage='',devFilters={dashboard:{},report:{type:'enrollments',page:1}},notificationState={items:[],unread:0,open:false};
-let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,historyPage=1,courseFilter='all',assistantAnswer=null;
+let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,historyPage=1,courseFilter='all',courseArea='all',courseSearch='',assistantAnswer=null;
 
-function resetDevelopment(){selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;historyPage=1;courseFilter='all';}
+function resetDevelopment(){selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;historyPage=1;courseFilter='all';courseArea='all';courseSearch='';}
 function loadData(key,path){
   if(pageCache[key])return pageCache[key];
   pageCache[key]={loading:true};
@@ -636,6 +636,7 @@ const ACTIONS={
   'notification-open':async el=>{const data=await api('me/notifications/read',{ids:[Number(el.dataset.id)]});notificationState={items:data.notifications,unread:data.unread,open:false};if(el.dataset.link)location.hash=el.dataset.link;render();},
   'dash-period-clear':()=>{devFilters.dashboard={};render();},
   'course-filter':el=>{courseFilter=el.dataset.value;render();},
+  'course-area':el=>{courseArea=el.dataset.value;render();},
   'report-preset':el=>{devFilters.report={type:el.dataset.type,page:1};},
   'report-reset':()=>{devFilters.report={type:devFilters.report.type,page:1};render();},
   'report-page':el=>{devFilters.report.page=Number(el.dataset.page);render();},

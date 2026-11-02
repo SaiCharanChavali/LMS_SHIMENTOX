@@ -101,6 +101,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{border-color:#b1
 .catalog-footer .btn{align-self:flex-start}
 @media(hover:hover){.catalog-card:hover{transform:none}}
 @media(max-width:680px){.catalog-grid{grid-template-columns:1fr}.catalog-body h3{min-height:0}}
+/* Courses page: category filter row and a heading above each category's cards. */
+.area-filter button{font-size:12px;padding:8px 14px}
+.catalog-section{margin-bottom:30px}
+.catalog-section .catalog-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr))}
+.catalog-section-head{margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.catalog-section-head h2{margin:0 0 3px;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink)}
+.catalog-section-head p{margin:0;color:var(--muted);font-size:12px}
 
 .python-workshop,.python-knowledge{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}
 .python-workshop label{display:block;font-weight:600;margin:18px 0 10px}

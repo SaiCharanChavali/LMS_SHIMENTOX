@@ -130,6 +130,23 @@ async function main() {
   context.location.hash='#catalog';run('render()');
   assert.equal(context.document.title,'Courses • ShimentoX');
   assert.ok(['Started Course','Done Course','New Course'].every(t=>app.innerHTML.includes(t)));
+  // The Courses page groups courses into learning areas derived from each course's category, with live counts.
+  run(`savedCatalog=courseCatalog;courseCatalog=[['generative-ai-fundamentals','Generative AI Fundamentals','Artificial Intelligence'],['retrieval-augmented-generation','Retrieval-Augmented Generation (RAG)','Artificial Intelligence'],['python-programming','Python Programming','Development'],['shimento-python-developer','Python Programming Senior','Technical Skills'],['java-full-stack-development','Java Full Stack Development','Technical Skills'],['agile-and-scrum','Agile and Scrum','Professional Development'],['data-privacy-protection','Data Privacy and Protection','Cybersecurity and Data Protection'],['posh-act-awareness','POSH','Policies & Compliance'],['phishing-cybersecurity-awareness','Phishing and CyberSecurity Awareness','Cybersecurity Awareness']].map(([id,title,category],i)=>({...savedCatalog[0],id,title,category,started:i===0,completed:false,progress:i===0?40:0,status:i===0?'in_progress':'not_started'}))`);
+  const areaOf={'Artificial Intelligence':'technical','Development':'technical','Technical Skills':'technical','Generative AI & Automation':'technical','Data Analytics':'technical','Professional Development':'professional','Communication & Presentation':'professional','Time Management':'professional','Leadership & Management':'management','Project Management':'management','Talent Acquisition':'recruitment','HR Policies':'compliance','Recruitment & HR':'recruitment','Cybersecurity and Data Protection':'compliance','Cybersecurity Awareness':'compliance','Policies & Compliance':'compliance','Something New':'professional'};
+  for(const [category,area] of Object.entries(areaOf))assert.equal(run(`learningArea(${JSON.stringify(category)}).id`),area,category);
+  context.location.hash='#catalog';run(`courseArea='all';courseFilter='all';courseSearch=''`);run('render()');
+  const count=(value,n)=>assert.ok(new RegExp(`data-value="${value}" aria-pressed="(true|false)">[^<]+ <span>${n}</span>`).test(app.innerHTML),`${value} count ${n}`);
+  [['all',9],['technical',5],['professional',1],['recruitment',0],['management',0],['compliance',3]].forEach(([v,n])=>count(v,n));
+  const headings=[...app.innerHTML.matchAll(/<div class="catalog-section-head"><h2>([^<]+)<\/h2>/g)].map(m=>m[1]);
+  assert.deepEqual(headings,['Technical','Non-Technical &amp; Professional Development','Compliance &amp; Security'],'All Courses is grouped; empty categories are left out.');
+  assert.ok(app.innerHTML.includes('title="Cybersecurity and Data Protection">Compliance &amp; Security</span>')&&app.innerHTML.includes('title="Professional Development">Professional Development</span>'),'Badges show the learning area.');
+  assert.ok(app.innerHTML.includes('Continue learning')&&app.innerHTML.includes('data-open-course="data-privacy-protection"'),'Progress and Start/Continue buttons are kept.');
+  run(`ACTIONS['course-area']({dataset:{value:'technical'}})`);
+  assert.ok(['Generative AI Fundamentals','Python Programming Senior','Java Full Stack Development'].every(t=>app.innerHTML.includes(t))&&!app.innerHTML.includes('>POSH<')&&!app.innerHTML.includes('>Agile and Scrum<'));
+  run(`ACTIONS['course-filter']({dataset:{value:'in_progress'}})`);
+  assert.equal([...app.innerHTML.matchAll(/data-course-card=/g)].length,1,'Category and status filters combine.');count('technical',1);count('compliance',0);
+  run(`ACTIONS['course-area']({dataset:{value:'recruitment'}})`);assert.ok(app.innerHTML.includes('No courses in this view'));
+  run(`courseArea='all';courseFilter='all';courseCatalog=savedCatalog`);
   run(`courseCatalog=courseCatalog.filter(c=>!c.started)`);context.location.hash='#courses';run('render()');
   assert.ok(app.innerHTML.includes('You have not started a course yet')&&app.innerHTML.includes('href="#catalog"'));
   await run('loadCandidate()');

@@ -1,0 +1,516 @@
+{
+  "id": "phishing-cybersecurity-awareness",
+  "version": 1,
+  "title": "Phishing and CyberSecurity Awareness",
+  "category": "Cybersecurity Awareness",
+  "difficulty": "beginner",
+  "durationMinutes": 60,
+  "visibility": "everyone",
+  "status": "published",
+  "description": "Learn to recognise and stop phishing and social engineering: why attackers target people, how phishing works across email, SMS, phone and QR codes, the 30-second check, what to do if you clicked, deepfake scams, and everyday security habits, with knowledge checks and a final assessment.",
+  "source": {
+    "title": "Cybersecurity courses and resources, CyberAID",
+    "url": "https://www.cyberaid.eu/en/cybersecurity-courses/"
+  },
+  "knowledgeCheck": {
+    "passPercent": 70,
+    "maxAttempts": 3,
+    "timeLimitMinutes": 10
+  },
+  "finalAssessment": {
+    "id": "phishing-cybersecurity-awareness-final",
+    "title": "Phishing and CyberSecurity Awareness: Final Assessment",
+    "description": "Ten questions drawn at random from the whole course. Score 70% or more to earn your certificate.",
+    "passPercent": 70,
+    "maxAttempts": 3,
+    "timeLimitMinutes": 20,
+    "questionCount": 10,
+    "questions": [
+      [
+        "What is phishing?",
+        [
+          "A message that pretends to come from someone you trust, to steal information or money",
+          "A type of software update",
+          "A way of backing up files",
+          "A method of creating strong passwords"
+        ],
+        0,
+        "Phishing uses a fake, trusted-looking message to make you hand over information, open a file or send money."
+      ],
+      [
+        "An email from \"IT Support\" comes from an address on an unfamiliar domain and asks you to sign in within 2 hours. What should you do?",
+        [
+          "Sign in quickly to keep your mailbox",
+          "Do not click; report it to your IT or security team",
+          "Reply asking if it is real",
+          "Forward it to your team to check"
+        ],
+        1,
+        "An unfamiliar sender address and a short deadline are red flags. Report it and do not click."
+      ],
+      [
+        "Which of these is vishing?",
+        [
+          "A fake text message about a parcel",
+          "A fake QR code on a poster",
+          "A phone call from someone pretending to be from your bank",
+          "A fake post on social media"
+        ],
+        2,
+        "Vishing is phishing by phone call, often by people posing as bank staff or officials."
+      ],
+      [
+        "What are the three things attackers usually want?",
+        [
+          "Hardware, software and networks",
+          "Photos, videos and music",
+          "Updates, backups and passwords",
+          "Credentials, money and access"
+        ],
+        3,
+        "Attackers want credentials, money, or access to a wider organisation through your device or account."
+      ],
+      [
+        "Which detail is the strongest sign that an email is not from your bank?",
+        [
+          "It asks for your password or one-time code",
+          "It uses your name",
+          "It arrives during working hours",
+          "It includes the bank's logo"
+        ],
+        0,
+        "Banks never ask for passwords or one-time codes. Logos and names are easy to copy."
+      ],
+      [
+        "What does a \"reason to hurry\" in a phishing message try to achieve?",
+        [
+          "It helps you find the right page faster",
+          "It stops you from taking time to check",
+          "It proves the message is official",
+          "It improves email delivery"
+        ],
+        1,
+        "Urgency is designed to make you act before you check."
+      ],
+      [
+        "After clicking a phishing link and entering card details, what should you do?",
+        [
+          "Wait for the bank to notice",
+          "Post about it on social media",
+          "Call your bank on its official number to block the card",
+          "Reply to the phishing message"
+        ],
+        2,
+        "Block the card quickly by calling the bank's official 24-hour number."
+      ],
+      [
+        "What is the main defence against deepfake voice and video scams?",
+        [
+          "Trusting a familiar voice",
+          "Using a faster internet connection",
+          "Deleting all recordings",
+          "Verifying requests on a second, known channel"
+        ],
+        3,
+        "Confirm urgent requests on a separate, known channel and agree verification procedures that do not rely on voice or video alone."
+      ],
+      [
+        "Why is two-step verification (MFA) recommended for email and banking?",
+        [
+          "It keeps the account locked even if the password leaks",
+          "It makes passwords unnecessary",
+          "It speeds up sign-in",
+          "It blocks all spam"
+        ],
+        0,
+        "With two-step verification, a stolen password alone is not enough to get in."
+      ],
+      [
+        "A QR code sticker has been placed over the code on a parking meter. What is the risk?",
+        [
+          "There is no risk with QR codes",
+          "It may lead to a fake payment page",
+          "It will damage your phone camera",
+          "It will only open the real website"
+        ],
+        1,
+        "Fake QR stickers placed over genuine codes are a common way to send people to fake payment pages."
+      ],
+      [
+        "Which statement about reporting phishing at work is correct?",
+        [
+          "Only report it if you lost money",
+          "Delete the message so it cannot spread",
+          "Report it quickly to IT, even if you already clicked",
+          "Report it only to your friends"
+        ],
+        2,
+        "Report quickly, even after a mistake. Speed matters more than blame."
+      ],
+      [
+        "What does the padlock icon on a website tell you?",
+        [
+          "The site is genuine",
+          "The site is government approved",
+          "The site cannot be phishing",
+          "The connection is encrypted, nothing more"
+        ],
+        3,
+        "Phishing sites can use HTTPS too. Check the address itself."
+      ],
+      [
+        "What is a password manager used for?",
+        [
+          "Storing a different strong password for each account",
+          "Sharing passwords with colleagues",
+          "Writing passwords on paper",
+          "Using the same password everywhere"
+        ],
+        0,
+        "A password manager makes it practical to use a different password for every account."
+      ],
+      [
+        "Why is one employee's phishing click a risk to the whole organisation?",
+        [
+          "It slows down the internet",
+          "It can give attackers access to the entire network",
+          "It changes everyone's passwords",
+          "It deletes the company website"
+        ],
+        1,
+        "A single opened message can give attackers a way into the whole company network."
+      ],
+      [
+        "A message from a friend's social media account asks you to send money urgently. What should you do?",
+        [
+          "Send it, because it is from a friend",
+          "Reply with your bank details",
+          "Confirm with your friend through another channel, such as a phone call",
+          "Share the message publicly"
+        ],
+        2,
+        "Accounts of people you know can be hacked. Confirm through a separate, known channel."
+      ]
+    ]
+  },
+  "lessons": [
+    {
+      "slug": "lesson-01",
+      "title": "Introduction to Cybersecurity Awareness",
+      "durationMinutes": 9,
+      "content": "## Learning objectives\n- Explain why most cyber attacks target people rather than software.\n- Name the three things an attacker usually wants: credentials, money and access.\n- Describe the four stages of cyber awareness: identification, safety, awareness and protection.\n- Apply the three habits that prevent the most harm.\n\n## Why people are the target\nSecurity software stops many attacks, but it cannot stop every one. Many attacks succeed because someone clicks a link, reuses a password or follows a convincing request. Cyber awareness is the protection you build for yourself, because no one can install it for you.\n\nDigital services for payments, documents, healthcare and work have grown faster than the habits needed to use them safely. Attackers rarely need a rare software flaw. They succeed by using people's unfamiliarity with how attacks work. This is called **social engineering**: manipulating people into giving away information or access.\n\n## What an attacker actually wants\n| Goal | What it looks like | Why it matters |\n|---|---|---|\n| **Credentials** | Passwords for email, banking, social media and work accounts | Email is the most valuable, because other accounts can be reset through it |\n| **Money** | Card details, payments sent to the wrong account, or a ransom after files are encrypted (ransomware) | Losses can be immediate and hard to recover |\n| **Access** | Using your device or account as a way into your employer, family or other organisations | One person's account can open the door to a whole organisation |\n\n## The four stages of cyber awareness\n:::flow From recognising attacks to protecting yourself\nIdentification | Recognise the signs: urgent demands, unexpected login pages, unexpected files\nSafety | The basics: different passwords, two-step verification, updates and backups\nAwareness | Why manipulation works and what happens to stolen data\nProtection | Good habits every day, with the right tools at home and at work\n:::\n\n## Three habits that prevent the most harm\n1. **Use a different password for every important account**, and keep them in a password manager. When one password is reused, one breach can unlock many accounts.\n2. **Turn on two-step verification (MFA)**, at least for email and online banking. If a password leaks, the account stays locked without the second step.\n3. **Pause for about ten seconds** before you click an unexpected link. Urgency is the attacker's main tool, and a short pause breaks it.\n\n:::note You do not need to be technical\nThese habits need no special knowledge. Most attacks are stopped by people who slow down, check, and ask.\n:::\n\n## Key takeaways\n- Most attacks target people, using haste, fear and trust.\n- Attackers want credentials, money or access, and email accounts are the most valuable credentials.\n- Different passwords, two-step verification and a short pause before clicking stop most attacks.\n\n## Learning reference\n\nThis lesson is based on the free CyberAID materials below. The explanations, examples and questions are original. If you are unsure whether a message is genuine, stop and ask your IT or security team before you act.\n\n- [Introduction to cyber education, CyberAID](https://www.cyberaid.eu/en/introduction-to-cyber-education/)\n- [Cybersecurity courses and resources, CyberAID](https://www.cyberaid.eu/en/cybersecurity-courses/)",
+      "knowledgeCheck": [
+        [
+          "Why do most cyber attacks succeed, according to this lesson?",
+          [
+            "They exploit people through haste, fear and trust",
+            "They always use rare software flaws",
+            "Antivirus software never works",
+            "Computers are too slow to detect them"
+          ],
+          0,
+          "Most attacks target people. They succeed through clicked links, reused passwords and convincing requests rather than rare software flaws."
+        ],
+        [
+          "Which account is described as the most valuable to an attacker?",
+          [
+            "A shopping account",
+            "Your email account",
+            "A streaming service account",
+            "A games account"
+          ],
+          1,
+          "Email is the most valuable, because other accounts can be reset through it."
+        ],
+        [
+          "What is the purpose of pausing for about ten seconds before clicking an unexpected link?",
+          [
+            "To let the page load faster",
+            "To give antivirus time to update",
+            "To break the urgency that attackers rely on",
+            "To make the link expire"
+          ],
+          2,
+          "Urgency is the attacker's main tool. A short pause gives you time to think and check."
+        ],
+        [
+          "Which is one of the three habits that prevent the most harm?",
+          [
+            "Using one strong password everywhere",
+            "Turning off software updates",
+            "Sharing passwords only with colleagues",
+            "Turning on two-step verification for email and banking"
+          ],
+          3,
+          "Two-step verification keeps an account locked even if the password leaks. The other two habits are different passwords and pausing before clicking."
+        ]
+      ],
+      "description": "Why attackers target people, what they want from you, the four stages of cyber awareness, and the three habits that prevent the most harm."
+    },
+    {
+      "slug": "lesson-02",
+      "title": "How Phishing Attacks Work",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Explain what phishing is and why it works.\n- Describe the four elements most phishing attacks share.\n- Recognise the channels phishing uses, including SMS, phone calls and QR codes.\n\n## What is phishing?\n**Phishing** is the most widely used method of stealing personal data, and one of the least technical. The attacker sends a message that pretends to come from someone you trust, to make you hand over information, open a file or send money. It works against ordinary users and specialists alike, because it targets people, not computer systems. It relies on haste, fear and trust in familiar names.\n\n## The four elements of a phishing attack\n| Element | What the attacker does | Example |\n|---|---|---|\n| **Borrowed identity** | Pretends to be a bank, courier, government office, online shop or colleague | The sender name says \"HR Payroll Team\" |\n| **Reason to hurry** | Creates pressure so you act before you check | \"Your account will be blocked in 24 hours\" |\n| **Requested action** | Asks you to click a link, open a file, confirm a code or fill in a form | \"Confirm your details using the link below\" |\n| **False destination** | Sends you to a page that looks like the real one but has a different address | A login page at a lookalike address |\n\nFaking a sender's **display name** is easy. Faking the actual email **address** is harder, which is why checking the full address is so useful.\n\n## The channels phishing uses\n- **Email:** still the main channel.\n- **SMS (smishing):** messages about parcels, fines or deliveries, often with shortened links.\n- **Phone calls (vishing):** callers who pretend to be bank staff or officials and ask you to \"confirm\" your details.\n- **Messaging apps and social networks:** including messages from the hacked accounts of people you know.\n- **QR codes:** on posters, invoices or stickers placed over the real code.\n\n:::example Example: the parcel text message\nYou receive an SMS: *\"Your parcel could not be delivered. Pay the Rs 25 redelivery fee within 12 hours: [short link]\"*. It borrows the identity of a courier, creates urgency with a deadline, asks you to click and pay, and leads to a fake payment page. All four elements are there.\n:::\n\n## Key takeaways\n- Phishing tricks people, not computers, using haste, fear and trust.\n- Most attacks combine a borrowed identity, urgency, a requested action and a fake destination.\n- Phishing arrives by email, SMS, phone, messaging apps, social media and QR codes.\n\n## Learning reference\n\nThis lesson is based on the free CyberAID materials below. The explanations, examples and questions are original. If you are unsure whether a message is genuine, stop and ask your IT or security team before you act.\n\n- [Phishing attacks: how they work and how to spot them, CyberAID](https://www.cyberaid.eu/en/phishing-attacks-how-they-work/)",
+      "knowledgeCheck": [
+        [
+          "Which of these is one of the four elements of a phishing attack?",
+          [
+            "A borrowed identity",
+            "A software update",
+            "A strong password",
+            "A backup copy"
+          ],
+          0,
+          "Phishing combines a borrowed identity, a reason to hurry, a requested action and a false destination."
+        ],
+        [
+          "What is smishing?",
+          [
+            "Phishing by phone call",
+            "Phishing by SMS text message",
+            "Phishing by QR code",
+            "Phishing on social media"
+          ],
+          1,
+          "Smishing is phishing by SMS, often about parcels, fines or deliveries, with shortened links."
+        ],
+        [
+          "Why is checking the full sender address useful?",
+          [
+            "The address is always hidden",
+            "Display names cannot be changed",
+            "Faking a display name is easy, but faking the real address is harder",
+            "Addresses expire after a day"
+          ],
+          2,
+          "Anyone can set a display name. The actual address is harder to fake, and lookalike addresses often differ by one letter."
+        ],
+        [
+          "How can QR codes be used in phishing?",
+          [
+            "QR codes cannot be faked",
+            "Only by sending them in email",
+            "By making codes that cannot be scanned",
+            "By placing fake stickers over genuine codes on posters or invoices"
+          ],
+          3,
+          "Attackers place fake QR codes on posters, invoices or stickers covering the real code, leading to fake sites."
+        ]
+      ],
+      "description": "What phishing is, the four elements most attacks share, and the channels it arrives through: email, SMS, phone calls, messaging apps, social media and QR codes."
+    },
+    {
+      "slug": "lesson-03",
+      "title": "Spotting a Phishing Message",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Check any unexpected message in about 30 seconds.\n- Read a sender's full address and a link's real destination.\n- Verify a request through a separate, trusted channel.\n\n## The 30-second check\nBefore you act on an unexpected message, take these steps:\n\n1. **Read the full sender address**, not just the display name. The difference is often a single letter.\n2. **Do not click the link.** On a computer, hover over it; on a phone, press and hold it, to see the real address.\n3. **Ask whether the request makes sense.** Would this organisation really ask for this? Banks never ask for passwords or SMS codes.\n4. **Go there yourself.** If the message might be genuine, do not use its link. Open the official app or type the address you already know.\n5. **Confirm on another channel.** Call the official number, not the one in the message. This takes about two minutes.\n\n## Red flags\n| Red flag | What it might look like |\n|---|---|\n| Lookalike sender address | `support@paypa1.com` or `hr@shimentox-payroll.co` instead of the real domain |\n| Urgency or threats | \"Act now\", \"within 24 hours\", \"your account will be closed\" |\n| A request for secrets | Passwords, one-time codes (OTPs), card numbers or PINs |\n| A link that does not match | The text says one site, but hovering shows a different address |\n| Unexpected attachments | Invoices, \"documents\" or compressed files you were not expecting |\n| An unusual payment request | New bank details for a supplier, or gift cards |\n\n:::example Example: checking an email step by step\n**Subject:** Action required: your mailbox is full\n**From:** IT Support <it-support@shimentox-helpdesk.net>\n*\"Your mailbox has reached its limit. Sign in within 2 hours to avoid losing email: [Sign in]\"*\n\n- **Sender:** the display name says IT Support, but the address is not the company's real domain.\n- **Urgency:** a 2-hour deadline is meant to stop you thinking.\n- **Link:** hovering shows an unfamiliar address, not your company's sign-in page.\n- **Right action:** do not click. Report the message to your IT or security team, then delete it.\n:::\n\n:::note A secure padlock is not proof\nMany phishing sites use HTTPS and show a padlock. The padlock only means the connection is encrypted. It does not mean the site is genuine. Always check the address itself.\n:::\n\n## Key takeaways\n- Check the full sender address and hover over or press and hold links before you trust them.\n- No genuine bank or employer will ask for your password or one-time code.\n- When in doubt, go to the organisation yourself or confirm on a separate channel.\n\n## Learning reference\n\nThis lesson is based on the free CyberAID materials below. The explanations, examples and questions are original. If you are unsure whether a message is genuine, stop and ask your IT or security team before you act.\n\n- [Phishing attacks: how they work and how to spot them, CyberAID](https://www.cyberaid.eu/en/phishing-attacks-how-they-work/)",
+      "knowledgeCheck": [
+        [
+          "What is the safest way to see where a link really goes before clicking it?",
+          [
+            "Hover over it on a computer, or press and hold it on a phone",
+            "Click it quickly and close the page",
+            "Forward it to a colleague",
+            "Reply to the sender and ask"
+          ],
+          0,
+          "Hovering or pressing and holding shows the real address without opening the link."
+        ],
+        [
+          "Your bank sends a message asking you to confirm your SMS one-time code. What should you know?",
+          [
+            "Banks often ask for codes to verify you",
+            "Banks never ask for passwords or SMS codes",
+            "You should reply with the code only once",
+            "Codes are safe to share if the message has the bank logo"
+          ],
+          1,
+          "No genuine bank asks for your password or one-time code. A request for one is a red flag."
+        ],
+        [
+          "A message might be genuine. How should you go to the website?",
+          [
+            "Use the link in the message",
+            "Search for the link inside the message",
+            "Open the official app or type the address you already know",
+            "Scan any QR code in the message"
+          ],
+          2,
+          "Never use the link in the message. Go to the organisation yourself through its app or a known address."
+        ],
+        [
+          "What does the padlock (HTTPS) in the address bar prove?",
+          [
+            "That the website is genuine",
+            "That the website is owned by a bank",
+            "That the website has no viruses",
+            "Only that the connection is encrypted"
+          ],
+          3,
+          "Many phishing sites use HTTPS. The padlock means the connection is encrypted, not that the site is genuine."
+        ]
+      ],
+      "description": "The 30-second check for any unexpected message: reading the sender address, checking links safely, the red flags to look for, and confirming requests on a separate channel."
+    },
+    {
+      "slug": "lesson-04",
+      "title": "If You Clicked: Respond and Report",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Take the right steps, in the right order, if you clicked a phishing link.\n- Explain why acting quickly matters more than blame.\n- Report a phishing attempt correctly and keep the evidence.\n\n## Act fast, without blame\nIf you clicked a link or entered details, **speed matters more than blame**. Attackers move quickly, so the sooner you act, the less damage they can do. Reporting honestly and early is the right thing to do.\n\n## What to do, in order\n:::flow If you clicked or entered your details\nChange passwords | The affected account, and any other account that used the same password\nTurn on two-step verification | Wherever it is not already active\nBlock your card | If you entered card details, call your bank on its official 24-hour number\nCheck email rules | Look for new forwarding rules, which attackers often create and people often miss\nKeep the evidence | Do not delete the original message\nReport it | To your IT or security team, and to the organisation that was impersonated\n:::\n\n## Why forwarding rules matter\nAfter taking over a mailbox, attackers often add a rule that quietly forwards copies of your email to them. Even after you change your password, the rule keeps leaking information until someone removes it. Check your mailbox settings, or ask IT to check them for you.\n\n## How to report\n- **At work:** report the message to your IT or security team using your organisation's reporting process. Do not forward it to colleagues to ask \"is this real?\"\n- **Keep the original:** it helps investigators trace the attack and warn others.\n- **Tell the impersonated organisation:** most banks and couriers have a way to report fake messages that use their name.\n- **In India:** incidents can be reported to CERT-In, the national cybersecurity authority. Report cyber fraud, including money lost to scams, at cybercrime.gov.in or by calling the national cyber fraud helpline, 1930.\n\n:::example Example: a quick recovery\nArjun enters his email password on a fake \"document sharing\" page, then notices the address was wrong. Within minutes he changes his password, turns on two-step verification, and tells the IT team. IT finds and removes a forwarding rule the attacker had already added. Because Arjun reported it quickly, nothing else was lost.\n:::\n\n## Key takeaways\n- Act quickly: change passwords, turn on two-step verification and block cards if needed.\n- Check for forwarding rules, which attackers use to keep reading your email.\n- Keep the original message and report it to IT and to the organisation that was impersonated.\n\n## Learning reference\n\nThis lesson is based on the free CyberAID materials below. The explanations, examples and questions are original. If you are unsure whether a message is genuine, stop and ask your IT or security team before you act.\n\n- [Phishing attacks: how they work and how to spot them, CyberAID](https://www.cyberaid.eu/en/phishing-attacks-how-they-work/)",
+      "knowledgeCheck": [
+        [
+          "You entered your password on a fake page. What should you do first?",
+          [
+            "Change the password for that account and any account using the same password",
+            "Wait and see if anything happens",
+            "Delete the message so no one finds out",
+            "Turn off your computer for a day"
+          ],
+          0,
+          "Change the affected password straight away, plus any other account that used the same password."
+        ],
+        [
+          "Why should you check your email for new forwarding rules?",
+          [
+            "They speed up your inbox",
+            "Attackers often add them to keep receiving copies of your email",
+            "They are needed for two-step verification",
+            "They delete phishing messages automatically"
+          ],
+          1,
+          "Attackers add forwarding rules that keep leaking your email even after you change your password."
+        ],
+        [
+          "What should you do with the original phishing message?",
+          [
+            "Delete it immediately",
+            "Forward it to all colleagues as a warning",
+            "Keep it as evidence and report it",
+            "Reply to the sender to complain"
+          ],
+          2,
+          "Keep the original as evidence and report it, so it can be investigated and others warned."
+        ],
+        [
+          "In India, what is the national cyber fraud helpline number?",
+          [
+            "100",
+            "112",
+            "1098",
+            "1930"
+          ],
+          3,
+          "Cyber fraud can be reported by calling 1930 or at cybercrime.gov.in."
+        ]
+      ],
+      "description": "What to do, in order, if you clicked a phishing link or entered your details, why forwarding rules matter, and how to report an incident and keep the evidence."
+    },
+    {
+      "slug": "lesson-05",
+      "title": "Deepfakes and Social Engineering",
+      "durationMinutes": 11,
+      "content": "## Learning objectives\n- Explain how deepfakes are made and why they are hard to spot.\n- Recognise how deepfakes are used in social engineering.\n- Verify urgent requests in a way that does not rely on voice or video alone.\n\n## What is a deepfake?\nA **deepfake** is fake audio, video or images made with artificial intelligence (AI). It often uses a technique called a **generative adversarial network**: one part of the system creates fake content, and another compares it with real material and points out the differences. They repeat this until the fake is very hard to tell apart from the real thing.\n\nThe technology has moved from research labs into everyday tools, with both legitimate and harmful uses.\n\n| Technique | What it does |\n|---|---|\n| **Voice cloning** | Copies a person's voice, including its tone and rhythm, from a short recording; a few minutes of audio can be enough |\n| **Face swapping** | Replaces one person's face with another's in a video |\n| **Lip-sync** | Matches a person's lip movements to fake audio |\n\n## How deepfakes are used in social engineering\n- **Fake payment requests:** a cloned voice of a manager tells an employee to make an urgent transfer.\n- **Fake video calls:** used to approve decisions or obtain login details.\n- **Blackmail:** fake compromising material is created to pressure someone.\n- **False statements:** fake recordings of real people are used to influence opinion or markets.\n- **Identity checks:** synthetic faces are used to pass weak online identity checks.\n\n## Warning signs\n- An **urgent** request for money, data or access\n- **Emotionally charged** content that arrives out of context\n- A recording or video whose **source is unclear**\n\n## How to protect yourself and your organisation\n1. **Treat urgent financial or access requests as unverified** until you confirm them on a second, known channel, such as calling the person on a number you already have.\n2. **Agree a verification procedure in advance** that does not rely on voice or video alone, such as a call-back rule or a second approver for payments.\n3. **Check the original source** before you believe or share a recording.\n4. **Be sceptical of emotional content** that appears without context.\n\n:::example Example: the \"CEO\" on the phone\nA finance executive gets a call that sounds exactly like the CEO, asking for an urgent, confidential transfer to a new supplier before the end of the day. The executive follows the company rule: hang up, call the CEO back on the number in the company directory, and get a second approval. The real CEO knows nothing about it. The voice was cloned.\n:::\n\n:::note Technology alone cannot stop deepfakes\nBecause deepfakes target trust, training and clear verification rules are the main defence. The EU's NIS 2 Directive makes cybersecurity training for staff a mandatory security measure for the organisations it covers.\n:::\n\n## Key takeaways\n- Deepfakes use AI to fake voices, faces and lip movements, and a few minutes of audio can be enough to clone a voice.\n- Attackers use them for fake payment requests, fake calls, blackmail and false statements.\n- Always confirm urgent requests on a second, known channel, never by voice or video alone.\n\n## Learning reference\n\nThis lesson is based on the free CyberAID materials below. The explanations, examples and questions are original. If you are unsure whether a message is genuine, stop and ask your IT or security team before you act.\n\n- [Deepfake and social engineering attacks, CyberAID](https://www.cyberaid.eu/en/deepfake-and-social-engineering-attacks/)",
+      "knowledgeCheck": [
+        [
+          "According to the lesson, how much recorded audio can be enough to clone a voice?",
+          [
+            "A few minutes",
+            "At least 100 hours",
+            "A full year of recordings",
+            "It is impossible to clone a voice"
+          ],
+          0,
+          "A short sample, a few minutes of audio, can be enough to copy someone's voice, tone and rhythm."
+        ],
+        [
+          "What is the best response to an urgent payment request from a voice that sounds like your manager?",
+          [
+            "Make the payment quickly, as the voice is familiar",
+            "Confirm it on a second, known channel, such as calling back on a number you already have",
+            "Ask the caller to send a photo",
+            "Reply by email to the same thread"
+          ],
+          1,
+          "Treat urgent financial requests as unverified until confirmed on a second, known channel. Voice alone is not proof."
+        ],
+        [
+          "What does a face-swap deepfake do?",
+          [
+            "Matches lips to fake audio",
+            "Clones a voice from a recording",
+            "Replaces one person's face with another's in a video",
+            "Deletes faces from photos"
+          ],
+          2,
+          "Face swapping replaces one person's face with another's. Lip-sync deepfakes match lip movements to fake audio."
+        ],
+        [
+          "Which is a warning sign of a deepfake-based attack?",
+          [
+            "A routine meeting invitation from a known colleague",
+            "A newsletter you subscribed to",
+            "A message from a verified internal system",
+            "An emotionally charged recording with an unclear source"
+          ],
+          3,
+          "Urgent requests, emotional content out of context and recordings of unclear origin are warning signs."
+        ]
+      ],
+      "description": "How deepfakes are made, how attackers use cloned voices and fake videos to manipulate people, the warning signs, and how to verify urgent requests safely."
+    },
+    {
+      "slug": "lesson-06",
+      "title": "Everyday Cyber Hygiene",
+      "durationMinutes": 10,
+      "content": "## Learning objectives\n- Build the everyday habits that keep accounts and devices safe.\n- Explain why updates and backups matter.\n- Describe how one person's mistake can affect a whole organisation.\n\n## Strong, different passwords\n- Use a **different password for every important account**, so one breach does not unlock the others.\n- Use long passphrases that are easy for you to remember and hard to guess.\n- Store passwords in a **password manager** instead of writing them down or reusing them.\n- Never share your password or one-time codes with anyone, including people who claim to be IT support.\n\n## Two-step verification (MFA)\nTwo-step verification asks for a second proof, such as a code or an app approval, after your password. If your password leaks, the attacker still cannot get in. Turn it on at least for **email and online banking**, and for every work system that offers it.\n\n:::note Never approve a sign-in you did not start\nIf you receive an approval request or a code you did not ask for, someone may already have your password. Do not approve it. Change your password and tell your IT team.\n:::\n\n## Updates and backups\n| Habit | Why it matters |\n|---|---|\n| **Install updates promptly** | Updates fix security weaknesses that attackers already know about |\n| **Back up important data** | If files are lost or locked by ransomware, you can restore them without paying |\n| **Lock your screen** | Stops anyone nearby from using your account when you step away |\n\n## Why it matters for the whole organisation\nA single opened message can give an attacker access to an entire company network. That is why cybersecurity training is treated as a required security measure, not an optional extra. Under the EU's NIS 2 Directive, for example, staff training is mandatory for the organisations it covers. Every employee is part of the organisation's defence.\n\n## Your everyday checklist\n1. Pause before you click anything unexpected.\n2. Check the sender's full address and the link's real destination.\n3. Confirm unusual requests on a separate, known channel.\n4. Use different passwords, a password manager and two-step verification.\n5. Install updates and keep backups of important data.\n6. Report anything suspicious quickly, even if you have already clicked.\n\n## Key takeaways\n- Different passwords, a password manager and two-step verification protect your accounts.\n- Updates close security gaps, and backups protect you from data loss and ransomware.\n- One click can affect the whole organisation, so report anything suspicious quickly.\n\n## Learning reference\n\nThis lesson is based on the free CyberAID materials below. The explanations, examples and questions are original. If you are unsure whether a message is genuine, stop and ask your IT or security team before you act.\n\n- [Introduction to cyber education, CyberAID](https://www.cyberaid.eu/en/introduction-to-cyber-education/)\n- [Phishing attacks: how they work and how to spot them, CyberAID](https://www.cyberaid.eu/en/phishing-attacks-how-they-work/)",
+      "knowledgeCheck": [
+        [
+          "Why should you use a different password for every important account?",
+          [
+            "So one breach does not unlock your other accounts",
+            "Because passwords expire every day",
+            "So you can share them more easily",
+            "Because websites require identical passwords"
+          ],
+          0,
+          "Reused passwords let a single breach spread to many accounts."
+        ],
+        [
+          "You receive a sign-in approval request you did not start. What should you do?",
+          [
+            "Approve it to make it stop",
+            "Do not approve it, change your password and tell IT",
+            "Ignore it and carry on",
+            "Share the code with whoever asks for it"
+          ],
+          1,
+          "An unexpected approval request may mean someone has your password. Deny it, change the password and report it."
+        ],
+        [
+          "How do backups help against ransomware?",
+          [
+            "They stop all phishing emails",
+            "They make passwords stronger",
+            "They let you restore files without paying a ransom",
+            "They block every website"
+          ],
+          2,
+          "If files are encrypted by ransomware, a backup lets you restore them without paying."
+        ],
+        [
+          "Why do software updates matter for security?",
+          [
+            "They change your passwords automatically",
+            "They remove the need for backups",
+            "They turn off two-step verification",
+            "They fix security weaknesses that attackers already know about"
+          ],
+          3,
+          "Updates close known security gaps, so install them promptly."
+        ]
+      ],
+      "description": "The everyday habits that keep you and your organisation safe: different passwords, a password manager, two-step verification, updates, backups and quick reporting."
+    }
+  ]
+}

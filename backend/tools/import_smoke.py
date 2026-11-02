@@ -22,6 +22,8 @@ SAMPLES = [
     'https://www.coursera.org/learn/python',
     'https://www.edx.org/learn/python/harvard-university-cs50-s-introduction-to-programming-with-python',
     'https://docs.python.org/3/tutorial/',
+    'https://www.ftc.gov/business-guidance/resources/protecting-personal-information-guide-business',
+    'https://learn.microsoft.com/en-us/training/modules/describe-security-concepts-methodologies/',
 ]
 
 

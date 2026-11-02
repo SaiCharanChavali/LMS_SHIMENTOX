@@ -47,7 +47,7 @@ PYTHON_PATH = BACKEND / 'data/shimento-python-course.json'
 JAVA_PATH = BACKEND / 'data/java-full-stack-course.json'
 VIDEO_ROOT = BACKEND / 'videos'
 DEFAULT_DEPARTMENTS =['Engineering', 'Human Resources', 'Sales', 'Marketing', 'Finance']
-DEFAULT_CATEGORIES = ['Technical Skills', 'Generative AI & Automation', 'Data Analytics', 'Communication & Presentation', 'Leadership & Management', 'Cybersecurity Awareness', 'Policies & Compliance', 'Professional Development']
+DEFAULT_CATEGORIES = ['Technical Skills', 'Generative AI & Automation', 'Data Analytics', 'Communication & Presentation', 'Leadership & Management', 'Cybersecurity Awareness', 'Cybersecurity and Data Protection', 'Policies & Compliance', 'Professional Development']
 CURRICULUM = json.loads((BACKEND / 'data/python-course.json').read_text(encoding='utf-8'))
 LESSONS = json.loads((BACKEND / 'data/python-lessons.json').read_text(encoding='utf-8'))
 
@@ -66,7 +66,7 @@ def initialize(path):
     try:
         db.execute('PRAGMA journal_mode=WAL')
         version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version not in (0, 1, 2, 3, 4, 5, 6):
+        if version not in (0, 1, 2, 3, 4, 5, 6, 7):
             raise RuntimeError('Unsupported database schema version')
         if version == 1:
             db.executescript((BACKEND / 'database/migrations/002_roles_and_courses.sql').read_text(encoding='utf-8'))
@@ -89,6 +89,9 @@ def initialize(path):
         if db.execute('SELECT 1 FROM course_categories').fetchone() is None:
             for name in DEFAULT_CATEGORIES + [r[0] for r in db.execute('SELECT DISTINCT category FROM courses')]:
                 db.execute('INSERT OR IGNORE INTO course_categories VALUES (?,?)', (name, stamp))
+        elif 0 < version < 7:
+            # Categories added to the defaults later reach existing databases once, at the upgrade to version 7.
+            db.execute('INSERT OR IGNORE INTO course_categories VALUES (?,?)', ('Cybersecurity and Data Protection', stamp))
         db.execute("UPDATE courses SET lessons_json=?,sets_json=?,description='Build a strong foundation in Python, one lesson at a time.' WHERE id=? AND lessons_json='[]'", (json.dumps(LESSONS),json.dumps(CURRICULUM),COURSE_ID))
         for s, item in enumerate(CURRICULUM):
             db.execute('INSERT OR IGNORE INTO course_sets VALUES (?,?,?)', (COURSE_ID, s, item['title']))

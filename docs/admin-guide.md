@@ -79,7 +79,7 @@ The importer identifies the site and chooses a strategy:
 | IMS / SCORM `imsmanifest.xml` URL | The package's organisation tree | Modules and lessons from the manifest, each resource page's text |
 | Any other public page | schema.org course outline, else a table of contents whose links sit below the page's address, else a single article | As above |
 
-Microsoft Learn, MIT OpenCourseWare, GeeksforGeeks, freeCodeCamp News, Coursera, edX and docs.python.org (generic table of contents) were tested against the live sites. The other enrollment platforms in the table have not been tested; they are only classified as reference-only. Run `python backend/tools/import_smoke.py` to re-check the live sites, because their page layouts can change.
+Microsoft Learn, MIT OpenCourseWare, GeeksforGeeks, freeCodeCamp News, Coursera, edX, docs.python.org (generic table of contents) and ftc.gov (generic single article) were tested against the live sites. The other enrollment platforms in the table have not been tested; they are only classified as reference-only. Run `python backend/tools/import_smoke.py` to re-check the live sites, because their page layouts can change.
 
 The **preview** shows the detected platform, licence (when the page states one), every module and lesson in the source's order with **Imported**, **Not retrieved** (with the reason) or **Reference** status, and each lesson's section outline. Select **Preview** on a lesson to read it as employees will see it. Nothing is stored until you save.
 
@@ -89,6 +89,18 @@ Choose what to save:
 - **Save as a course reference**: titles and structure with links to the original, no copied content. This is the only option for enrollment platforms and for sites that refuse automated access (sign-in, HTTP 403, robots.txt, CAPTCHA). For those sites, enter the course title yourself.
 
 **Save as draft** or **Publish**. Imports are never published automatically. The course then opens in the course builder, where an **Imported from…** panel lists each lesson's import result, and you can edit lessons and add an assessment as for any course. Every imported lesson keeps a link to its original page, and the employee course page credits the source.
+
+### Example: Data Privacy and Protection
+
+The **Cybersecurity and Data Protection** category exists for this course. Import it like any other course:
+
+1. **Add a course** → **Import from URL**, and paste a public privacy or data protection resource, for example the FTC's [Protecting Personal Information: A Guide for Business](https://www.ftc.gov/business-guidance/resources/protecting-personal-information-guide-business) (a US government work, so it can be reused) or Microsoft Learn's [Describe security and compliance concepts](https://learn.microsoft.com/en-us/training/modules/describe-security-concepts-methodologies/) module (check its terms of use before importing its text).
+2. Enter **Data Privacy and Protection** as the title, choose **Cybersecurity and Data Protection**, difficulty **Beginner**, visibility **Everyone**, and paste the course description.
+3. **Import**, review the modules, lessons and section outline in the preview, then **Save as draft**.
+4. In the course builder, add the knowledge check under **Assessment**: multiple-choice questions with four options and an explanation each, written from the imported lessons, with a pass mark of 70%. Answer positions are shuffled on every attempt, and each attempt and score is saved.
+5. **Publish** when the course has been reviewed.
+
+A single article such as the FTC guide becomes one lesson whose sections and subsections follow the article's headings. A site with a table of contents becomes modules and lessons in the site's order. Some privacy regulators' sites (for example ico.org.uk) refuse automated access; they can only be saved as a course reference.
 
 Limits: 40 lesson pages per import, 3 MB per page, 100,000 characters of text per lesson, about 75 seconds per import, two imports at a time. Lessons beyond the page limit are listed with links but not retrieved. Importing the same source again (ignoring tracking parameters and `#` anchors) is refused while a non-archived course from that source exists; archive it first to re-import.
 

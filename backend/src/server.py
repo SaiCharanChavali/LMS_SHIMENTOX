@@ -1,5 +1,8 @@
 """Same-origin JSON endpoints and static frontend serving (local development)."""
 import hmac
+from collections import defaultdict, deque
+from datetime import datetime
+from html import escape
 import json
 import os
 import re
@@ -7,14 +10,16 @@ import sqlite3
 import time
 import ipaddress
 import socket
+import threading
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, unquote, parse_qs
+from zoneinfo import ZoneInfo
 
 from database import BACKEND, connect, public_curriculum
 from security import token_hash, password_hash, verify_password
-from services import APIError, can_view_course, authenticate, auth_event, bundle, candidate_view, candidate_certificates, check, current_run, create_run, expire_exams, learning_action, records, text, now
+from services import APIError, can_view_course, authenticate, auth_event, bundle, candidate_view, candidate_certificates, set_certificate_sharing, check, current_run, create_run, expire_exams, learning_action, records, text, now
 from admin import admin_action, course_view, setup_initial_admin
 from development import MAX_MATERIAL_BYTES, catalog, course_video, course_extras, development_action, material_file, store_material
 import assistant
@@ -22,7 +27,7 @@ import assistant
 PUBLIC = BACKEND.parent / 'frontend/public'
 COOKIE = 'shimentox_session'
 # Reported by /api/session so the browser can detect a server still running older code.
-API_VERSION = 9
+API_VERSION = 10
 
 
 class PortalServer(ThreadingHTTPServer):
@@ -33,6 +38,8 @@ class PortalServer(ThreadingHTTPServer):
 
     def __init__(self, address, handler, db_path):
         self.db_path = db_path
+        self.public_rate_lock = threading.Lock()
+        self.public_rate_hits = defaultdict(deque)
         super().__init__(address, handler)
 
     def server_bind(self):
@@ -76,8 +83,106 @@ class PortalHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         # Do not log request bodies, passwords, cookies, or tokens.
+        if re.fullmatch(r'/certificates/[A-Za-z0-9_-]+', urlsplit(self.path).path):
+            return
         if os.environ.get('LMS_QUIET') != '1':
             super().log_message(fmt, *args)
+
+    def public_base_url(self):
+        configured = os.environ.get('LMS_PUBLIC_BASE_URL', '').strip()
+        if configured:
+            parsed = urlsplit(configured)
+            check(parsed.scheme in ('http', 'https') and parsed.hostname and parsed.netloc and
+                  parsed.username is None and parsed.password is None and parsed.path in ('', '/') and
+                  not parsed.query and not parsed.fragment,
+                  'LMS_PUBLIC_BASE_URL must be an HTTP(S) website origin without a path.', 500)
+            return f'{parsed.scheme}://{parsed.netloc}'
+
+        host = self.headers.get('Host', '')
+        if not re.fullmatch(r'(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?', host):
+            host = 'localhost:5173'
+        for candidate in (self.headers.get('Origin', ''), self.headers.get('Referer', '')):
+            parsed = urlsplit(candidate)
+            if parsed.scheme in ('http', 'https') and parsed.netloc.lower() == host.lower():
+                return f'{parsed.scheme}://{parsed.netloc}'
+        forwarded = self.headers.get('X-Forwarded-Proto', '').lower()
+        scheme = forwarded if forwarded in ('http', 'https') else 'http'
+        return f'{scheme}://{host}'
+
+    def public_route_allowed(self):
+        now_mono = time.monotonic()
+        address = self.client_address[0]
+        with self.server.public_rate_lock:
+            hits = self.server.public_rate_hits[address]
+            while hits and now_mono - hits[0] >= 60:
+                hits.popleft()
+            if len(hits) >= 30:
+                return False
+            hits.append(now_mono)
+            if len(self.server.public_rate_hits) > 5000:
+                for ip, entries in list(self.server.public_rate_hits.items()):
+                    while entries and now_mono - entries[0] >= 60:
+                        entries.popleft()
+                    if not entries:
+                        self.server.public_rate_hits.pop(ip, None)
+        return True
+
+    def certificate_html_response(self, status, body, head=False):
+        data = body.encode('utf-8')
+        self.send_response(status)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Length', str(len(data)))
+        self.send_header('X-Robots-Tag', 'noindex, nofollow, noarchive')
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('X-Frame-Options', 'DENY')
+        self.end_headers()
+        if not head:
+            self.wfile.write(data)
+
+    def public_certificate(self, token, head=False):
+        if not self.public_route_allowed():
+            return self.certificate_html_response(429, '<!doctype html><html lang="en"><meta charset="utf-8"><title>Try again later</title><p>Too many requests. Please try again later.</p></html>', head)
+        not_found = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive"><title>Certificate not found</title><body><main><h1>Certificate not found</h1><p>This certificate is unavailable.</p></main></body></html>'
+        if not re.fullmatch(r'[A-Za-z0-9_-]{40,64}', token):
+            return self.certificate_html_response(404, not_found, head)
+        db = connect(self.server.db_path)
+        try:
+            award = db.execute('SELECT candidate_name,course_title,issued_at,certificate_number FROM certificates WHERE public_token=?', (token,)).fetchone()
+        finally:
+            db.close()
+        if award is None:
+            return self.certificate_html_response(404, not_found, head)
+
+        try:
+            base = self.public_base_url()
+        except APIError:
+            return self.certificate_html_response(500, '<!doctype html><html lang="en"><meta charset="utf-8"><title>Certificate unavailable</title><p>Certificate unavailable.</p></html>', head)
+        link = f'{base}/certificates/{token}'
+        image = f'{base}/assets/images/certificate-share-preview.png'
+        timestamp = datetime.fromisoformat(award['issued_at'].replace('Z', '+00:00'))
+        completed = timestamp.astimezone(ZoneInfo('Asia/Kolkata'))
+        date = f'{completed.day} {completed.strftime("%B %Y")}'
+        name = escape(award['candidate_name'], quote=True)
+        course = escape(award['course_title'], quote=True)
+        number = escape(award['certificate_number'], quote=True)
+        safe_date = escape(date, quote=True)
+        title = escape(f'Certificate of Completion — {award["course_title"]}', quote=True)
+        description = escape(f'{award["candidate_name"]} completed {award["course_title"]} on {date}.', quote=True)
+        safe_link = escape(link, quote=True)
+        safe_image = escape(image, quote=True)
+        body = f'''<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive"><meta name="googlebot" content="noindex,nofollow,noarchive">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ShimentoX Learning">
+<meta property="og:title" content="{title}"><meta property="og:description" content="{description}">
+<meta property="og:url" content="{safe_link}"><meta property="og:image" content="{safe_image}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><title>{title}</title>
+<style>body{{margin:0;background:#f4f2e9;color:#163e35;font:16px/1.5 Arial,sans-serif}}main{{box-sizing:border-box;max-width:860px;margin:8vh auto;padding:48px;background:#fffdf7;border:1px solid #dfdccb;box-shadow:0 8px 30px #163e3508;text-align:center}}header{{margin:-48px -48px 40px;padding:22px;background:#163e35;color:#f3d875;letter-spacing:.14em;font-size:13px}}h1{{font:40px Georgia,serif;font-weight:400}}dl{{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:34px auto 0;max-width:650px}}dt{{color:#788176;font-size:11px;letter-spacing:.12em;text-transform:uppercase}}dd{{margin:7px 0 0;font:20px Georgia,serif;overflow-wrap:anywhere}}.name{{font-size:32px}}@media(max-width:600px){{main{{margin:0;padding:28px 18px}}header{{margin:-28px -18px 32px}}dl{{grid-template-columns:1fr}}h1{{font-size:32px}}}}</style>
+</head><body><main><header>SHIMENTOX · LEARNING &amp; DEVELOPMENT</header><h1>Certificate of Completion</h1>
+<dl><div><dt>Learner</dt><dd class="name">{name}</dd></div><div><dt>Course</dt><dd>{course}</dd></div>
+<div><dt>Completion date</dt><dd>{safe_date}</dd></div><div><dt>Certificate number</dt><dd>{number}</dd></div></dl></main></body></html>'''
+        return self.certificate_html_response(200, body, head)
 
     def json_response(self, status, payload, cookie=None):
         data = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode('utf-8')
@@ -111,6 +216,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path.startswith('/api/'):
             return self.api('GET', path)
+        if path.startswith('/certificates/'):
+            return self.public_certificate(path.removeprefix('/certificates/'))
         resolved = (PUBLIC / unquote(path).lstrip('/')).resolve()
         if not resolved.is_relative_to(PUBLIC.resolve()) or any(part.startswith('.') for part in Path(unquote(path)).parts):
             return self.send_error(404)
@@ -120,7 +227,10 @@ class PortalHandler(SimpleHTTPRequestHandler):
         self.api('POST', urlsplit(self.path).path)
 
     def do_HEAD(self):
-        if urlsplit(self.path).path.startswith('/api/'):
+        path = urlsplit(self.path).path
+        if path.startswith('/certificates/'):
+            return self.public_certificate(path.removeprefix('/certificates/'), head=True)
+        elif path.startswith('/api/'):
             self.send_response(405)
             self.end_headers()
         else:
@@ -282,11 +392,22 @@ class PortalHandler(SimpleHTTPRequestHandler):
                 elif method == 'GET' and path == '/api/records':
                     payload = {'user': candidate_view(user), **records(db, candidate)}
                 elif method=='GET' and path=='/api/certificates':
-                    payload={'certificates':candidate_certificates(db,candidate)}
+                    payload={'certificates':candidate_certificates(db,candidate,self.public_base_url(),bool(os.environ.get('LMS_PUBLIC_BASE_URL','').strip()))}
+                elif method=='POST' and re.fullmatch(r'/api/certificates/[0-9a-fA-F-]{36}/sharing',path):
+                    identity=path.split('/')[3]
+                    sharing=set_certificate_sharing(db,candidate,identity,data.get('enabled'),data.get('consent'))
+                    public_url=f'{self.public_base_url()}/certificates/{sharing["publicToken"]}' if sharing['publicToken'] else None
+                    payload={'certificateNumber':sharing['certificateNumber'],'shareEnabled':sharing['shareEnabled'],'publicUrl':public_url}
                 elif method == 'POST' and path.startswith('/api/learning/'):
                     payload = learning_action(db, candidate, path.removeprefix('/api/learning/'), data)
                 else:
                     raise APIError(404, f'Endpoint was not found: {method} {path}')
+            if user and isinstance(payload,dict) and (isinstance(payload.get('learning'),dict) or 'certificates' in payload):
+                awards=candidate_certificates(db,candidate,self.public_base_url(),bool(os.environ.get('LMS_PUBLIC_BASE_URL','').strip()))
+                if isinstance(payload.get('learning'),dict):
+                    payload['learning']['certificates']=awards
+                if 'certificates' in payload:
+                    payload['certificates']=awards
             db.commit()
             self.json_response(200, payload)
         except APIError as error:

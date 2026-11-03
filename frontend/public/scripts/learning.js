@@ -134,6 +134,31 @@ render = function() { originalRender(); document.body.classList.toggle('exam-act
   const confirm = document.getElementById('confirm-restart'); if (confirm) confirm.onclick = resetCourse;
   const cancel = document.getElementById('cancel-restart'); if (cancel) cancel.onclick = () => document.getElementById('restart-confirm').classList.add('hidden');
   const picker=document.getElementById('certificate-choice');if(picker)picker.onchange=()=>{selectedAwardId=picker.value;render();};
+  document.querySelectorAll('[data-open-certificate-sharing]').forEach(button=>button.onclick=()=>{
+    const dialog=document.getElementById('certificate-sharing-dialog');
+    if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute('open','');
+  });
+  const confirmSharing=document.querySelector('[data-confirm-certificate-sharing]');
+  if(confirmSharing)confirmSharing.onclick=()=>{
+    const award=learning.certificates.find(item=>item.id===selectedAwardId)||learning.certificates[learning.certificates.length-1];
+    if(award)updateCertificateSharing(award,true,confirmSharing);
+  };
+  const cancelSharing=document.querySelector('[data-cancel-certificate-sharing]');
+  if(cancelSharing)cancelSharing.onclick=()=>document.getElementById('certificate-sharing-dialog')?.close();
+  document.querySelectorAll('[data-certificate-sharing]').forEach(button=>button.onclick=()=>{
+    const award=learning.certificates.find(item=>item.id===selectedAwardId)||learning.certificates[learning.certificates.length-1];
+    if(award)updateCertificateSharing(award,button.dataset.certificateSharing==='on',button);
+  });
+  const copyCertificate=document.querySelector('[data-copy-certificate-link]');
+  if(copyCertificate)copyCertificate.onclick=()=>{const award=learning.certificates.find(item=>item.id===selectedAwardId)||learning.certificates[learning.certificates.length-1];if(award)copyCertificateLink(award);};
+  const linkedinDetails=document.querySelector('[data-linkedin-details]');
+  document.querySelectorAll('[data-open-linkedin-details]').forEach(link=>link.onclick=()=>{
+    if(linkedinDetails){linkedinDetails.hidden=false;linkedinDetails.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  });
+  document.querySelectorAll('[data-copy-linkedin-detail]').forEach(button=>button.onclick=()=>copyLinkedInDetail(button));
+  document.querySelectorAll('[data-select-certificate-number]').forEach(number=>number.onclick=()=>{
+    const selection=window.getSelection(),range=document.createRange();range.selectNodeContents(number);selection.removeAllRanges();selection.addRange(range);
+  });
   if(typeof wirePythonPractice==='function')wirePythonPractice();
   if(typeof wireLessonKnowledge==='function')wireLessonKnowledge();
   wireVideo();
@@ -145,7 +170,67 @@ certificates = function() {
   // The certificate records the candidate and date at completion, even after a restart.
   return `<div class="certificate-picker"><label for="certificate-choice">Your certificates</label><select id="certificate-choice">${learning.certificates.map(a=>`<option value="${esc(a.id)}" ${a.id===award.id?'selected':''}>${esc(a.courseTitle||'Course')} - ${esc(new Date(a.completedAt).toLocaleDateString('en-IN'))}</option>`).join('')}</select></div>`+certificateMarkup(award);
 };
-function certificateMarkup(award) { const date = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date(award.completedAt)); return `<div class="intro certificate-intro"><div><h1>My achievements</h1><p>You completed ${esc(award.courseTitle||"your course")}! ${learning.certificates.length} certificate${learning.certificates.length === 1 ? '' : 's'} earned. Showing your latest achievement.</p></div><button class="btn" data-print-certificate>Print / Save PDF ${icon('award')}</button></div><article class="certificate"><div class="certificate-header"><img src="assets/images/ShimentoX-Light-Logo.webp" alt="ShimentoX" width="960" height="169"><span>LEARNING & DEVELOPMENT</span></div><div class="certificate-body"><div class="certificate-kicker">A COMMITMENT TO CONTINUOUS GROWTH</div><h2>Certificate of Completion</h2><p class="certificate-presented">This certificate is proudly presented to</p><h3 class="certificate-name">${esc(award.name)}</h3><p class="certificate-description">for successfully completing all lessons, practice activities and required assessments in</p><h4 class="certificate-course">${esc(award.courseTitle||currentCourseInfo.title)}</h4><p class="certificate-description">Lessons &middot; Practice &middot; Assessment</p><div class="certificate-details"><div><strong>${esc(date)}</strong><span>DATE OF COMPLETION</span></div><div class="certificate-seal">${icon('award')}<span>COURSE<br>COMPLETED</span></div><div><strong>ShimentoX</strong><span>LEARNING & DEVELOPMENT</span></div></div><p class="certificate-note">ShimentoX Learning · Course run ${esc(award.runId)}</p></div></article><div class="certificate-actions"><a class="btn secondary" href="#course">Revisit course →</a><p>Choose “Save as PDF” in the print dialog to download your certificate.</p></div>${learning.certificates.length > 1 ? `<div class="panel certificate-history"><h3>Previous achievements</h3>${learning.certificates.slice(0, -1).reverse().map(a => `<p>${esc(a.name)} · ${esc(new Date(a.completedAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }))} · Run ${esc(a.runId)}</p>`).join('')}</div>` : ''}`; }
+function certificateTools(award) {
+  const shared=Boolean(award.shareEnabled&&award.publicUrl);
+  const linkedInUrl='https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME';
+  return `<div class="certificate-tools"><button class="btn secondary" data-print-certificate>Print / Save PDF ${icon('award')}</button>${shared?`<a class="btn" href="${linkedInUrl}" target="_blank" rel="noopener noreferrer" data-open-linkedin-details title="LinkedIn may ask you to enter the certificate details manually.">Add to LinkedIn</a>`:'<button class="btn" type="button" data-open-certificate-sharing>Add to LinkedIn</button>'}<button class="btn secondary" type="button" ${shared?'data-copy-certificate-link':'data-open-certificate-sharing'}>Copy link</button></div>`;
+}
+function linkedinDetailsPanel(award) {
+  const issueDate=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'Asia/Kolkata'}).format(new Date(award.completedAt));
+  const details=[['Name',award.courseTitle||'ShimentoX course'],['Issuing organization','ShimentoX'],['Issue date',issueDate],['Credential ID',award.certificateNumber||''],['Credential URL',award.publicUrl||'']];
+  return `<section class="panel linkedin-details" data-linkedin-details aria-labelledby="linkedin-details-title" tabindex="-1" hidden><h2 id="linkedin-details-title">Your certificate details</h2><ol>${details.map(([label,value])=>`<li class="linkedin-detail"><div><strong>${label}</strong><span data-linkedin-value>${esc(value)}</span></div><button class="btn secondary" type="button" data-copy-linkedin-detail>Copy</button></li>`).join('')}</ol><p class="linkedin-details-tip">Leave Expiration date empty. Add at least one skill (LinkedIn requires it).</p>${award.publicBaseConfigured===false?'<p class="linkedin-details-warning" role="status">This link only works on this computer. LinkedIn and other people can\'t open it.</p>':''}</section>`;
+}
+function certificateSharingPanel(award) {
+  if(award.shareEnabled&&award.publicUrl)return `<section class="panel certificate-sharing" aria-label="Certificate sharing"><p role="status">Public sharing is on. Anyone with the link can see your name, course, completion date and certificate number.</p><p class="certificate-sharing-error" role="alert" hidden></p><button class="btn secondary" type="button" data-certificate-sharing="off">Turn sharing off</button></section>`;
+  return `<section class="panel certificate-sharing" aria-label="Certificate sharing"><p>Sharing is off. Turn it on to use Add to LinkedIn or Copy link.</p><button class="btn secondary" type="button" data-open-certificate-sharing>Turn on sharing</button></section>`;
+}
+function certificateSharingDialog() {
+  return `<dialog class="certificate-sharing-dialog" id="certificate-sharing-dialog" aria-labelledby="certificate-sharing-title"><div class="certificate-sharing-dialog-body"><h2 id="certificate-sharing-title">Turn on public sharing?</h2><p>Anyone with the link can see your name, course, completion date and certificate number.</p><p class="certificate-sharing-dialog-note">After you confirm, your public link will be created. Then click Copy link or Add to LinkedIn again. LinkedIn may require you to enter the certificate details manually.</p><p class="certificate-sharing-error" role="alert" hidden></p><div class="certificate-sharing-dialog-actions"><button class="btn secondary" type="button" data-cancel-certificate-sharing>Cancel</button><button class="btn" type="button" data-confirm-certificate-sharing>Turn on sharing</button></div></div></dialog>`;
+}
+function certificateMarkup(award) {
+  const date=new Intl.DateTimeFormat('en-IN',{day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Kolkata'}).format(new Date(award.completedAt));
+  const latest=learning.certificates[learning.certificates.length-1]?.id===award.id;
+  return `<div class="intro certificate-intro"><div><h1>My achievements</h1><p>You completed ${esc(award.courseTitle||'your course')}! ${learning.certificates.length} certificate${learning.certificates.length===1?'':'s'} earned. ${latest?'Showing your latest achievement.':'Viewing a previous achievement.'}</p></div>${certificateTools(award)}</div>${award.shareEnabled&&award.publicUrl?linkedinDetailsPanel(award):''}<article class="certificate"><div class="certificate-header"><img src="assets/images/ShimentoX-Light-Logo.webp" alt="ShimentoX" width="960" height="169"><span>LEARNING & DEVELOPMENT</span></div><div class="certificate-body"><div class="certificate-kicker">A COMMITMENT TO CONTINUOUS GROWTH</div><h2>Certificate of Completion</h2><p class="certificate-presented">This certificate is proudly presented to</p><h3 class="certificate-name">${esc(award.name)}</h3><p class="certificate-description">for successfully completing all lessons, practice activities and required assessments in</p><h4 class="certificate-course">${esc(award.courseTitle||currentCourseInfo.title)}</h4><p class="certificate-description">Lessons &middot; Practice &middot; Assessment</p><div class="certificate-details"><div><strong>${esc(date)}</strong><span>DATE OF COMPLETION</span></div><div class="certificate-seal">${icon('award')}<span>COURSE<br>COMPLETED</span></div><div><strong>ShimentoX</strong><span>LEARNING & DEVELOPMENT</span></div></div><p class="certificate-note">Certificate number <span class="certificate-number" data-select-certificate-number title="Click to select certificate number">${esc(award.certificateNumber)}</span></p></div></article>${certificateSharingPanel(award)}${certificateSharingDialog()}<div class="certificate-actions"><a class="btn secondary" href="#course">Revisit course →</a><p>Choose “Save as PDF” in the print dialog to download your certificate.</p></div>${learning.certificates.length>1?`<div class="panel certificate-history"><h3>Previous achievements</h3>${learning.certificates.filter(a=>a.id!==award.id).reverse().map(a=>`<p>${esc(a.name)} · ${esc(new Date(a.completedAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}))} · ${esc(a.certificateNumber)}</p>`).join('')}</div>`:''}`;
+}
+async function updateCertificateSharing(award, enabled, button) {
+  const error=button.closest('dialog')?.querySelector('.certificate-sharing-error')||document.querySelector('.certificate-sharing-error');
+  const label=enabled?'Turn sharing on':'Turn sharing off';
+  if(button.disabled)return;
+  button.disabled=true;
+  button.setAttribute('aria-busy','true');
+  button.textContent=enabled?'Turning sharing on…':'Turning sharing off…';
+  if(error){error.hidden=true;error.textContent='';}
+  try {
+    const result=await api(`certificates/${encodeURIComponent(award.id)}/sharing`,{enabled,...(enabled?{consent:true}:{})});
+    Object.assign(award,result);render();
+  } catch(failure) {
+    const message=failure.message||'Could not update certificate sharing. Please try again.';
+    if(error){error.textContent=message;error.hidden=false;}
+    toast(message);
+  } finally {
+    if(button.isConnected){
+      button.disabled=false;
+      button.textContent=label;
+      button.removeAttribute('aria-busy');
+    }
+  }
+}
+async function copyCertificateLink(award) {
+  if(!award.publicUrl)return;
+  try {
+    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(award.publicUrl);
+    else {const field=document.createElement('textarea');field.value=award.publicUrl;field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();const copied=document.execCommand('copy');field.remove();if(!copied)throw new Error('Copy is unavailable in this browser.');}
+    toast('Public certificate link copied.');
+  } catch(error) { toast(error.message||'Could not copy the certificate link.'); }
+}
+async function copyLinkedInDetail(button) {
+  const value=button.closest('.linkedin-detail')?.querySelector('[data-linkedin-value]')?.textContent||'';
+  try {
+    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(value);
+    else {const field=document.createElement('textarea');field.value=value;field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();const copied=document.execCommand('copy');field.remove();if(!copied)throw new Error('Copy is unavailable in this browser.');}
+    const original=button.textContent;button.textContent='Copied';button.setAttribute('aria-live','polite');setTimeout(()=>{if(button.isConnected)button.textContent=original;},1200);
+  } catch(error) { toast(error.message||'Could not copy this certificate detail.'); }
+}
 // Exam security rules for every scored attempt: module exams, assignments, knowledge checks, final and standalone assessments.
 // The attempt runs in full screen; leaving full screen, switching tabs or windows, navigating away or reloading ends it,
 // and every ended attempt counts toward the three-attempt limit enforced on the server.

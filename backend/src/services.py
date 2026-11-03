@@ -2,6 +2,7 @@
 import json
 import math
 import re
+import secrets
 import time
 import uuid
 from datetime import datetime, timezone
@@ -168,8 +169,30 @@ def attempt_view(row):
     return {'id': row['id'], 'status': row['status'], 'startedAt': row['started_at'], 'deadline': row['deadline'] * 1000, 'finishedAt': row['finished_at'], 'score': row['score'], 'reason': row['reason'], 'attemptNumber': row['attempt_number']}
 
 
-def candidate_certificates(db, candidate):
-    return [{'id':r['id'],'runId':r['run_id'],'name':r['candidate_name'],'courseTitle':r['course_title'],'courseId':r['course_id'],'completedAt':r['issued_at']} for r in db.execute('SELECT c.*,r.course_id FROM certificates c JOIN course_runs r ON r.id=c.run_id WHERE r.candidate_id=? ORDER BY c.issued_at,c.id',(candidate,))]
+def candidate_certificates(db, candidate, public_base=None, public_base_configured=True):
+    result = []
+    for r in db.execute('SELECT c.*,r.course_id FROM certificates c JOIN course_runs r ON r.id=c.run_id WHERE r.candidate_id=? ORDER BY c.issued_at,c.id',(candidate,)):
+        item = {'id':r['id'],'runId':r['run_id'],'name':r['candidate_name'],'courseTitle':r['course_title'],'courseId':r['course_id'],'completedAt':r['issued_at'],
+                'certificateNumber':r['certificate_number'],'shareEnabled':bool(r['public_token']),
+                'publicBaseConfigured':public_base_configured}
+        if r['public_token'] and public_base:
+            item['publicUrl'] = f'{public_base}/certificates/{r["public_token"]}'
+        result.append(item)
+    return result
+
+
+def set_certificate_sharing(db, candidate, certificate_id, enabled, consent=False):
+    row = db.execute('''SELECT c.id,c.certificate_number,c.public_token FROM certificates c
+        JOIN course_runs r ON r.id=c.run_id WHERE c.id=? AND r.candidate_id=?''', (certificate_id, candidate)).fetchone()
+    check(row is not None, 'Certificate was not found.', 404)
+    check(type(enabled) is bool, 'Sharing status must be true or false.')
+    if enabled:
+        check(consent is True, 'Confirm that you want to make these certificate details public.')
+        token = row['public_token'] or secrets.token_urlsafe(32)
+    else:
+        token = None
+    db.execute('UPDATE certificates SET public_token=? WHERE id=?', (token, certificate_id))
+    return {'certificateNumber': row['certificate_number'], 'shareEnabled': enabled, 'publicToken': token}
 
 
 def bundle(db, candidate, course_id=COURSE_ID):
@@ -239,7 +262,13 @@ def issue_certificate(db, candidate, run):
         title = db.execute('SELECT title FROM courses WHERE id=(SELECT course_id FROM course_runs WHERE id=?)',(run,)).fetchone()[0]
         db.execute('UPDATE course_runs SET completed_at=COALESCE(completed_at,?) WHERE id=?', (timestamp, run))
         # One certificate per qualifying run (UNIQUE run_id); notify only when a new one is created.
-        if db.execute('INSERT OR IGNORE INTO certificates VALUES (?,?,?,?,?)', (uid(), run, name, title, timestamp)).rowcount:
+        while True:
+            certificate_number = 'SX-' + secrets.token_hex(6).upper()
+            if db.execute('SELECT 1 FROM certificates WHERE certificate_number=?', (certificate_number,)).fetchone() is None:
+                break
+        created = db.execute('INSERT OR IGNORE INTO certificates (id,run_id,candidate_name,course_title,issued_at,certificate_number,public_token) VALUES (?,?,?,?,?,?,NULL)',
+                             (uid(), run, name, title, timestamp, certificate_number)).rowcount
+        if created:
             from notifications import staff_event
             staff_event(db, candidate, f'Course completed: {name}', f'{title}: a completion certificate was earned.', f'team-certificate:{run}')
             notify(db, [candidate], 'certificate', f'Certificate earned: {title}', 'Your completion certificate is ready to view and print.', 'certificates', f'certificate:{run}')

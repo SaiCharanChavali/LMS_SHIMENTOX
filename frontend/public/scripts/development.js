@@ -24,7 +24,7 @@ function outdatedServerNotice(){
   if(!serverOutdated||!currentUser)return '';
   return currentUser.role==='admin'
     ?'<div class="notice" role="alert"><strong>The server is running an older version of the portal.</strong><p>The browser loaded the updated pages, but the backend process was started before the update, so new features return “Endpoint was not found”. Stop the server (Ctrl+C in its terminal) and run <code>npm start</code> again. Back up <code>backend/data/lms.sqlite3</code> first; it is upgraded automatically on start.</p></div>'
-    :'<div class="notice" role="alert">Some features are temporarily unavailable while the portal is being updated. Please try again later or contact your administrator.</div>';
+    :'<div class="notice" role="alert"><strong>The portal browser and server versions do not match.</strong><p>Some features will fail until an administrator stops the older server process currently using this address and restarts the updated portal.</p></div>';
 }
 function stateBlock(entry,label,key){
   if(entry.error)return `<div class="notice" role="alert">${esc(entry.error)} <button class="auth-link" data-act="retry" data-key="${esc(key)}">Try again</button></div>`;

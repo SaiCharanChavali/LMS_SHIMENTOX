@@ -7,7 +7,7 @@ let currentCourseInfo={id:null,title:'',category:'Development'};
 let portalReady = false;
 let operationQueue = Promise.resolve();
 // Must match API_VERSION in backend/src/server.py. A mismatch means the server process predates these files.
-const EXPECTED_API_VERSION = 9;
+const EXPECTED_API_VERSION = 10;
 let serverOutdated = false;
 
 async function api(path, body, options = {}) {

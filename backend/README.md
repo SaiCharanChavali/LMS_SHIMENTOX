@@ -72,7 +72,10 @@ Use PowerShell environment variables before `npm start` when needed:
 ```powershell
 $env:PORT = '5173'
 $env:LMS_DB_PATH = 'C:\path\to\persistent\lms.sqlite3'
+$env:LMS_PUBLIC_BASE_URL = 'https://learning.example.com'
 ```
+
+Set `LMS_PUBLIC_BASE_URL` to the public HTTPS website origin for certificate links and social preview metadata. If unset, links use the incoming request host; LinkedIn cannot reach localhost or private network addresses.
 
 The default database is `backend/data/lms.sqlite3`. `LMS_COOKIE_SECURE=1` enables the Secure cookie flag when served through HTTPS; leave it off for local HTTP. `.env` files are not loaded automatically. `LMS_QUIET=1` silences access logs. Logs never include request bodies, passwords, or session tokens.
 

@@ -1,6 +1,7 @@
 """SQLite schema initialization, curriculum seed, and transactional connections."""
 import hashlib
 import json
+import secrets
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -68,7 +69,7 @@ def initialize(path):
     try:
         db.execute('PRAGMA journal_mode=WAL')
         version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version not in (0, 1, 2, 3, 4, 5, 6, 7):
+        if version not in (0, 1, 2, 3, 4, 5, 6, 7, 8):
             raise RuntimeError('Unsupported database schema version')
         if version == 1:
             db.executescript((BACKEND / 'database/migrations/002_roles_and_courses.sql').read_text(encoding='utf-8'))
@@ -80,6 +81,21 @@ def initialize(path):
         for table, column, definition in ADDED_COLUMNS:
             if column not in {r[1] for r in db.execute(f'PRAGMA table_info({table})')}:
                 db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+        # Add public certificate fields without rebuilding the existing table, then number old awards.
+        certificate_columns = {r[1] for r in db.execute('PRAGMA table_info(certificates)')}
+        if 'certificate_number' not in certificate_columns:
+            db.execute('ALTER TABLE certificates ADD COLUMN certificate_number TEXT')
+        if 'public_token' not in certificate_columns:
+            db.execute('ALTER TABLE certificates ADD COLUMN public_token TEXT')
+        db.execute('CREATE UNIQUE INDEX IF NOT EXISTS certificates_number ON certificates(certificate_number)')
+        db.execute('CREATE UNIQUE INDEX IF NOT EXISTS certificates_public_token ON certificates(public_token) WHERE public_token IS NOT NULL')
+        for row in db.execute('SELECT id FROM certificates WHERE certificate_number IS NULL OR certificate_number=\'\'').fetchall():
+            while True:
+                number = 'SX-' + secrets.token_hex(6).upper()
+                if db.execute('SELECT 1 FROM certificates WHERE certificate_number=?', (number,)).fetchone() is None:
+                    db.execute('UPDATE certificates SET certificate_number=? WHERE id=?', (number, row['id']))
+                    break
+        db.execute('PRAGMA user_version=8')
         # Indexes on columns added by migration 003 are created here so the base schema stays valid for older tables.
         db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;')
         stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')

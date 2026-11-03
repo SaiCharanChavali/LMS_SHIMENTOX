@@ -34,6 +34,8 @@ def main():
     url = f'http://{browser_host}:{server.server_port}'
     print(f'ShimentoX LMS: {url}', flush=True)
     print(f'SQLite database: {path}', flush=True)
+    if not os.environ.get('LMS_PUBLIC_BASE_URL', '').strip():
+        print('Warning: LMS_PUBLIC_BASE_URL is unset. Certificate share links use the request host; LinkedIn cannot reach localhost or private network addresses.', file=sys.stderr, flush=True)
     if args.open:
         # The database and listening socket are ready; browser launch cannot block HTTP serving.
         def open_browser():

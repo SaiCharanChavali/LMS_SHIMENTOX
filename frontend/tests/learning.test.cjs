@@ -274,13 +274,13 @@ async function main() {
   assert.ok(!run("Object.values(ROLE_NAV).flat().some(item=>['paths','skills'].includes(item[0]))"),'No role has Learning Paths or Skills in the sidebar.');
   assert.ok(!app.innerHTML.includes('learning plans')&&!app.innerHTML.includes('Skills developed'));
   console.log('PASS role navigation, organisation dashboard metrics, reports and safe CSV export');
-  // A backend process started before an update reports an older (or no) API version: admins get restart guidance, employees a neutral message.
+  // A backend process started before an update reports an older (or no) API version: all users get a clear version-mismatch message.
   server.apiVersion=null;server.user={...testAdmin};server.setupRequired=false;await run('initializePortal()');
   assert.equal(run('serverOutdated'),true);
   context.location.hash='#calendar';run('render()');assert.ok(app.innerHTML.includes('older version of the portal')&&app.innerHTML.includes('npm start'));
   context.empUser={id:'employee-one',name:'Sai Charan',email:'sai@shimentox.com',role:'employee',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};run('currentUser=empUser');run('render()');
-  assert.ok(app.innerHTML.includes('temporarily unavailable')&&!app.innerHTML.includes('npm start'));
-  server.apiVersion=9;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
+  assert.ok(app.innerHTML.includes('browser and server versions do not match')&&!app.innerHTML.includes('npm start'));
+  server.apiVersion=10;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
   console.log('PASS outdated-server detection with role-appropriate guidance');
   for (let i = 1; i <= 6; i++) {
     assert.ok(fs.statSync(__dirname + `/../public/assets/videos/lesson-${i}.webm`).size > 1000);

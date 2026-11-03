@@ -41,7 +41,20 @@ Without npm, run `python backend/server.py` from this directory. The same server
 
 If `backend/data/admin-seed.json` is present, a new database starts with that administrator, so a fresh clone opens on the login page. Create or refresh it with `python backend/tools/export_admin.py`, which saves the local admin's name, email and salted password hash (never the password). Otherwise, if no administrator exists, the browser opens a one-time **Set up your admin account** form automatically. Enter your full name, email, and password there. If the email already has an account, enter its current password to preserve and promote it. Setup is available only on the local server computer and closes permanently once an admin exists. No terminal account-creation command is required.
 
-Roles are **Administrator, HR / L&D Admin, Trainer, Manager, and Employee**. Employees see **My Learning, My Dashboard, Training Calendar, My Certificates, and My Profile**, and open on My Learning. Administrators see **Dashboard, Manage Courses, Users & Teams, Assessments, Training Calendar, Certificates, Reports & Analytics, Activity Log, and My Profile**. HR, trainers and managers see their own learning plus the management pages their role allows. Backend permissions protect every API, not just sidebar visibility.
+After sign-in, the portal identifies the user's role and opens the matching workspace on one shared LMS platform:
+
+```text
+Login -> Authentication -> Identify role
+  Admin    -> Admin Dashboard -> My Learning
+  Manager  -> Manager View    -> My Learning
+  Employee -> My Learning
+```
+
+- **Admin** opens on the **Admin Dashboard** and also has **My Learning** and **Courses**, plus Manage Courses, Users & Teams, Assessments, Training Calendar, Certificates, Reports & Analytics, Activity Log and My Profile.
+- **Manager** opens on the **Manager View**, showing the progress, overdue training and recent activity of their direct reports, and also has **My Learning**, Courses, Training Calendar, My Certificates, My Profile and Team Reports.
+- **Employee** opens on **My Learning**, and also has Courses, My Dashboard, Training Calendar, My Certificates and My Profile.
+
+My Learning lists the courses the user has started or completed; Courses lists every published course. In Users & Teams, admins create Employee and Manager accounts. HR and Trainer accounts created before this change keep working with their existing pages. Backend permissions protect every API, not just sidebar visibility.
 
 In **Users & Teams**, an admin or HR assigns a full name, work email, role, department, job role, manager, and temporary password. Share those credentials with the employee. Public registration is disabled. First sign-in requires a different personal password before accessing courses or records. Admins can reset temporary passwords, disable/enable access, and review learning history. **My profile** supports later password changes.
 

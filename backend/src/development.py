@@ -904,7 +904,7 @@ def catalog(db, user):
         if not (a or can_view_course(db, user, row)):
             continue
         item = course_view(row, False, db)
-        item.update({'progress': p['progress'] if p else 0, 'enrolled': p is not None, 'completed': bool(p and p['completed']), 'lastActivity': p['lastActivity'] if p else '',
+        item.update({'progress': p['progress'] if p else 0, 'enrolled': p is not None, 'started': bool(p and p['started']), 'completed': bool(p and p['completed']), 'lastActivity': p['lastActivity'] if p else '',
                      'assignment': a, 'status': pair_status(p, a), 'lessonCount': lesson_counts.get(row['id'], 0)})
         items.append(item)
     return items

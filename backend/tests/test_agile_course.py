@@ -92,3 +92,12 @@ class AgileScrumCourseTests(PortalFixture):
                 self.assertEqual(db.execute('SELECT version FROM courses WHERE id=?', (course_id,)).fetchone()[0], 2)
                 contents = [r[0] for r in db.execute('SELECT content FROM course_lessons WHERE course_id=?', (course_id,))]
                 self.assertTrue(contents and not any('Learning reference' in c for c in contents))
+
+    def test_course_list_marks_started_courses_for_my_learning(self):
+        client = self.employee('Catalog Learner')
+        listed = lambda: next(c for c in client.request('courses')[1]['courses'] if c['id'] == COURSE)
+        self.assertFalse(listed()['started'], 'An unopened course stays on the Courses page only.')
+        self.assertEqual(client.request('learning/enroll', {'courseId': COURSE})[0], 200)
+        lesson = client.request('learning?courseId=' + COURSE)[1]['courseLessons'][0]
+        self.assertEqual(client.action('lesson', lessonId=lesson['id'])[0], 200)
+        self.assertTrue(listed()['started'], 'A course with progress appears in My Learning.')

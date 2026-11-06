@@ -57,7 +57,7 @@ The accounts table keeps its historical name, `candidates`, so existing referenc
 
 ### Imported courses
 
-Courses imported from a URL use the existing `courses` and `course_lessons` tables, with no new tables. Columns are added automatically to existing databases.
+Courses created from a website link, and courses imported from a URL by earlier versions, use the existing `courses` and `course_lessons` tables, with no new tables. Columns are added automatically to existing databases. Courses created from a link have an empty `import_status`, which keeps their source visible to course managers only.
 
 | Column | Purpose |
 | --- | --- |

@@ -369,6 +369,15 @@ CREATE TABLE IF NOT EXISTS training_sessions (
     created_by TEXT REFERENCES candidates(id),
     created_at TEXT NOT NULL
 );
+-- Yearly training-hours target per employee, set by an administrator/HR or the employee's manager.
+CREATE TABLE IF NOT EXISTS training_targets (
+    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    year INTEGER NOT NULL CHECK(year BETWEEN 2000 AND 2100),
+    hours INTEGER NOT NULL CHECK(hours BETWEEN 1 AND 2000),
+    set_by TEXT REFERENCES candidates(id),
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(employee_id, year)
+);
 CREATE TABLE IF NOT EXISTS session_registrations (
     session_id TEXT NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE,
     employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,

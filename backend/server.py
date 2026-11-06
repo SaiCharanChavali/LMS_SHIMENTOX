@@ -11,9 +11,22 @@ from database import BACKEND, initialize, seed_admin
 from server import PortalServer, PortalHandler
 
 
+def load_env(path):
+    """Read KEY=VALUE lines from backend/.env (private settings such as Keka keys; never committed).
+    Variables already set in the real environment take precedence."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if line and not line.startswith('#') and '=' in line:
+            key, value = line.split('=', 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def main():
+    load_env(Path(__file__).resolve().parent / '.env')
     parser = argparse.ArgumentParser(description='ShimentoX LMS server')
-    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', '5173')))
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', '5010')))
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--init-db', action='store_true')
     parser.add_argument('--open', action='store_true', help='Open the portal in the default browser after startup')

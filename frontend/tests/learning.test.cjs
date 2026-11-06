@@ -6,8 +6,8 @@ const curriculum = JSON.parse(fs.readFileSync(__dirname + '/../../backend/data/p
 const copy = value => JSON.parse(JSON.stringify(value));
 const fixtureLessons=JSON.parse(fs.readFileSync(__dirname+'/../../backend/data/python-lessons.json','utf8'));
 const courseInfo={id:'python-programming',title:'PYTHON PROGRAMMING',category:'Development',description:'Python basics',status:'published',progress:0,enrolled:true,completed:false,difficulty:'beginner',durationMinutes:90,skills:[{id:'s1',name:'Python',level:1}],passPercent:75,maxAttempts:3,assignment:{mandatory:true,dueDate:'2099-01-31',assignedBy:'HR Partner'}};
-const employeeDashboard={profile:{name:'Sai Charan',email:'sai@shimentox.com',role:'employee',department:'Engineering',job_role:'Data Analyst',manager:'Line Manager',job_title:''},stats:{assigned:1,inProgress:0,completed:0,overdue:0,certificates:0,skillGaps:1},assigned:[{...courseInfo,status:'not_started'}],continue:[],recommendations:[{id:'sql',title:'SQL Foundations',description:'Query data.',difficulty:'beginner',durationMinutes:60,category:'Data Analytics',skills:['SQL'],reasons:['Closes your SQL gap (Not assessed now, Intermediate required for your role).']}],paths:[{id:'p1',title:'Generative AI Path',progress:50,completed:1,total:2,dueDate:null}],skills:[],sessions:[],pendingAssessments:[],goals:[],history:[]};
-const orgDashboardData={scope:'organisation',kpis:{totalEmployees:12,activeLearners:7,publishedCourses:3,completionRate:42,enrollments:19,completions:8,certificatesEarned:8,trainingHours:15.5,pendingMandatory:4,employeesWithPlans:5},progress:{activelyLearning:6,completedAssigned:3,notStarted:2,overdue:1,overdueEmployees:[{id:'e1',name:'Late Learner',department:'Sales',overdue:1}]},departments:[{department:'Engineering',employees:5,participants:4,participationRate:80,completionRate:50,completionsInPeriod:3,averageScore:82,trainingHours:9.2}],period:{from:null,to:null},recent:[{type:'completion',at:'2026-10-20T10:00:00Z',text:'Asha completed SQL Foundations and earned a certificate'}],upcoming:{sessions:[],deadlines:[{courseId:'c1',course:'Security Awareness',dueDate:'2099-01-01',pending:4,overdue:false}],pendingAssessments:[]}};
+const employeeDashboard={training:{year:2026,targetHours:30,completedHours:12,percent:40},profile:{name:'Sai Charan',email:'sai@shimentox.com',role:'employee',department:'Engineering',job_role:'Data Analyst',manager:'Line Manager',job_title:''},stats:{assigned:1,inProgress:0,completed:0,overdue:0,certificates:0,skillGaps:1},assigned:[{...courseInfo,status:'not_started'}],continue:[],recommendations:[{id:'sql',title:'SQL Foundations',description:'Query data.',difficulty:'beginner',durationMinutes:60,category:'Data Analytics',skills:['SQL'],reasons:['Closes your SQL gap (Not assessed now, Intermediate required for your role).']}],paths:[{id:'p1',title:'Generative AI Path',progress:50,completed:1,total:2,dueDate:null}],skills:[],sessions:[],pendingAssessments:[],goals:[],history:[]};
+const orgDashboardData={training:[{id:'r1',name:'Team Report',department:'Engineering',year:2026,targetHours:20,completedHours:5,percent:25}],scope:'organisation',kpis:{totalEmployees:12,activeLearners:7,publishedCourses:3,completionRate:42,enrollments:19,completions:8,certificatesEarned:8,trainingHours:15.5,pendingMandatory:4,employeesWithPlans:5},progress:{activelyLearning:6,completedAssigned:3,notStarted:2,overdue:1,overdueEmployees:[{id:'e1',name:'Late Learner',department:'Sales',overdue:1}]},departments:[{department:'Engineering',employees:5,participants:4,participationRate:80,completionRate:50,completionsInPeriod:3,averageScore:82,trainingHours:9.2}],period:{from:null,to:null},recent:[{type:'completion',at:'2026-10-20T10:00:00Z',text:'Asha completed SQL Foundations and earned a certificate'}],upcoming:{sessions:[],deadlines:[{courseId:'c1',course:'Security Awareness',dueDate:'2099-01-01',pending:4,overdue:false}],pendingAssessments:[]}};
 const safeCourse = copy(curriculum);
 for (const set of safeCourse) { set.exam = set.exam.map(q => q.slice(0, 2)); for (const ex of set.exercises) ex.questions = ex.questions.map(q => q.slice(0, 2)); }
 const empty = () => ({ version: 3, run: { id: 'run-one', runNumber: 1, videos: {}, exercises: {}, attempts: [[], [], []], completedAt: null }, certificates: [] });
@@ -47,13 +47,11 @@ async function main() {
     else if(path==='manage/assessments')result={assessments:[]};
     else if(path.startsWith('manage/reports'))result={type:'enrollments',title:'Course enrollment and completion',columns:[{key:'employee',label:'Employee'},{key:'status',label:'Status'}],rows:[{employee:'=HYPERLINK("x")',status:'Completed'}],summary:{Enrollments:1},total:1,page:1,pages:1};
     else if(path==='admin/overview')result={stats:{candidates:1,courses:1,certificates:0,exams:0}};
-    else if(path==='admin/candidates')result=options.body?{candidate:{id:'new-account'}}:{candidates:[server.user]};
+    else if(path==='admin/candidates')result=options.body?{candidate:{id:'new-account'}}:{candidates:[server.user,{...server.user,id:'existing-one',name:'Existing Employee',email:'existing@shimentox.com',role:'employee',active:true,certificates:0,courseRuns:1,training:{year:2026,targetHours:null,completedHours:3,percent:null}}]};
+    else if(path==='manage/course-generator')result={enabled:true};
+    else if(path==='manage/training-targets')result={training:Object.fromEntries(data.employeeIds.map(id=>[id,{year:2026,targetHours:data.hours,completedHours:0,percent:0}]))};
     else if(path==='admin/courses')result={courses:[{...courseInfo,content:{sets:curriculum,lessons:fixtureLessons}}]};
     else if(path==='admin/audit')result={events:[]};
-    else if(path==='manage/import/preview')result={token:'preview-token',duplicate:null,preview:{platform:{id:'microsoft-learn',name:'Microsoft Learn'},strategy:'Microsoft Learn module (units)',kind:'course',sourceUrl:data.url,requestedUrl:data.url,title:'Organize data',description:'Lists and dictionaries.',license:null,policy:{fullContent:true,note:''},notes:[],
-      items:[{type:'module',title:'Collections',url:data.url,lessons:[{title:'Store data with lists',url:data.url+'2-lists',status:'imported',reason:'',description:'',content:'## Creating a list\n\n- one\n  - nested\n\n```python\nx = [1]\n```',sections:[{level:1,title:'Creating a list'}],words:400,codeBlocks:1,tables:0,figures:0},
-        {title:'Module assessment',url:data.url+'3-check',status:'inaccessible',reason:'No readable lesson text was found on this page.',description:'',content:'',sections:[],words:0,codeBlocks:0,tables:0,figures:0}]}],
-      stats:{modules:1,lessons:2,imported:1,inaccessible:1,reference:0}}};
     else if (path === 'learning/resume') result = { learning: server.learning };
     else if(path==='learning/checkpoint-start'){
       const c=server.learning.run.checkpoints.find(c=>c.id===data.checkpointId),attempt={id:'cp-'+(c.attempts.length+1),status:'in-progress',attemptNumber:c.attempts.length+1,deadline:Date.now()+600000,startedAt:new Date().toISOString()};
@@ -83,7 +81,7 @@ async function main() {
     return { ok: status < 400, status, json: async () => copy(result) };
   }
   const context = {
-    document: { getElementById: element, querySelectorAll: () => [], body: { classList: classes() }, hidden: false, addEventListener: (n, fn) => (docEvents[n] ||= []).push(fn), title: '',
+    document: { getElementById: element, querySelector: () => null, querySelectorAll: () => [], body: { classList: classes() }, hidden: false, addEventListener: (n, fn) => (docEvents[n] ||= []).push(fn), title: '',
       // Exams require full screen; tests can deny it with allowFullscreen=false.
       fullscreenElement: null, documentElement: { async requestFullscreen() { if (!context.allowFullscreen) throw Error('denied'); context.document.fullscreenElement = this; } }, async exitFullscreen() { context.document.fullscreenElement = null; } },
     allowFullscreen: true,
@@ -96,6 +94,11 @@ async function main() {
   for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(app.innerHTML.includes('id="login-form"'));
+  // Sign in with Keka account: a link to the server's Keka start route, and a clear message when Keka sign-in fails.
+  assert.ok(app.innerHTML.includes('href="/api/auth/keka/start"')&&app.innerHTML.includes('Sign in with Keka account'));
+  context.location.search='?signin_error=keka-inactive';context.location.pathname='/';run('render()');
+  assert.ok(element('auth-error').textContent.includes('Your account is not active'));
+  context.location.search='';
   assert.ok(!app.innerHTML.includes('class="shell"'));
   assert.ok(!app.innerHTML.includes('toggle-auth'));
   element('email').value='sai@shimentox.com';element('password').value='Temporary123!';
@@ -211,11 +214,32 @@ async function main() {
   context.location.hash='#courses';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
   context.location.hash='#dashboard';run('render()');
   context.location.hash='#admin-users';run('render()');assert.ok(app.innerHTML.includes('id="create-candidate-form"'));
+  assert.ok(app.innerHTML.includes('data-act="keka-sync"')&&app.innerHTML.includes('Sync from Keka'),'Admins bring Keka employees in with one click.');
+  assert.ok(app.innerHTML.includes('Yearly training target')&&app.innerHTML.includes('<option value="all">All employees'),'Admins set a yearly target for everyone, a department or one employee.');
   const roleSelect=app.innerHTML.match(/<select id="new-candidate-role">(.*?)<\/select>/)[1];assert.deepEqual([...roleSelect.matchAll(/<option value="([^"]*)"/g)].map(m=>m[1]),['manager','employee'],'Employee and Manager are the roles that can be assigned.');
-  element('new-candidate-name').value='New Learner';element('new-candidate-email').value='learner@shimentox.com';element('new-candidate-role').value='employee';element('new-candidate-password').value='Assigned123!';
+  element('new-candidate-name').value='New Learner';element('new-candidate-email').value='learner@shimentox.com';element('new-candidate-role').value='employee';element('new-candidate-password').value='Assigned123!';element('new-candidate-target').value='30';
+  // Existing employees get a target box in their own row; new employees can get one on the Add employee form.
+  assert.ok(app.innerHTML.includes('value="user:existing-one"')&&app.innerHTML.includes('3 hours completed in 2026'));
   await element('create-candidate-form').onsubmit({preventDefault(){}});
+  assert.ok(requests.some(r=>r.path==='manage/training-targets'&&r.data.employeeIds[0]==='new-account'&&r.data.hours===30));
+  assert.ok(app.innerHTML.includes('with a yearly training target of 30 hours'));
   assert.ok(requests.some(r=>r.path==='admin/candidates'&&r.data.email==='learner@shimentox.com'&&r.data.role==='employee'));
   assert.ok(app.innerHTML.includes('Share these credentials'));
+  // Create a course from a link: the choice, the form, live progress, and failures shown on the form.
+  context.location.hash='#admin-courses';run("courseAddMode='choose';render()");
+  assert.ok(app.innerHTML.includes('data-import="generate-open"')&&app.innerHTML.includes('Create from a link with AI'));
+  run("courseAddMode='generate';generateState=newGenerateState();render()");await new Promise(resolve=>setImmediate(resolve));run('render()');
+  assert.ok(app.innerHTML.includes('id="generate-form"')&&app.innerHTML.includes('Choose automatically')&&app.innerHTML.includes('>Create course<'));
+  run("generateState.busy=true;generateState.stage='writing';render()");
+  assert.ok(app.innerHTML.includes('Writing the lessons and assessments')&&!app.innerHTML.includes('>Create course<'));
+  await run("handleCourseJob(generateState,{status:'failed',error:'Not enough readable text'})");
+  assert.ok(app.innerHTML.includes('Not enough readable text')&&app.innerHTML.includes('>Create course<'));
+  run("courseAddMode=null;generateState=null");
+  // The builder keeps "10 questions drawn from a bank of 15" when a course is saved, and sends nothing extra otherwise.
+  const builderDraft=(count,size)=>`courseDraft=draftFromBuilder({course:{id:'c',title:'T',category:'C',description:'D',skills:[]},lessons:[],assessment:{title:'A',passPercent:70,maxAttempts:3,timeLimitMinutes:20,questionCount:${count},questions:Array.from({length:${size}},()=>['Q',['a','b'],0,''])}});builderPayload('draft').assessment.questionCount`;
+  assert.equal(run(builderDraft(10,15)),10);
+  assert.equal(run(builderDraft(15,15)),undefined);
+  run('courseDraft=null');
   context.location.hash='#admin-courses';run('render()');
   // New courses open the step-by-step builder; existing 3-module courses keep the curriculum editor.
   assert.ok(app.innerHTML.includes('id="course-builder"')&&app.innerHTML.includes('Learning materials')&&app.innerHTML.includes('Publication status'));
@@ -231,16 +255,12 @@ async function main() {
   run('builderStep=4;render()');assert.ok(app.innerHTML.includes('LESSON 1 OF 2')&&app.innerHTML.includes('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'));
   run(`editingCourse='python-programming';courseDraft=null;render()`);assert.ok(app.innerHTML.includes('id="course-editor-form"'));
   run('editingCourse=null;courseDraft=null');
-  // Add a course → Import from URL: manual creation stays available; the preview keeps modules, lessons and statuses.
-  run(`IMPORT_ACTIONS.choose();render()`);assert.ok(app.innerHTML.includes('Create manually')&&app.innerHTML.includes('Import from URL'));
-  run(`IMPORT_ACTIONS.open();render()`);assert.ok(app.innerHTML.includes('id="import-form"')&&app.innerHTML.includes('Difficulty level')&&!app.innerHTML.includes('id="course-builder"'));
-  run(`importState.url='https://learn.microsoft.com/en-us/training/modules/organize-data/'`);await run('runCourseImport()');
-  assert.ok(requests.some(r=>r.path==='manage/import/preview'&&r.data.url.includes('organize-data')));
-  assert.equal(run('importState.title'),'Organize data');assert.equal(run('importState.durationMinutes'),'2');
-  assert.ok(app.innerHTML.includes('Collections')&&app.innerHTML.includes('NOT RETRIEVED')&&app.innerHTML.includes('No readable lesson text'));
-  run(`importState.openLesson='0-0';render()`);assert.ok(app.innerHTML.includes('<ul><li>one<ul><li>nested</li></ul></li></ul>')&&app.innerHTML.includes('lesson-code'));
-  await run(`saveCourseImport('draft')`);assert.ok(run('importState.error').includes('may reuse this content'),run('importState.error'));assert.ok(!requests.some(r=>r.path==='manage/import/save'),'Saving full content requires the rights confirmation');
+  // Add a course offers manual creation and Create from a link with AI; the old Import from URL option is gone.
+  run(`IMPORT_ACTIONS.choose();render()`);assert.ok(app.innerHTML.includes('Create manually')&&app.innerHTML.includes('Create from a link with AI')&&!app.innerHTML.includes('Import from URL'));
+  assert.equal(run("typeof courseImporter+typeof runCourseImport"),'undefinedundefined');
   run(`IMPORT_ACTIONS.close();render()`);assert.ok(app.innerHTML.includes('id="course-builder"'));
+  // The extended lesson formatting keeps nested lists and code.
+  assert.ok(run("renderMarkdown('- one\\n  - nested\\n\\n```python\\nx=1\\n```')").includes('<ul><li>one<ul><li>nested</li></ul></li></ul>'));
   context.location.hash='#admin-audit';run('render()');assert.ok(app.innerHTML.includes('Activity log'));
   console.log('PASS admin dashboard, candidate provisioning, course editor and audit pages');
   await run('logoutPortal()');
@@ -279,6 +299,8 @@ async function main() {
   assert.ok(app.innerHTML.includes('Learning materials')&&app.innerHTML.includes('has not been enabled'));
   assert.ok(app.innerHTML.includes('MODULE 1'));
   context.location.hash='#reports';run('render()');assert.ok(!app.innerHTML.includes('Export CSV'));
+  context.location.hash='#dashboard';run('render()');await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(app.innerHTML.includes('Training hours 2026')&&app.innerHTML.includes('12 of 30 hours in 2026')&&app.innerHTML.includes('18 hours to go')&&app.innerHTML.includes('width:40%'),'The employee sees a bar of hours completed against the yearly target.');
   console.log('PASS employee dashboard, assignments, recommendations, notifications, course resources, assistant state');
 
   // A running knowledge check or final assessment replaces the course page: only the questions are shown in full screen.
@@ -301,6 +323,7 @@ async function main() {
   context.location.hash='#dashboard';run('render()');await new Promise(resolve=>setImmediate(resolve));run('render()');
   assert.equal(context.document.title,'Manager View • ShimentoX');
   assert.ok(app.innerHTML.includes('MANAGER WORKSPACE')&&app.innerHTML.includes('Direct reports')&&!app.innerHTML.includes('Welcome back'));
+  assert.ok(app.innerHTML.includes('Team training hours 2026')&&app.innerHTML.includes('Team Report')&&app.innerHTML.includes('5 of 20 hours in 2026')&&app.innerHTML.includes('data-form="training-target"'),'The manager sees and sets the yearly target for each report.');
   context.adminUser={...testAdmin};run('currentUser=adminUser');await run('loadCandidate()');
   context.location.hash='#dashboard';run('render()');await new Promise(resolve=>setImmediate(resolve));
   assert.ok(app.innerHTML.includes('Total employees')&&app.innerHTML.includes('>12<')&&app.innerHTML.includes('42%'));

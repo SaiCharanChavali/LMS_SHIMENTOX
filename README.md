@@ -35,9 +35,9 @@ cd C:\Users\DELL\Desktop\shimento_LMS\shimentox-lms
 npm start
 ```
 
-`npm start` opens **http://localhost:5173** in your default browser automatically once the server is ready. Stop the server with **Ctrl+C**. Use `npm run start:server` to start without opening a browser.
+`npm start` opens **http://localhost:5010** in your default browser automatically once the server is ready. Stop the server with **Ctrl+C**. Use `npm run start:server` to start without opening a browser.
 
-Without npm, run `python backend/server.py` from this directory. The same server serves both the frontend and the API. Stop any previous static server on port 5173 before starting it. Opening the HTML directly or using a static-only server will not provide login or database access.
+Without npm, run `python backend/server.py` from this directory. The same server serves both the frontend and the API. Stop any previous static server on port 5010 before starting it. Opening the HTML directly or using a static-only server will not provide login or database access.
 
 If `backend/data/admin-seed.json` is present, a new database starts with that administrator, so a fresh clone opens on the login page. Create or refresh it with `python backend/tools/export_admin.py`, which saves the local admin's name, email and salted password hash (never the password). Otherwise, if no administrator exists, the browser opens a one-time **Set up your admin account** form automatically. Enter your full name, email, and password there. If the email already has an account, enter its current password to preserve and promote it. Setup is available only on the local server computer and closes permanently once an admin exists. No terminal account-creation command is required.
 
@@ -56,11 +56,19 @@ Login -> Authentication -> Identify role
 
 My Learning lists the courses the user has started or completed; Courses lists every published course. In Users & Teams, admins create Employee and Manager accounts. HR and Trainer accounts created before this change keep working with their existing pages. Backend permissions protect every API, not just sidebar visibility.
 
+### Sign in with Keka
+
+Employees can sign in with the **Sign in with Keka account** button on the login page, using their Keka email and password. Keka verifies them; the LMS never sees Keka passwords. On sign-in, the LMS creates or updates the employee's account from their Keka profile (name, work email, job title, employee number, reporting manager), so LMS records carry the Keka details. Only employees of your company's Keka account who are marked **Working** can sign in; **Relieved** employees are refused and their LMS accounts disabled. Accounts created from Keka have no LMS password.
+
+In **Users & Teams**, **Sync from Keka** brings every Keka employee in at once: new accounts are created, names, job titles, employee numbers and reporting managers are updated, reporting managers get the Manager role, and relieved employees are disabled. Learning records, certificates and training targets are kept.
+
+To connect Keka, copy `backend/.env.example` to `backend/.env` (private; never committed), fill in the values from your Keka admin and Keka Support, and restart the server. Register `<LMS_PUBLIC_BASE_URL>/api/auth/keka/callback` with Keka as the sign-in redirect address.
+
 In **Users & Teams**, an admin or HR assigns a full name, work email, role, department, job role, manager, and temporary password. Share those credentials with the employee. Public registration is disabled. First sign-in requires a different personal password before accessing courses or records. Admins can reset temporary passwords, disable/enable access, and review learning history. **My profile** supports later password changes.
 
 In **Manage courses**, create a draft, enter metadata, edit the curriculum JSON template, then publish. Each course has three sets, two videos and exercises per set, and one exam per set. Only published courses appear for candidates. Each course has independent progress and attempts. Create a new version to change assessments after learners have enrolled. See [admin guide](docs/admin-guide.md).
 
-The optional AI learning assistant is off unless configured on the server; see [AI assistant](docs/ai-assistant.md). No other environment variables are required.
+The optional AI learning assistant, and creating a course from a website link with AI, are off unless configured on the server; see [AI assistant](docs/ai-assistant.md). No other environment variables are required.
 
 SQLite is created automatically at `backend/data/lms.sqlite3`. Schema version 3 upgrades existing databases automatically, keeping all accounts and learning records; former candidate accounts become employees. Uploaded learning materials are stored privately in `backend/data/materials/`, which is excluded from version control; back it up together with the database. No database installation or npm dependency installation is needed. Back up this file to retain candidate data. Use `npm run db:init` to initialize the schema without starting the server.
 

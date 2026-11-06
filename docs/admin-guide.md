@@ -64,47 +64,15 @@ Lesson text supports a small, safe Markdown subset; anything else shows as plain
 
 To group lessons into sections in the sidebar, start each lesson description with `Section N · Name.` (for example `Section 2 · Database Fundamentals. Design tables with keys.`). The prefix is shown as the section name and removed from the lesson overview.
 
-## Importing a course from a URL
+## Creating a course from a website link
 
-In **Manage Courses**, select **Add a course**, then **Import from URL** (**Create manually** opens the usual builder). Paste the address of a course or article, fill in the title, category, difficulty, department, estimated duration and visibility (title and duration are filled from the source when left blank), and select **Import**. Administrators, HR and trainers can import, the same roles that can create courses.
+In **Manage Courses**, select **Add a course**, then **Create from a link with AI** (**Create manually** opens the usual builder). Paste the address of a public page, optionally enter a title and category, and select **Create course**. This needs the Claude API; see [AI assistant](ai-assistant.md).
 
-The importer identifies the site and chooses a strategy:
+The page is used only as a reference. AI writes new lessons, examples and questions in the portal's format, with a knowledge check after each lesson and a final assessment. The course is saved as a **draft** and opens in the course builder, so review it, correct anything needed, and publish it. Employees do not see the source website.
 
-| Source | Strategy | What is kept |
-| --- | --- | --- |
-| Microsoft Learn | Learning path → modules → units; module → units; single unit or docs article | Module and unit names and order, unit text, code, tables |
-| MIT OpenCourseWare | The course navigation: sections become modules, their sub-pages lessons | Page text, tables, code, links to lecture videos and PDFs, the CC BY-NC-SA licence |
-| GeeksforGeeks, freeCodeCamp News | Single article | Heading hierarchy, code with language, lists, tables, figure links |
-| Coursera, edX (also treated this way: Udemy, LinkedIn Learning, Pluralsight, Udacity, Skillshare, DataCamp, FutureLearn, O'Reilly) | Reference only | Public title, description and syllabus outline, with links to the course |
-| IMS / SCORM `imsmanifest.xml` URL | The package's organisation tree | Modules and lessons from the manifest, each resource page's text |
-| Any other public page | schema.org course outline, else a table of contents whose links sit below the page's address, else a single article | As above |
+The reader only uses public pages. It does not sign in, send cookies, bypass paywalls, CAPTCHAs or bot protection, and it respects robots.txt. If a page cannot be read, you see a message and no course is created.
 
-Microsoft Learn, MIT OpenCourseWare, GeeksforGeeks, freeCodeCamp News, Coursera, edX, docs.python.org (generic table of contents) and ftc.gov (generic single article) were tested against the live sites. The other enrollment platforms in the table have not been tested; they are only classified as reference-only. Run `python backend/tools/import_smoke.py` to re-check the live sites, because their page layouts can change.
-
-The **preview** shows the detected platform, licence (when the page states one), every module and lesson in the source's order with **Imported**, **Not retrieved** (with the reason) or **Reference** status, and each lesson's section outline. Select **Preview** on a lesson to read it as employees will see it. Nothing is stored until you save.
-
-Choose what to save:
-
-- **Import the lesson content**: requires confirming that ShimentoX may reuse it, under its licence or an agreement with the publisher. Lessons that could not be retrieved are kept in place with their title and a link to the original; no text is written for them.
-- **Save as a course reference**: titles and structure with links to the original, no copied content. This is the only option for enrollment platforms and for sites that refuse automated access (sign-in, HTTP 403, robots.txt, CAPTCHA). For those sites, enter the course title yourself.
-
-**Save as draft** or **Publish**. Imports are never published automatically. The course then opens in the course builder, where an **Imported from…** panel lists each lesson's import result, and you can edit lessons and add an assessment as for any course. Every imported lesson keeps a link to its original page, and the employee course page credits the source.
-
-### Example: Data Privacy and Protection
-
-The **Cybersecurity and Data Protection** category exists for this course. Import it like any other course:
-
-1. **Add a course** → **Import from URL**, and paste a public privacy or data protection resource, for example the FTC's [Protecting Personal Information: A Guide for Business](https://www.ftc.gov/business-guidance/resources/protecting-personal-information-guide-business) (a US government work, so it can be reused) or Microsoft Learn's [Describe security and compliance concepts](https://learn.microsoft.com/en-us/training/modules/describe-security-concepts-methodologies/) module (check its terms of use before importing its text).
-2. Enter **Data Privacy and Protection** as the title, choose **Cybersecurity and Data Protection**, difficulty **Beginner**, visibility **Everyone**, and paste the course description.
-3. **Import**, review the modules, lessons and section outline in the preview, then **Save as draft**.
-4. In the course builder, add the knowledge check under **Assessment**: multiple-choice questions with four options and an explanation each, written from the imported lessons, with a pass mark of 70%. Answer positions are shuffled on every attempt, and each attempt and score is saved.
-5. **Publish** when the course has been reviewed.
-
-A single article such as the FTC guide becomes one lesson whose sections and subsections follow the article's headings. A site with a table of contents becomes modules and lessons in the site's order. Some privacy regulators' sites (for example ico.org.uk) refuse automated access; they can only be saved as a course reference.
-
-Limits: 40 lesson pages per import, 3 MB per page, 100,000 characters of text per lesson, about 75 seconds per import, two imports at a time. Lessons beyond the page limit are listed with links but not retrieved. Importing the same source again (ignoring tracking parameters and `#` anchors) is refused while a non-archived course from that source exists; archive it first to re-import.
-
-The importer only reads public pages. It does not sign in, send cookies, bypass paywalls, CAPTCHAs or bot protection, or download videos. It only connects to public internet addresses on the standard ports. Local, private-network and cloud-metadata addresses are refused, including when a site redirects to one. It also follows robots.txt.
+Courses imported from a URL by earlier versions of the portal keep working, and their **Imported from…** panel stays in the course builder. New courses can no longer be imported this way.
 
 ## Records and migration
 

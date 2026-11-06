@@ -74,7 +74,8 @@ def candidate_view(row):
     keys = row.keys()
     return {'id': row['id'], 'name': row['full_name'], 'email': row['email'], 'createdAt': row['created_at'], 'role': row['role'], 'mustChangePassword': bool(row['must_change_password']), 'active': bool(row['is_active']),
             'departmentId': row['department_id'] if 'department_id' in keys else None, 'jobRoleId': row['job_role_id'] if 'job_role_id' in keys else None,
-            'managerId': row['manager_id'] if 'manager_id' in keys else None, 'jobTitle': row['job_title'] if 'job_title' in keys else ''}
+            'managerId': row['manager_id'] if 'manager_id' in keys else None, 'jobTitle': row['job_title'] if 'job_title' in keys else '',
+            'source': row['auth_source'] if 'auth_source' in keys else 'local', 'kekaEmployeeNumber': row['keka_employee_number'] if 'keka_employee_number' in keys else ''}
 
 
 def can_view_course(db, user, course):
@@ -130,13 +131,18 @@ def authenticate(db, data, ip, register=False):
         auth_event(db, row['id'] if row else None, email, 'login_failed', ip)
         db.commit()
         raise APIError(401, 'Email or password is incorrect or the account is unavailable.')
+    return start_session(db, row, ip, data.get('remember') is True)
+
+
+def start_session(db, row, ip, remember=False):
+    """Sign in an account whose identity is already verified (by password or by Keka): record it and create a session."""
     if not row['last_login_at']:
         from notifications import staff_event
         staff_event(db, row['id'], f'First sign-in: {row["full_name"]}', 'This user signed in for the first time.', f'first-login:{row["id"]}')
     db.execute('UPDATE candidates SET last_login_at=? WHERE id=?', (now(), row['id']))
-    auth_event(db, row['id'], email, 'login', ip)
+    auth_event(db, row['id'], row['email'], 'login', ip)
     raw, csrf = token(), token()
-    lifetime = 30 * 86400 if data.get('remember') is True else 8 * 3600
+    lifetime = 30 * 86400 if remember else 8 * 3600
     db.execute('DELETE FROM sessions WHERE expires_at<=?', (time.time(),))
     db.execute('INSERT INTO sessions VALUES (?,?,?,?,?)', (token_hash(raw), row['id'], csrf, now(), time.time() + lifetime))
     return {'user': candidate_view(row), 'csrfToken': csrf}, raw, lifetime

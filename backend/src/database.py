@@ -36,6 +36,12 @@ ADDED_COLUMNS = [
     ('course_lessons', 'module_index', "INTEGER CHECK(module_index IS NULL OR module_index >= 0)"),
     ('course_lessons', 'module_title', "TEXT NOT NULL DEFAULT ''"),
     ('course_lessons', 'source_url', "TEXT NOT NULL DEFAULT ''"),
+    # Accounts from Keka: how the user signs in, and the Keka identity the LMS record belongs to.
+    ('candidates', 'auth_source', "TEXT NOT NULL DEFAULT 'local' CHECK(auth_source IN ('local','keka'))"),
+    ('candidates', 'keka_user_id', "TEXT NOT NULL DEFAULT ''"),
+    ('candidates', 'keka_employee_id', "TEXT NOT NULL DEFAULT ''"),
+    ('candidates', 'keka_employee_number', "TEXT NOT NULL DEFAULT ''"),
+    ('candidates', 'keka_synced_at', "TEXT NOT NULL DEFAULT ''"),
 ]
 GENAI_COURSE = BACKEND / 'data/generative-ai-course.json'
 RAG_COURSE = BACKEND / 'data/rag-course.json'
@@ -97,7 +103,7 @@ def initialize(path):
                     break
         db.execute('PRAGMA user_version=8')
         # Indexes on columns added by migration 003 are created here so the base schema stays valid for older tables.
-        db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;')
+        db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;CREATE UNIQUE INDEX IF NOT EXISTS candidates_keka_employee ON candidates(keka_employee_id) WHERE length(keka_employee_id)>0;')
         stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
         # Configurable defaults are seeded once, only into empty tables, so admin deletions are respected.
         if db.execute('SELECT 1 FROM departments').fetchone() is None:

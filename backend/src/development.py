@@ -13,9 +13,10 @@ from pathlib import Path
 
 from admin import audit, course_view, media_reference, owns_course
 from analytics import (LEVELS, UNITS, assignment_index, dashboard, employee_paths, local_now, pair_status, pending_assessments,
-                       progress_index, recommendations, report, role_targets, skill_levels, today)
+                       progress_index, recommendations, report, role_targets, skill_levels, today, training_progress)
 from notifications import announce
-import course_import
+import course_generator
+import keka
 from database import BACKEND, MAX_EXAM_ATTEMPTS, VIDEO_ROOT, public_curriculum
 from services import allowed, can_view_course, check, current_run, issue_certificate, notify, now, require, text, uid
 
@@ -97,6 +98,30 @@ def me(db, user):
     row = db.execute('''SELECT c.id,c.full_name AS name,c.email,c.role,c.department_id,c.job_role_id,c.manager_id,c.job_title,d.name AS department,j.name AS job_role,m.full_name AS manager
         FROM candidates c LEFT JOIN departments d ON d.id=c.department_id LEFT JOIN job_roles j ON j.id=c.job_role_id LEFT JOIN candidates m ON m.id=c.manager_id WHERE c.id=?''', (user['id'],)).fetchone()
     return dict(row)
+
+
+def save_training_targets(db, user, data):
+    """Set or clear the yearly training-hours target for one or more employees.
+    Administrators and HR can set it for anyone; a manager only for their own direct reports."""
+    check(allowed(user, 'users.manage') or user['role'] == 'manager', 'You do not have permission to set training targets.', 403)
+    ids = data.get('employeeIds')
+    check(isinstance(ids, list) and 1 <= len(ids) <= 5000 and all(isinstance(i, str) for i in ids), 'Choose at least one employee.')
+    ids = list(dict.fromkeys(ids))
+    year = integer(data, 'year', 2000, 2100, 'Year', date.today().year)
+    hours = data.get('hours')
+    check(hours is None or (type(hours) is int and 1 <= hours <= 2000), 'Training target must be a whole number of hours from 1 to 2000.')
+    found = {r[0] for r in db.execute(f"SELECT id FROM candidates WHERE is_active=1 AND role<>'admin' AND id IN ({','.join('?' * len(ids))})", ids)}
+    check(found == set(ids), 'One or more employees were not found.', 404)
+    if not allowed(user, 'users.manage'):
+        check(set(ids) <= team(db, user['id']), 'Managers can set training targets only for their direct reports.', 403)
+    for employee in ids:
+        if hours is None:
+            db.execute('DELETE FROM training_targets WHERE employee_id=? AND year=?', (employee, year))
+        else:
+            db.execute('INSERT INTO training_targets(employee_id,year,hours,set_by,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(employee_id,year) DO UPDATE SET hours=excluded.hours,set_by=excluded.set_by,updated_at=excluded.updated_at',
+                       (employee, year, hours, user['id'], now()))
+    audit(db, user['id'], 'training_target_set', ids[0] if len(ids) == 1 else '', f'{year}: {hours if hours is not None else "cleared"} hours for {len(ids)} employee(s)')
+    return {'training': training_progress(db, ids, year)}
 
 
 def team(db, manager_id):
@@ -1002,6 +1027,7 @@ def my_dashboard(db, user):
     skills = [{'skill': names.get(s, ''), 'current': levels.get(s, 0), 'target': targets.get(s, 0)} for s in sorted(set(levels) | set(targets), key=lambda s: names.get(s, ''))]
     certificates = db.execute('SELECT COUNT(*) FROM certificates x JOIN course_runs r ON r.id=x.run_id WHERE r.candidate_id=?', (user['id'],)).fetchone()[0]
     return {'profile': {k: employee[k] for k in ('name', 'email', 'role', 'department', 'job_role', 'manager', 'job_title')},
+            'training': training_progress(db, [user['id']])[user['id']],
             'stats': {'assigned': len(assigned_items), 'inProgress': sum(1 for c in courses.values() if c['status'] == 'in_progress'), 'completed': sum(1 for c in courses.values() if c['completed']),
                       'overdue': sum(1 for c in assigned_items if c['status'] == 'overdue'), 'certificates': certificates,
                       'skillGaps': sum(1 for s in skills if s['target'] and s['current'] < s['target'])},
@@ -1120,7 +1146,7 @@ def development_action(db, user, method, route, query, data):
     check(parts[0] == 'manage', f'Endpoint was not found: {method} /api/{route}', 404)
     check(user['role'] != 'employee', 'You do not have permission for this area.', 403)
     p = parts[1:]
-    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync') else '*' for i, x in enumerate(p)))
     handlers = {
         ('POST', 'announcements'): lambda: announce(db, user, data),
         ('GET', 'org'): lambda: org(db, user),
@@ -1136,8 +1162,9 @@ def development_action(db, user, method, route, query, data):
         ('GET', 'courses/*/preview'): lambda: preview(db, user, p[1]),
         ('GET', 'courses/*/builder'): lambda: course_builder(db, user, p[1]),
         ('POST', 'courses/*/resources'): lambda: save_resource(db, user, p[1], data),
-        ('POST', 'import/preview'): lambda: course_import.preview(db, user, data),
-        ('POST', 'import/save'): lambda: course_import.save(db, user, data),
+        ('GET', 'course-generator'): lambda: course_generator.status(user),
+        ('POST', 'course-generator'): lambda: course_generator.start(db, user, data),
+        ('GET', 'course-generator/*'): lambda: course_generator.get_job(user, p[1]),
         ('POST', 'resources/*/delete'): lambda: delete_resource(db, user, p[1]),
         ('GET', 'paths'): lambda: path_list(db, user),
         ('POST', 'paths'): lambda: save_path(db, user, data),
@@ -1148,6 +1175,8 @@ def development_action(db, user, method, route, query, data):
         ('POST', 'skills'): lambda: save_skill(db, user, data),
         ('POST', 'competencies'): lambda: save_competency(db, user, data),
         ('POST', 'skill-evidence'): lambda: save_evidence(db, user, data),
+        ('POST', 'training-targets'): lambda: save_training_targets(db, user, data),
+        ('POST', 'keka/sync'): lambda: keka.sync_all(db, user),
         ('GET', 'assessments'): lambda: assessment_list(db, user),
         ('POST', 'assessments'): lambda: save_assessment(db, user, data),
         ('GET', 'assessments/*/attempts'): lambda: assessment_attempts(db, user, p[1], query),

@@ -18,14 +18,17 @@ from urllib.parse import urlsplit, unquote, parse_qs
 from zoneinfo import ZoneInfo
 
 from database import BACKEND, connect, public_curriculum
-from security import token_hash, password_hash, verify_password
+from security import token, token_hash, password_hash, verify_password
 from services import APIError, can_view_course, authenticate, auth_event, bundle, candidate_view, candidate_certificates, set_certificate_sharing, check, current_run, create_run, expire_exams, learning_action, records, text, now
 from admin import admin_action, course_view, setup_initial_admin
 from development import MAX_MATERIAL_BYTES, catalog, course_video, course_extras, development_action, material_file, store_material
 import assistant
+import keka
 
 PUBLIC = BACKEND.parent / 'frontend/public'
 COOKIE = 'shimentox_session'
+# Holds the Keka sign-in state between leaving for Keka and coming back, for 10 minutes.
+KEKA_COOKIE = 'shimentox_keka'
 # Reported by /api/session so the browser can detect a server still running older code.
 API_VERSION = 10
 
@@ -66,8 +69,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
         self.send_header('Referrer-Policy', 'same-origin')
         self.send_header('Cache-Control', 'no-store')
         if sandbox:
-            host = self.headers.get('Host', 'localhost:5173')
-            host = host if re.fullmatch(r'[a-zA-Z0-9.\-\[\]:]+', host) else 'localhost:5173'
+            host = self.headers.get('Host', 'localhost:5010')
+            host = host if re.fullmatch(r'[a-zA-Z0-9.\-\[\]:]+', host) else 'localhost:5010'
             runtime = f'http://{host}/assets/python-runtime/ https://{host}/assets/python-runtime/'
             self.send_header('Content-Security-Policy', f"default-src 'none'; script-src 'self' {runtime} 'wasm-unsafe-eval'; worker-src blob:; connect-src {runtime}; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; sandbox allow-scripts")
         else:
@@ -100,7 +103,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
 
         host = self.headers.get('Host', '')
         if not re.fullmatch(r'(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?', host):
-            host = 'localhost:5173'
+            host = 'localhost:5010'
         for candidate in (self.headers.get('Origin', ''), self.headers.get('Referer', '')):
             parsed = urlsplit(candidate)
             if parsed.scheme in ('http', 'https') and parsed.netloc.lower() == host.lower():
@@ -194,11 +197,11 @@ class PortalHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def cookie_value(self):
+    def cookie_value(self, name=COOKIE):
         cookies = SimpleCookie()
         try:
             cookies.load(self.headers.get('Cookie', ''))
-            return cookies[COOKIE].value if COOKIE in cookies else ''
+            return cookies[name].value if name in cookies else ''
         except Exception:
             return ''
 
@@ -211,6 +214,44 @@ class PortalHandler(SimpleHTTPRequestHandler):
     def session_cookie(self, raw, lifetime):
         secure = '; Secure' if os.environ.get('LMS_COOKIE_SECURE') == '1' else ''
         return f'{COOKIE}={raw}; Path=/; HttpOnly; SameSite=Lax; Max-Age={lifetime}{secure}'
+
+    def redirect(self, location, *cookies):
+        self.send_response(302)
+        self.send_header('Location', location)
+        self.send_header('Cache-Control', 'no-store')
+        for cookie in cookies:
+            self.send_header('Set-Cookie', cookie)
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
+    def keka_state_cookie(self, value, lifetime):
+        secure = '; Secure' if os.environ.get('LMS_COOKIE_SECURE') == '1' else ''
+        return f'{KEKA_COOKIE}={value}; Path=/api/auth/keka; HttpOnly; SameSite=Lax; Max-Age={lifetime}{secure}'
+
+    def keka_start(self):
+        """Send the browser to Keka's sign-in page; Keka returns it to /api/auth/keka/callback."""
+        if not keka.sso_ready():
+            return self.redirect('/?signin_error=keka-not-configured')
+        state = token()
+        return self.redirect(keka.authorize_url(state, token(), keka.redirect_uri(self.public_base_url())), self.keka_state_cookie(state, 600))
+
+    def keka_callback(self, db, user, query):
+        """Keka sends the person back here after they sign in. Any problem returns to the login page with a fixed message code."""
+        clear = self.keka_state_cookie('', 0)
+        expected, state = self.cookie_value(KEKA_COOKIE), query.get('state', [''])[0]
+        if query.get('error'):
+            return self.redirect('/?signin_error=keka-cancelled', clear)
+        if not expected or not state or not hmac.compare_digest(expected, state):
+            return self.redirect('/?signin_error=keka-expired', clear)
+        try:
+            payload, raw, lifetime = keka.sign_in(db, query.get('code', [''])[0], self.client_address[0], keka.redirect_uri(self.public_base_url()))
+        except keka.SignInError as error:
+            db.commit()
+            return self.redirect(f'/?signin_error={error.code}', clear)
+        if user:
+            db.execute('DELETE FROM sessions WHERE token_hash=?', (user['token_hash'],))
+        db.commit()
+        return self.redirect('/', clear, self.session_cookie(raw, lifetime))
 
     def do_GET(self):
         path = urlsplit(self.path).path
@@ -306,14 +347,13 @@ class PortalHandler(SimpleHTTPRequestHandler):
                         check(isinstance(data, dict), 'A JSON object is required.')
                     except (ValueError, UnicodeError):
                         raise APIError(400, 'Invalid JSON request.')
-                # A course import preview spends up to ~75 seconds on outbound requests and only reads the
-                # database, so it must not hold the write lock that every other POST takes.
-                if path != '/api/manage/import/preview':
+                # A Keka sync waits on outbound requests before it writes, so it must not hold the write lock that every other POST takes.
+                if path != '/api/manage/keka/sync':
                     db.execute('BEGIN IMMEDIATE')
             user = self.session(db)
             query = parse_qs(urlsplit(self.path).query)
             if method == 'GET' and path == '/api/session':
-                payload = {'user': candidate_view(user) if user else None, 'csrfToken': user['csrf_token'] if user else None,'setupRequired':db.execute("SELECT 1 FROM candidates WHERE role='admin'").fetchone() is None,'setupAllowed':ipaddress.ip_address(self.client_address[0]).is_loopback,'apiVersion':API_VERSION}
+                payload = {'user': candidate_view(user) if user else None, 'csrfToken': user['csrf_token'] if user else None,'setupRequired':db.execute("SELECT 1 FROM candidates WHERE role='admin'").fetchone() is None,'setupAllowed':ipaddress.ip_address(self.client_address[0]).is_loopback,'apiVersion':API_VERSION,'kekaSignIn':keka.sso_ready()}
             elif method=='POST' and path=='/api/setup/admin':
                 check(ipaddress.ip_address(self.client_address[0]).is_loopback,'Initial setup must be completed on the server computer.',403)
                 check(urlsplit('http://'+self.headers.get('Host','')).hostname in ('localhost','127.0.0.1','::1'),'Open the local portal address to complete setup.',403)
@@ -321,6 +361,10 @@ class PortalHandler(SimpleHTTPRequestHandler):
                 payload,raw,lifetime=authenticate(db,data,self.client_address[0])
                 db.commit()
                 return self.json_response(201,payload,self.session_cookie(raw,lifetime))
+            elif method == 'GET' and path == '/api/auth/keka/start':
+                return self.keka_start()
+            elif method == 'GET' and path == '/api/auth/keka/callback':
+                return self.keka_callback(db, user, query)
             elif method == 'POST' and path in ('/api/auth/login', '/api/auth/register'):
                 payload, raw, lifetime = authenticate(db, data, self.client_address[0], path.endswith('register'))
                 if user:

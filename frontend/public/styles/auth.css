@@ -65,3 +65,9 @@
 @media(max-width:680px){.login{grid-template-rows:auto minmax(0,1fr)}.login-visual{padding:18px 24px}.login-visual .brand-logo{max-width:170px}.login-visual h1{font-size:23px;margin:15px 0 0;line-height:1.15}.login-visual .eyebrow,.login-visual p,.login-code-gallery{display:none}.login-form{padding:18px 25px}.login-form h1{font-size:24px}.login-form .form-inner>p{font-size:11px}.login-form .form-inner label{margin-top:12px}.login-form .form-options label{margin:0}.login-form .login-foot{margin-top:16px}}
 .login-visual>.brand-logo{position:relative;top:16px}
 .profile-signout{display:flex;align-items:center;gap:5px;margin-top:5px;padding:0;border:0;background:transparent;color:var(--teal);font-size:10px;line-height:1.4;text-align:left}.profile-signout .ico,.profile-signout .ico svg{width:12px;height:12px}.profile-signout:hover{text-decoration:underline}.profile-signout:disabled{opacity:.6;cursor:wait}@media(max-width:680px){.topbar .profile>.profile-details{display:block}.profile-details>strong{display:block;max-width:125px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-details>small{display:none}.profile-signout{margin-top:3px}}
+/* "Sign in with Keka account": a full-width secondary button under the password form. */
+.auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted,#788176);font-size:12px;text-transform:uppercase;letter-spacing:1.5px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--line,#dfe5e1)}
+.keka-signin{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:50px;border-radius:9px;font-size:15px;font-weight:600;text-decoration:none;box-sizing:border-box}
+.keka-signin .auth-icon{width:18px;height:18px}
+.keka-help{margin-top:10px}

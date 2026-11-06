@@ -151,7 +151,8 @@ def activity_times(db, course_ids=None):
 
 
 def training_seconds(db, course_ids=None, start=None, end=None):
-    """Seconds of verified video watching plus attended instructor-led sessions, per employee."""
+    """Seconds of verified video watching, attended instructor-led sessions and completed lessons, per employee.
+    A completed lesson counts for its planned duration, so text-based courses add to training time too."""
     where, params = ids_clause(course_ids, 'r.course_id')
     totals = {}
     for r in db.execute(f'SELECT r.candidate_id,v.watched_seconds,v.updated_at FROM video_progress v JOIN course_runs r ON r.id=v.run_id WHERE {where}', params):
@@ -161,7 +162,24 @@ def training_seconds(db, course_ids=None, start=None, end=None):
     for r in db.execute(f"SELECT g.employee_id,s.starts_at,(julianday(s.ends_at)-julianday(s.starts_at))*86400 AS seconds FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.status='attended' AND {w2}", p2):
         if start is None and end is None or in_range(r['starts_at'], start, end):
             totals[r['employee_id']] = totals.get(r['employee_id'], 0) + max(0, r['seconds'] or 0)
+    w3, p3 = ids_clause(course_ids, 'r.course_id')
+    for r in db.execute(f'SELECT r.candidate_id,p.completed_at,l.duration_minutes FROM lesson_progress p JOIN course_runs r ON r.id=p.run_id JOIN course_lessons l ON l.id=p.lesson_id WHERE {w3}', p3):
+        if start is None and end is None or in_range(r['completed_at'], start, end):
+            totals[r['candidate_id']] = totals.get(r['candidate_id'], 0) + max(0, r['duration_minutes'] or 0) * 60
     return totals
+
+
+def training_progress(db, employee_ids, year=None):
+    """Each employee's yearly training-hours target and the hours completed in that calendar year."""
+    year = year or date.today().year
+    seconds = training_seconds(db, None, f'{year}-01-01', f'{year}-12-31')
+    targets = {r[0]: r[1] for r in db.execute('SELECT employee_id,hours FROM training_targets WHERE year=?', (year,))}
+    result = {}
+    for employee in employee_ids:
+        done, target = round(seconds.get(employee, 0) / 3600, 1), targets.get(employee)
+        result[employee] = {'year': year, 'targetHours': target, 'completedHours': done,
+                            'percent': min(100, round(done / target * 100)) if target else None}
+    return result
 
 
 def assessment_scores(db, course_ids=None, start=None, end=None):
@@ -363,9 +381,12 @@ def dashboard(db, user, query):
                                 'participationRate': round(row['participants'] / row['employees'] * 100) if row['employees'] else 0,
                                 'completionRate': round(row['completed'] / row['pairs'] * 100) if row['pairs'] else 0, 'completionsInPeriod': row['completionsInPeriod'],
                                 'averageScore': average(row['scores']), 'trainingHours': round(row['seconds'] / 3600, 1)})
+    # Yearly training-hours progress per direct report, for the Manager View.
+    team_training = training_progress(db, ids) if employee_scope is not None else {}
     return {'scope': 'organisation' if employee_scope is None and course_scope is None else 'team' if employee_scope is not None else 'courses',
             'kpis': kpis, 'progress': progress_summary, 'departments': department_rows, 'period': {'from': start, 'to': end},
-            'recent': recent_activity(db, id_set, course_scope, employee_scope is not None), 'upcoming': upcoming_training(db, people, progress, assignments, statuses, courses)}
+            'recent': recent_activity(db, id_set, course_scope, employee_scope is not None), 'upcoming': upcoming_training(db, people, progress, assignments, statuses, courses),
+            'training': [{'id': e['id'], 'name': e['name'], 'department': e['department'], **team_training[e['id']]} for e in people if e['id'] in team_training]}
 
 
 def recent_activity(db, ids, course_scope, team_only, limit=12):

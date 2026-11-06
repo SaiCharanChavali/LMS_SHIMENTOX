@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from database import COURSE_ID, CURRICULUM, LESSONS
 from security import password_hash, verify_password
+from analytics import training_progress
 from services import ROLES, allowed, check, require, text, uid, now, create_run, candidate_view, records, expire_exams
 
 DIFFICULTIES = ('beginner', 'intermediate', 'advanced', 'expert')
@@ -88,9 +89,10 @@ def candidate_list(db):
         (SELECT COUNT(*) FROM course_runs r WHERE r.candidate_id=c.id) AS run_count
         FROM candidates c LEFT JOIN departments d ON d.id=c.department_id LEFT JOIN job_roles j ON j.id=c.job_role_id LEFT JOIN candidates m ON m.id=c.manager_id
         ORDER BY c.created_at DESC,c.id''')
+    rows=rows.fetchall();training=training_progress(db,[row['id'] for row in rows])
     for row in rows:
         item=candidate_view(row)
-        item.update({'certificates':row['certificate_count'],'courseRuns':row['run_count'],'lastLoginAt':row['last_login_at'],'department':row['department'],'jobRole':row['job_role'],'manager':row['manager']})
+        item.update({'certificates':row['certificate_count'],'courseRuns':row['run_count'],'lastLoginAt':row['last_login_at'],'department':row['department'],'jobRole':row['job_role'],'manager':row['manager'],'training':training[row['id']]})
         users.append(item)
     return users
 
@@ -110,8 +112,8 @@ def course_view(row, private=False, db=None):
     if 'page_layout' in keys:
         result['layout']=row['page_layout']
     if 'source_url' in keys and row['source_url']:
-        # Imported courses always show where the content came from.
-        result['source']={'url':row['source_url'],'platform':row['source_platform'],'importStatus':row['import_status']}
+        # Imported courses always show where the content came from; for courses written from a reference (no import status) only course managers see it.
+        if private or row['import_status']:result['source']={'url':row['source_url'],'platform':row['source_platform'],'importStatus':row['import_status']}
         if private and row['import_report_json']:result['importReport']=json.loads(row['import_report_json'])
     if db is not None:
         result['skills']=course_skills(db,row['id'])
@@ -434,7 +436,7 @@ def admin_action(db, actor, method, route, data):
         target=db.execute('SELECT * FROM candidates WHERE id=?',(parts[1],)).fetchone();check(target is not None,'Employee was not found.',404)
         if method=='GET' and parts[2]=='records':
             check(allowed(actor,'users.manage') or (actor['role']=='manager' and target['manager_id']==identity),'You can view records only for employees you manage.',403)
-            return {'user':candidate_view(target),**records(db,target['id'])}
+            return {'user':candidate_view(target),'training':training_progress(db,[target['id']])[target['id']],**records(db,target['id'])}
         require(actor,'users.manage');protected_target(actor,target)
         if method=='POST' and parts[2]=='profile':return {'candidate':update_profile(db,actor,target,data)}
         if method=='POST' and parts[2]=='reset-password':

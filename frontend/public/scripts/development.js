@@ -41,6 +41,25 @@ const tagText=(text,tone='')=>`<span class="tag ${tone}">${esc(String(text).toUp
 const levelTag=l=>`<span class="level level-${Number(l)||0}">${esc(LEVEL_LABELS[l]||LEVEL_LABELS[0])}</span>`;
 const meter=(value,label)=>`<div class="meter-row"><div class="meter" role="img" aria-label="${esc(label||'')} ${value}%"><span style="width:${Math.max(0,Math.min(100,Number(value)||0))}%"></span></div><b>${Number(value)||0}%</b></div>`;
 const intro=(title,text,tag)=>`<div class="intro"><div><h1>${esc(title)}</h1><p>${esc(text)}</p></div>${tag?`<span class="tag">${esc(tag)}</span>`:''}</div>`;
+// Yearly training hours against the target an admin or manager set: a bar with the hours completed.
+function trainingBar(t){
+  if(!t)return '';
+  if(!t.targetHours)return `<div class="training-target"><small>${t.completedHours} hours completed in ${t.year} · No yearly target set</small></div>`;
+  const left=Math.max(0,Math.round((t.targetHours-t.completedHours)*10)/10);
+  return `<div class="training-target"><div class="meter-row"><div class="meter" role="img" aria-label="${t.completedHours} of ${t.targetHours} training hours completed in ${t.year}"><span style="width:${t.percent}%"></span></div><b>${t.percent}%</b></div><small>${t.completedHours} of ${t.targetHours} hours in ${t.year}${t.percent>=100?' · Target met':` · ${left} hours to go`}</small></div>`;
+}
+// One form for every place a target is set. "target" is all, dept:<id>, user:<id> or ids:<id,id,...>.
+function trainingTargetForm(target,current,options=''){
+  return `<form class="training-target-form" data-form="training-target">${options||`<input type="hidden" name="target" value="${esc(target)}">`}<label class="visually-hidden" for="tt-${esc(target)}">Yearly target in hours</label><input id="tt-${esc(target)}" name="hours" type="number" min="1" max="2000" step="1" value="${esc(current??'')}" placeholder="Hours / year" aria-label="Yearly training target in hours"><button class="btn secondary" type="submit">Save target</button><p class="form-status" role="status"></p></form>`;
+}
+function trainingTargetIds(target){
+  const employees=(adminState.candidates||[]).filter(u=>u.active&&u.role!=='admin');
+  if(target==='all')return employees.map(u=>u.id);
+  if(target.startsWith('dept:'))return employees.filter(u=>u.departmentId===target.slice(5)).map(u=>u.id);
+  if(target.startsWith('user:'))return [target.slice(5)];
+  if(target.startsWith('ids:'))return target.slice(4).split(',').filter(Boolean);
+  return [];
+}
 const panel=(title,body,extra='')=>`<section class="panel"><div class="section-heading"><h2>${esc(title)}</h2>${extra}</div>${body}</section>`;
 const kpi=(name,value,label,hint)=>`<div class="stat"><div class="stat-icon">${icon(name)}</div><div><strong>${esc(value)}</strong><small>${esc(label)}</small>${hint?`<small class="stat-hint">${esc(hint)}</small>`:''}</div></div>`;
 const options=(items,selected,blank)=>`${blank!==undefined?`<option value="">${esc(blank)}</option>`:''}${items.map(([value,label])=>`<option value="${esc(value)}" ${String(value)===String(selected??'')?'selected':''}>${esc(label)}</option>`).join('')}`;
@@ -79,7 +98,7 @@ function orgDashboard(){
   if(!entry.data)return head+stateBlock(entry,'learning metrics',key);
   const d=entry.data,k=d.kpis;
   return head+`<div class="stats">${kpi('users',k.totalEmployees,'Total employees')}${kpi('play',k.activeLearners,'Active learners','Learning activity in the last 30 days')}${kpi('book',k.publishedCourses,'Published courses')}${kpi('check',k.completionRate+'%','Course completion rate',`${k.completions} of ${k.enrollments} enrollments`)}</div>
-  <div class="stats">${kpi('award',k.certificatesEarned,'Certificates earned')}${kpi('clock',k.trainingHours,'Training hours completed','Verified video time + attended sessions')}${kpi('bell',k.pendingMandatory,'Pending mandatory training')}</div>
+  <div class="stats">${kpi('award',k.certificatesEarned,'Certificates earned')}${kpi('clock',k.trainingHours,'Training hours completed','Completed lessons, verified video time and attended sessions')}${kpi('bell',k.pendingMandatory,'Pending mandatory training')}</div>
   <div class="dash-grid"><div class="dash-main">${progressPanel(d.progress)}${departmentPanel(d)}</div><div class="dash-side">${activityPanel(d.recent)}${upcomingPanel(d.upcoming)}</div></div>`;
 }
 function progressPanel(p){
@@ -120,6 +139,7 @@ function employeeDashboard(){
   const profile=`<p class="profile-line">${esc([p.job_title||p.job_role,p.department,p.manager&&'Manager: '+p.manager].filter(Boolean).join(' · ')||'Ask HR to add your department and job role to receive role-based training.')}</p>`;
   return head+profile+`<div class="stats">${kpi('book',d.stats.assigned,'Assigned courses',d.stats.overdue?`${d.stats.overdue} overdue`:'')}${kpi('play',d.stats.inProgress,'Courses in progress')}${kpi('award',d.stats.certificates,'Certificates earned')}</div>
   <div class="dash-grid"><div class="dash-main">
+  ${d.training?panel(`Training hours ${d.training.year}`,`${trainingBar(d.training)}<p class="muted">Completed lessons, video learning and attended training sessions count toward your yearly target, which your manager or administrator sets.</p>`):''}
   ${panel('Assigned to me',d.assigned.length?`<div class="tile-grid">${d.assigned.map(courseTile).join('')}</div>`:emptyState('No assigned training','Courses assigned by HR or your manager will appear here with their deadlines.','<a class="btn secondary" href="#catalog">Browse all courses</a>'),'<a href="#courses">My Learning &rarr;</a>')}
   ${d.continue.filter(c=>!c.assignment).length?panel('Continue learning',`<div class="tile-grid">${d.continue.filter(c=>!c.assignment).map(courseTile).join('')}</div>`):''}
   ${panel('Recommended for you',d.recommendations.length?`<div class="tile-grid">${d.recommendations.map(recommendationCard).join('')}</div>`:emptyState('No recommendations yet','Recommendations use your job role and assessment results.'))}
@@ -129,6 +149,11 @@ function employeeDashboard(){
   ${panel('Learning history',d.history.length?d.history.map(h=>`<div class="activity"><span class="bubble">${icon('check')}</span><p>${esc(h.text)}<br><small>${esc(fmtDate(h.at))}</small></p></div>`).join(''):'<p class="muted">Your completed activities will appear here.</p>','<a href="#history">All history &rarr;</a>')}
   </div></div>`;
 }
+function teamTrainingPanel(rows){
+  const year=rows[0]?.year||new Date().getFullYear();
+  const table=rows.length?`<div class="admin-table-scroll"><table class="admin-table" aria-label="Team training hours"><thead><tr><th>Employee</th><th>Training hours ${year}</th><th>Yearly target</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${esc(r.name)}</strong><small>${esc(r.department||'No department')}</small></td><td>${trainingBar(r)}</td><td>${trainingTargetForm('user:'+r.id,r.targetHours)}</td></tr>`).join('')}</tbody></table></div><h3 class="sub-heading">Set the same target for the whole team</h3>${trainingTargetForm('ids:'+rows.map(r=>r.id).join(','),'')}`:'<p class="muted">Employees who report to you will appear here.</p>';
+  return panel(`Team training hours ${year}`,`<p class="muted">Set how many hours of training each employee should complete this year. Leave the field blank and save to remove a target.</p>${table}`);
+}
 // Manager View: learning progress of the manager's direct reports; the server scopes the dashboard data to them.
 function managerView(){
   const entry=loadData('mgr-dash','manage/dashboard');
@@ -136,7 +161,7 @@ function managerView(){
   if(!entry.data)return head+stateBlock(entry,'team progress','mgr-dash');
   const k=entry.data.kpis;
   return head+`<div class="stats">${kpi('users',k.totalEmployees,'Direct reports')}${kpi('play',k.activeLearners,'Active learners','Learning activity in the last 30 days')}${kpi('check',k.completionRate+'%','Course completion rate',`${k.completions} of ${k.enrollments} enrollments`)}${kpi('bell',k.pendingMandatory,'Pending mandatory training')}</div>
-  <div class="dash-grid"><div class="dash-main">${progressPanel(entry.data.progress)}</div><div class="dash-side">${activityPanel(entry.data.recent)}</div></div>`;
+  <div class="dash-grid"><div class="dash-main">${teamTrainingPanel(entry.data.training||[])}${progressPanel(entry.data.progress)}</div><div class="dash-side">${activityPanel(entry.data.recent)}</div></div>`;
 }
 
 function calendarPage(){
@@ -632,6 +657,7 @@ async function submitForm(form,task){
 }
 const ACTIONS={
   retry:el=>{delete pageCache[el.dataset.key];render();},
+  'keka-sync':async el=>{el.disabled=true;try{kekaSyncResult=(await api('manage/keka/sync',{})).keka;await loadAdminState();refreshData('people','org','dash','mgr-dash');}catch(error){toast(error.message);}finally{el.disabled=false;render();}},
   'notifications-read-all':async()=>{const data=await api('me/notifications/read',{all:true});notificationState.items=data.notifications;notificationState.unread=data.unread;render();},
   'notification-open':async el=>{const data=await api('me/notifications/read',{ids:[Number(el.dataset.id)]});notificationState={items:data.notifications,unread:data.unread,open:false};if(el.dataset.link)location.hash=el.dataset.link;render();},
   'dash-period-clear':()=>{devFilters.dashboard={};render();},
@@ -694,6 +720,11 @@ const SUBMITS={
   'assessment-submit':form=>submitForm(form,async()=>{const a=activeAssessment,answers=a.attempt.questions.map((_,i)=>{const value=new FormData(form).get('q'+i);return value===null?null:Number(value);});if(answers.includes(null))throw new Error('Answer every question before submitting.');const data=await api(`me/assessments/${a.id}/submit`,{attemptId:a.attempt.id,answers});activeAssessment=null;exitExamFullscreen();assessmentResult=data.result;refreshData('me-assess','me-skills','me-dash');refreshNotifications();if(data.result.status==='passed'){try{learning.certificates=(await api('certificates')).certificates;}catch{/* The list refreshes on the next page load. */}}render();}),
   'assessment-save':form=>submitForm(form,async()=>{const v=formValues(form);let questions;try{questions=JSON.parse(v.questions);}catch{throw new Error('The question bank JSON is invalid. Check its syntax.');}const data=await api('manage/assessments',{id:form.dataset.id||null,title:v.title,description:v.description,kind:v.kind,courseId:v.courseId||null,skillId:v.skillId||null,skillLevel:Number(v.skillLevel),passPercent:Number(v.passPercent),maxAttempts:Number(v.maxAttempts),questionCount:Number(v.questionCount),timeLimitMinutes:Number(v.timeLimitMinutes),status:v.status,questions});pageCache['m-assess']={data:{assessments:data.assessments}};assessmentEditor=null;refreshData('me-assess');devMessage='Assessment saved.';render();}),
   'record-save':form=>submitForm(form,async()=>{const v=formValues(form);await api('me/records',{title:v.title,provider:v.provider,completedOn:v.completedOn,hours:Number(v.hours||0)});refreshData('me-history');historyPage=1;render();}),
+  'training-target':form=>submitForm(form,async()=>{const v=formValues(form),ids=trainingTargetIds(v.target||'');if(!ids.length)throw new Error('No employees match this choice.');
+    const data=await api('manage/training-targets',{employeeIds:ids,hours:v.hours===''?null:Number(v.hours)});
+    for(const user of adminState.candidates||[])if(data.training[user.id])user.training=data.training[user.id];
+    if(recordPreview&&data.training[recordPreview.user.id])recordPreview.training=data.training[recordPreview.user.id];
+    refreshData('mgr-dash','me-dash');toast(v.hours===''?'Training target removed.':`Training target saved: ${v.hours} hours for ${ids.length} employee${ids.length===1?'':'s'}.`);render();}),
   'user-profile':form=>submitForm(form,async()=>{const v=formValues(form);await api(`admin/candidates/${form.dataset.id}/profile`,{name:v.name,role:v.role,departmentId:v.departmentId||null,jobRoleId:v.jobRoleId||null,managerId:v.managerId||null,jobTitle:v.jobTitle});editUserId=null;adminMessage='Employee profile updated.';await loadAdminState();refreshData('people','org');render();}),
   'org-save':form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('manage/'+form.dataset.kind,{name:v.name,departmentId:v.departmentId||null});pageCache.org={data};render();}),
   'resource-save':form=>submitForm(form,async()=>{const v=formValues(form);let url=v.url;const file=form.querySelector('input[type="file"]')?.files?.[0];if(file){url=(await uploadMaterial(file)).url;}if(!url)throw new Error('Choose a file to upload or enter a link.');await api(`manage/courses/${form.dataset.id}/resources`,{title:v.title,kind:v.kind,url,moduleIndex:intOrNull(v.moduleIndex)});await loadAdminState();adminMessage='Learning material added.';render();}),

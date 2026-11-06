@@ -1,13 +1,13 @@
 # Backend
 
-Python standard-library HTTP API and SQLite database. No third-party runtime packages are needed. Run `npm start` at project root, or `python backend/server.py`. The default address is http://localhost:5173, bound to the local computer.
+Python standard-library HTTP API and SQLite database. No third-party runtime packages are needed. Run `npm start` at project root, or `python backend/server.py`. The default address is http://localhost:5010, bound to the local computer.
 
 ## Files
 
 - `server.py`: command-line entry point; supports `--port`, `--host`, and `--init-db`.
 - `src/server.py`: HTTP routes, static serving, cookie sessions, CSRF/origin checks, JSON validation.
 - `src/services.py`: accounts, enrollment, progress, exercise/exam grading, certificates, record exports.
-- `src/course_import.py`: Import from URL workflow: preview tokens, saving as a draft or published course, duplicate checks.
+- `src/course_generator.py`: Create from a link with AI: background job that reads a page, has Claude write an original course, and saves it as a draft.
 - `src/importers/`: the course importer: `fetch.py` (SSRF-safe HTTP, robots.txt, limits), `dom.py` (HTML tree and metadata), `markdown.py` (structure-preserving conversion), `pipeline.py` (crawl, limits, preview structure), `platforms.py` (platform detection and extractors).
 - `tools/import_smoke.py`: live check of the importer against real sites (needs internet).
 - `src/security.py`: scrypt password hashing, constant-time verification, opaque session tokens.
@@ -60,8 +60,9 @@ All learning POSTs except enrollment include `runId` and action-specific fields.
 | POST | `/api/admin/candidates/{id}/status` | Enable/disable account access |
 | GET / POST | `/api/admin/courses` | Private curriculum and course authoring |
 | GET | `/api/admin/audit` | Last 100 administrator actions |
-| POST | `/api/manage/import/preview` | Retrieve and extract a course URL for review (`{url}`); returns a preview token. Runs outside the write transaction |
-| POST | `/api/manage/import/save` | Save a reviewed import (`{token, mode: full\|reference, rightsConfirmed, status: draft\|published, title, category, ...}`) |
+| GET | `/api/manage/course-generator` | Whether Create from a link with AI is available. |
+| POST | `/api/manage/course-generator` | Start creating a draft course from a link (`{url, title?, category?}`); returns a job. |
+| GET | `/api/manage/course-generator/{id}` | Progress of your job (`status`, `stage`, `error`, `courseId`). |
 
 `src/admin.py` implements administration. `POST /api/setup/admin` configures the first admin from a loopback browser request and permanently locks once an admin exists. `database/migrations/002_roles_and_courses.sql` preserves version 1 records while adding roles, first-login flags, course content, and audit records. Initialization is repeatable and never promotes an account automatically.
 
@@ -70,7 +71,7 @@ All learning POSTs except enrollment include `runId` and action-specific fields.
 Use PowerShell environment variables before `npm start` when needed:
 
 ```powershell
-$env:PORT = '5173'
+$env:PORT = '5010'
 $env:LMS_DB_PATH = 'C:\path\to\persistent\lms.sqlite3'
 $env:LMS_PUBLIC_BASE_URL = 'https://learning.example.com'
 ```

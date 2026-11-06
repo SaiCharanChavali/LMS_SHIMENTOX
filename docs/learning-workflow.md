@@ -2,7 +2,7 @@
 
 A responsive LMS portal with an HTML/CSS/JavaScript frontend and a Python/SQLite backend, using the supplied ShimentoX logo. Includes candidate accounts, a combined dashboard, course search, video walkthroughs, exercises, timed examinations, and printable certificates.
 
-Run `npm start` from the project root, then open http://localhost:5173. Signed-out candidates see login; authenticated candidates see the dashboard. Opening the HTML directly does not run the API.
+Run `npm start` from the project root, then open http://localhost:5010. Signed-out candidates see login; authenticated candidates see the dashboard. Opening the HTML directly does not run the API.
 
 Admins create candidate accounts with assigned emails and temporary passwords. Public registration is disabled. Candidates must choose a different personal password on first sign-in, before accessing any course. The same portal shows role-appropriate pages: candidates have Dashboard, My courses, My profile, and Achievements; admins have account/course management and audit pages. SQLite stores roles, hashed passwords, sessions, and individual learning records. Logging out invalidates the session. My profile provides later password changes and personal record exports.
 

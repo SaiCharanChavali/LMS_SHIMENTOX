@@ -399,6 +399,40 @@ CREATE TABLE IF NOT EXISTS notifications (
     read_at TEXT,
     UNIQUE(employee_id, dedupe_key)
 );
+-- Deadline reminder configuration: a single row, seeded at startup.
+CREATE TABLE IF NOT EXISTS reminder_settings (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    intervals_json TEXT NOT NULL DEFAULT '[7,3,1]',
+    deadline_day INTEGER NOT NULL DEFAULT 1 CHECK(deadline_day IN (0,1)),
+    overdue INTEGER NOT NULL DEFAULT 1 CHECK(overdue IN (0,1)),
+    due_soon_days INTEGER NOT NULL DEFAULT 7 CHECK(due_soon_days BETWEEN 1 AND 90),
+    updated_by TEXT,
+    updated_at TEXT,
+    last_run_at TEXT,
+    last_run_json TEXT
+);
+-- One row per reminder delivery. The unique idempotency key prevents duplicates; assignment_id and course_id are
+-- plain values so the history survives removing an assignment or course.
+CREATE TABLE IF NOT EXISTS deadline_reminders (
+    id INTEGER PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    assignment_id TEXT NOT NULL,
+    course_id TEXT NOT NULL,
+    reminder_type TEXT NOT NULL,
+    deadline_at TEXT,
+    channel TEXT NOT NULL DEFAULT 'in_app',
+    scheduled_at TEXT NOT NULL,
+    sent_at TEXT,
+    status TEXT NOT NULL CHECK(status IN ('pending','sent','failed','cancelled')),
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at TEXT,
+    failure_reason TEXT,
+    notification_id INTEGER,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS deadline_reminders_employee ON deadline_reminders(employee_id, status);
+CREATE INDEX IF NOT EXISTS deadline_reminders_course ON deadline_reminders(course_id, created_at);
 CREATE TABLE IF NOT EXISTS materials (
     id TEXT PRIMARY KEY,
     original_name TEXT NOT NULL,

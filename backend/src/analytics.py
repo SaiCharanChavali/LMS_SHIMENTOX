@@ -7,7 +7,8 @@ import heapq
 from itertools import groupby,chain
 from datetime import date, datetime, timedelta, timezone
 
-from services import check
+from deadlines import end_of_day
+from services import check, now
 
 LEVELS = {0: 'Not assessed', 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert'}
 UNITS = 15  # 6 videos + 6 exercises + 3 module exams per course run
@@ -82,8 +83,10 @@ def progress_index(db, employee_ids=None, course_ids=None):
     w1, p1 = ids_clause(employee_ids, 'r.candidate_id')
     w2, p2 = ids_clause(course_ids, 'r.course_id')
     index = {}
-    for r in db.execute(f'SELECT candidate_id,course_id,MIN(started_at) AS started_at,MIN(completed_at) AS completed_at FROM course_runs r WHERE {w1} AND {w2} GROUP BY candidate_id,course_id', p1 + p2):
-        index[(r['candidate_id'], r['course_id'])] = {'units': 0, 'progress': 0, 'ready': False, 'completed': r['completed_at'] is not None, 'completedAt': r['completed_at'], 'startedAt': r['started_at'], 'started': False, 'lastActivity': ''}
+    for r in db.execute(f'''SELECT candidate_id,course_id,MIN(started_at) AS started_at,MIN(completed_at) AS completed_at,
+        (SELECT x.deadline_at_completion FROM course_runs x WHERE x.candidate_id=r.candidate_id AND x.course_id=r.course_id AND x.completed_at IS NOT NULL ORDER BY x.completed_at LIMIT 1) AS deadline_at_completion
+        FROM course_runs r WHERE {w1} AND {w2} GROUP BY candidate_id,course_id''', p1 + p2):
+        index[(r['candidate_id'], r['course_id'])] = {'units': 0, 'progress': 0, 'ready': False, 'completed': r['completed_at'] is not None, 'completedAt': r['completed_at'], 'deadlineAtCompletion': r['deadline_at_completion'], 'startedAt': r['started_at'], 'started': False, 'lastActivity': ''}
     # Module courses have 15 units per run; lesson-based courses have one unit per lesson.
     for r in db.execute(f'''SELECT r.candidate_id,r.course_id,k.format,
         (SELECT COUNT(*) FROM video_progress v WHERE v.run_id=r.id AND v.completed_at IS NOT NULL)
@@ -95,7 +98,8 @@ def progress_index(db, employee_ids=None, course_ids=None):
         (SELECT COUNT(DISTINCT ca.checkpoint_id) FROM checkpoint_attempts ca WHERE ca.run_id=r.id AND ca.status='passed') AS checkpoint_done,
         MAX(COALESCE((SELECT MAX(updated_at) FROM video_progress WHERE run_id=r.id),''),COALESCE((SELECT MAX(submitted_at) FROM exercise_attempts WHERE run_id=r.id),''),
             COALESCE((SELECT MAX(started_at) FROM exam_attempts WHERE run_id=r.id),''),COALESCE((SELECT MAX(completed_at) FROM lesson_progress WHERE run_id=r.id),''),
-            COALESCE((SELECT MAX(started_at) FROM checkpoint_attempts WHERE run_id=r.id),'')) AS last_activity
+            COALESCE((SELECT MAX(started_at) FROM checkpoint_attempts WHERE run_id=r.id),''),COALESCE((SELECT MAX(updated_at) FROM lesson_watch WHERE run_id=r.id),''),
+            COALESCE((SELECT MAX(submitted_at) FROM lesson_activity_attempts WHERE run_id=r.id),'')) AS last_activity
         FROM course_runs r JOIN courses k ON k.id=r.course_id WHERE r.archived_at IS NULL AND {w1} AND {w2}''', p1 + p2):
         item = index[(r['candidate_id'], r['course_id'])]
         total = r['lesson_total'] + r['checkpoint_total'] if r['format'] == 'lessons' else UNITS
@@ -108,23 +112,33 @@ def progress_index(db, employee_ids=None, course_ids=None):
 
 
 def assignment_index(db, employee_ids=None, course_ids=None):
-    """(employee, course) -> effective assignment, merging employee, department and job-role targets."""
+    """(employee, course) -> the assignment in force when an employee has several (employee, department, job role).
+
+    A mandatory assignment beats an optional one, so a manager's recommendation cannot weaken mandatory training. Next a
+    deadline beats none, an individual assignment beats a group one (this is how one person gets a different deadline),
+    and otherwise the earliest deadline applies.
+    """
     w1, p1 = ids_clause(employee_ids, 'c.id')
     w2, p2 = ids_clause(course_ids, 'a.course_id')
     index = {}
-    for r in db.execute(f'''SELECT c.id AS employee_id,a.course_id,MAX(a.mandatory) AS mandatory,MIN(a.due_date) AS due_date,MIN(a.assigned_at) AS assigned_at,
-        GROUP_CONCAT(DISTINCT m.full_name) AS assigned_by
+    for r in db.execute(f'''SELECT c.id AS employee_id,a.course_id,a.id,a.target_type,a.mandatory,a.due_date,a.deadline_at,a.original_deadline_at,a.deadline_updated_at,a.assigned_at,m.full_name AS assigned_by
         FROM candidates c JOIN course_assignments a ON (a.target_type='employee' AND a.target_id=c.id) OR (a.target_type='department' AND a.target_id=c.department_id) OR (a.target_type='job_role' AND a.target_id=c.job_role_id)
         JOIN courses k ON k.id=a.course_id AND k.status='published' LEFT JOIN candidates m ON m.id=a.assigned_by
-        WHERE c.is_active=1 AND {w1} AND {w2} GROUP BY c.id,a.course_id''', p1 + p2):
-        index[(r['employee_id'], r['course_id'])] = {'mandatory': bool(r['mandatory']), 'dueDate': r['due_date'], 'assignedAt': r['assigned_at'], 'assignedBy': r['assigned_by'] or ''}
+        WHERE c.is_active=1 AND {w1} AND {w2}
+        ORDER BY a.mandatory DESC,COALESCE(a.deadline_at,a.due_date) IS NULL,a.target_type<>'employee',COALESCE(a.deadline_at,a.due_date),a.assigned_at,a.id''', p1 + p2):
+        pair = (r['employee_id'], r['course_id'])
+        if pair not in index:
+            # Rows written directly with only a date still have an exact deadline: the end of that day.
+            deadline = r['deadline_at'] or (end_of_day(r['due_date']) if r['due_date'] else None)
+            index[pair] = {'assignmentId': r['id'], 'targetType': r['target_type'], 'mandatory': bool(r['mandatory']), 'dueDate': r['due_date'], 'deadlineAt': deadline, 'originalDeadlineAt': r['original_deadline_at'] or deadline,
+                           'deadlineUpdatedAt': r['deadline_updated_at'], 'assignedAt': r['assigned_at'], 'assignedBy': r['assigned_by'] or ''}
     return index
 
 
 def pair_status(progress, assignment):
     if progress and progress['completed']:
         return 'completed'
-    if assignment and assignment['dueDate'] and assignment['dueDate'] < today():
+    if assignment and assignment['deadlineAt'] and assignment['deadlineAt'] <= now():
         return 'overdue'
     if progress and progress['started']:
         return 'in_progress'
@@ -423,7 +437,7 @@ def upcoming_training(db, people, progress, assignments, statuses, courses):
     deadlines = {}
     for pair, a in assignments.items():
         if a['mandatory'] and a['dueDate'] and statuses[pair] != 'completed' and a['dueDate'] <= deadline_limit:
-            row = deadlines.setdefault((pair[1], a['dueDate']), {'courseId': pair[1], 'course': courses.get(pair[1], {}).get('title', ''), 'dueDate': a['dueDate'], 'pending': 0, 'overdue': a['dueDate'] < today()})
+            row = deadlines.setdefault((pair[1], a['dueDate']), {'courseId': pair[1], 'course': courses.get(pair[1], {}).get('title', ''), 'dueDate': a['dueDate'], 'pending': 0, 'overdue': bool(a['deadlineAt'] and a['deadlineAt'] <= now())})
             row['pending'] += 1
     pending = {}
     for (employee, course), item in progress.items():

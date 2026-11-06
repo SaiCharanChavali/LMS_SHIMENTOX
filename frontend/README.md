@@ -10,4 +10,4 @@
 - `tests/`: simulated browser workflow checks, run with `npm test` at project root.
 - `tools/`: development utilities, excluded from the browser's served directory.
 
-Run `npm start` from the project root and open http://localhost:5010. Opening HTML directly or using a static-only server cannot authenticate or save progress. The backend serves `public/` as the browser root; database, answer keys, test files, and development tools remain outside that root. The frontend does not use localStorage for candidate records or session secrets.
+Run `npm start` from the project root and open http://localhost:5007. Opening HTML directly or using a static-only server cannot authenticate or save progress. The backend serves `public/` as the browser root; database, answer keys, test files, and development tools remain outside that root. The frontend does not use localStorage for candidate records or session secrets.

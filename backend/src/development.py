@@ -15,9 +15,12 @@ from admin import audit, course_view, media_reference, owns_course
 from analytics import (LEVELS, UNITS, assignment_index, dashboard, employee_paths, local_now, pair_status, pending_assessments,
                        progress_index, recommendations, report, role_targets, skill_levels, today, training_progress)
 from notifications import announce
+import compliance
 import course_generator
 import keka
 from database import BACKEND, MAX_EXAM_ATTEMPTS, VIDEO_ROOT, public_curriculum
+from deadlines import STATUS_LABELS, deadline_status, deadline_view, end_of_day, format_deadline, local_date, local_input, parse_utc, timezone_label, utc_iso
+import reminders
 from services import allowed, can_view_course, check, current_run, issue_certificate, notify, now, require, text, uid
 
 VIDEO_TYPES = {'.mp4': 'video/mp4', '.webm': 'video/webm', '.vtt': 'text/vtt; charset=utf-8', '.jpg': 'image/jpeg'}
@@ -252,33 +255,127 @@ def assignment_rows(db, user, course_id=None):
         employees = target_employees(db, r['target_type'], r['target_id'])
         progress = progress_index(db, employees, [r['course_id']])
         rows.append({'id': r['id'], 'courseId': r['course_id'], 'course': r['course'], 'targetType': r['target_type'], 'targetId': r['target_id'], 'target': target_name(db, r['target_type'], r['target_id']),
-                     'mandatory': bool(r['mandatory']), 'dueDate': r['due_date'], 'note': r['note'], 'assignedBy': r['assigned_by_name'], 'assignedAt': r['assigned_at'],
+                     'mandatory': bool(r['mandatory']), 'dueDate': r['due_date'], 'deadlineAt': r['deadline_at'], 'deadlineDisplay': format_deadline(r['deadline_at']) if r['deadline_at'] else None, 'deadlineInput': local_input(r['deadline_at']),
+                     'originalDisplay': format_deadline(r['original_deadline_at']) if r['original_deadline_at'] and r['original_deadline_at'] != r['deadline_at'] else None, 'note': r['note'], 'assignedBy': r['assigned_by_name'], 'assignedAt': r['assigned_at'],
                      'employees': len(employees), 'completed': sum(1 for p in progress.values() if p['completed']), 'canRemove': user['role'] != 'manager' or r['assigned_by'] == user['id']})
     return rows
 
 
+def deadline_input(data):
+    """The exact UTC deadline from a form's date and time (portal timezone) or an older date-only request."""
+    value = data.get('deadline') or None
+    if value is not None:
+        check(isinstance(value, str) and len(value) <= 40, 'Enter a valid deadline date and time.')
+        try:
+            return utc_iso(parse_utc(value))
+        except (ValueError, OverflowError):
+            check(False, 'Enter a valid deadline date and time.')
+    due = opt_date(data, 'dueDate', 'Due date')
+    return end_of_day(due) if due else None
+
+
 def create_assignment(db, user, data):
+    """Create an assignment, or update the existing one for the same course and target."""
     require(user, 'courses.assign')
     course = course_or_404(db, data.get('courseId') if isinstance(data.get('courseId'), str) else '')
     check(course['status'] == 'published', 'Only published courses can be assigned.', 409)
     mandatory = flag(data, 'mandatory')
     kind, target = target_input(db, user, data, mandatory)
-    due = opt_date(data, 'dueDate', 'Due date')
-    check(due is None or due >= today(), 'The completion deadline cannot be in the past.')
-    check(not mandatory or due is not None, 'Mandatory training requires a completion deadline.')
+    deadline = deadline_input(data)
+    check(not mandatory or deadline is not None, 'Mandatory training requires a completion deadline.')
     note = opt_text(data, 'note', 500, 'Note')
     existing = db.execute('SELECT * FROM course_assignments WHERE course_id=? AND target_type=? AND target_id=?', (course['id'], kind, target)).fetchone()
+    changed_deadline = (existing['deadline_at'] if existing else None) != deadline
+    # An overdue assignment can keep its deadline while another field is edited, but a new deadline must be in the future.
+    check(not changed_deadline or deadline is None or parse_utc(deadline) > datetime.now(timezone.utc), 'The completion deadline cannot be in the past.')
+    due = local_date(deadline) if deadline else None
+    stamp = now()
     if existing:
         check(user['role'] != 'manager' or not existing['mandatory'], 'This mandatory assignment is managed by HR.', 403)
         identity = existing['id']
-        db.execute('UPDATE course_assignments SET mandatory=?,due_date=?,note=?,assigned_by=?,assigned_at=? WHERE id=?', (int(mandatory), due, note, user['id'], now(), identity))
+        db.execute('UPDATE course_assignments SET mandatory=?,due_date=?,deadline_at=?,original_deadline_at=COALESCE(original_deadline_at,?),note=?,assigned_by=?,assigned_at=? WHERE id=?',
+                   (int(mandatory), due, deadline, deadline, note, user['id'], stamp, identity))
+        if changed_deadline and existing['deadline_at']:
+            db.execute('UPDATE course_assignments SET deadline_updated_at=?,deadline_updated_by=? WHERE id=?', (stamp, user['id'], identity))
     else:
         identity = uid()
-        db.execute('INSERT INTO course_assignments VALUES (?,?,?,?,?,?,?,?,?)', (identity, course['id'], kind, target, int(mandatory), due, note, user['id'], now()))
+        db.execute('INSERT INTO course_assignments(id,course_id,target_type,target_id,mandatory,due_date,deadline_at,original_deadline_at,note,assigned_by,assigned_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+                   (identity, course['id'], kind, target, int(mandatory), due, deadline, deadline, note, user['id'], stamp))
     label = 'Mandatory training assigned' if mandatory else ('Training recommended by your manager' if user['role'] == 'manager' else 'New training assigned')
-    notify(db, target_employees(db, kind, target), 'assignment', f'{label}: {course["title"]}', f'Complete by {due}.' if due else 'Open My Learning to start.', 'courses', f'assigned:{identity}:{due or ""}:{int(mandatory)}')
+    employees = target_employees(db, kind, target)
+    assigned, progress = assignment_index(db, employees, [course['id']]), progress_index(db, employees, [course['id']])
+    for employee in employees:
+        pair = (employee, course['id'])
+        # Employees whose own assignment outranks this one, and those already finished, have nothing new to act on.
+        if assigned[pair]['assignmentId'] != identity or (progress.get(pair) or {}).get('completed'):
+            continue
+        if not existing:
+            reminders.announce_assignment(db, employee, course['id'], course['title'], assigned[pair], f'{label}: {course["title"]}')
+        elif changed_deadline and deadline:
+            reminders.announce_change(db, employee, course['id'], course['title'], assigned[pair], progress.get(pair))
+    if changed_deadline and existing and existing['deadline_at']:
+        audit(db, user['id'], 'course_deadline_changed', identity, f'{course["title"]} -> {kind}:{target_name(db, kind, target)}: {existing["deadline_at"]} to {deadline or "none"}')
     audit(db, user['id'], 'course_assigned', identity, f'{course["title"]} -> {kind}:{target_name(db, kind, target)}{" (mandatory)" if mandatory else ""}')
     return {'assignments': assignment_rows(db, user, course['id'])}
+
+
+def course_deadlines(db, user, query):
+    """Course Deadline Settings: assignment targets plus the deadline each employee actually has."""
+    require(user, 'courses.assign')
+    course = course_or_404(db, query.get('courseId', [''])[0])
+    config = reminders.settings(db)
+    soon = config['dueSoonDays'] * 86400
+    assigned = assignment_index(db, None, [course['id']])
+    people_rows = {r['id']: r for r in db.execute('SELECT c.id,c.full_name,c.email,c.role,d.name AS department FROM candidates c LEFT JOIN departments d ON d.id=c.department_id')}
+    reports = team(db, user['id']) if user['role'] == 'manager' else None
+    ids = [pair[0] for pair in assigned if people_rows[pair[0]]['role'] != 'admin' and (reports is None or pair[0] in reports)]
+    progress = progress_index(db, ids, [course['id']]) if ids else {}
+    last = {r['employee_id']: dict(r) for r in db.execute("""SELECT employee_id,reminder_type,status,MAX(COALESCE(sent_at,created_at)) AS at FROM deadline_reminders WHERE course_id=? GROUP BY employee_id""", (course['id'],))}
+    at = datetime.now(timezone.utc)
+    employees = []
+    for employee in ids:
+        pair = (employee, course['id'])
+        a, p, person = assigned[pair], progress.get(pair), people_rows[employee]
+        status = deadline_status(p, a, soon, at)
+        employees.append({'employeeId': employee, 'name': person['full_name'], 'email': person['email'], 'department': person['department'] or '', 'assignmentId': a['assignmentId'], 'source': a['targetType'],
+                          'mandatory': a['mandatory'], 'deadlineAt': a['deadlineAt'], 'deadlineDisplay': format_deadline(a['deadlineAt']) if a['deadlineAt'] else None, 'deadlineInput': local_input(a['deadlineAt']),
+                          'originalDisplay': format_deadline(a['originalDeadlineAt']) if a['originalDeadlineAt'] and a['originalDeadlineAt'] != a['deadlineAt'] else None,
+                          'status': status, 'statusLabel': STATUS_LABELS[status], 'progress': 100 if p and p['completed'] else (p or {}).get('progress', 0), 'completedDisplay': format_deadline(p['completedAt']) if p and p['completed'] and p['completedAt'] else None,
+                          'lastReminder': last.get(employee), 'nextReminderAt': None if status.startswith('completed') or not a['deadlineAt'] else reminders.next_reminder(a, config, at)})
+    employees.sort(key=lambda e: e['name'])
+    return {'courseId': course['id'], 'timezone': timezone_label(at), 'targets': assignment_rows(db, user, course['id']), 'employees': employees}
+
+
+def reminder_staff(user):
+    check(user['role'] in ('admin', 'hr'), 'Only administrators and HR can manage deadline reminders.', 403)
+
+
+def reminder_settings_view(db, user):
+    reminder_staff(user)
+    return {'settings': reminders.settings(db)}
+
+
+def save_reminder_settings(db, user, data):
+    reminder_staff(user)
+    saved = reminders.save_settings(db, user, data)
+    audit(db, user['id'], 'reminder_settings_changed', 'reminder_settings', f'{saved["intervalDays"]} days before; due soon {saved["dueSoonDays"]} days')
+    return {'settings': saved}
+
+
+def run_reminders(db, user):
+    reminder_staff(user)
+    summary = reminders.process_all(db)
+    audit(db, user['id'], 'reminders_processed', 'reminder_settings', json.dumps(summary))
+    return {'summary': summary, 'settings': reminders.settings(db)}
+
+
+def reminder_history(db, user, query):
+    reminder_staff(user)
+    course = query.get('courseId', [None])[0]
+    where, params = ('WHERE r.course_id=?', (course,)) if course else ('', ())
+    return {'history': [dict(row) for row in db.execute(f"""SELECT r.id,r.employee_id AS employeeId,c.full_name AS employee,r.assignment_id AS assignmentId,r.course_id AS courseId,k.title AS course,r.reminder_type AS type,r.channel,
+        r.deadline_at AS deadlineAt,r.scheduled_at AS scheduledAt,r.sent_at AS sentAt,r.status,r.attempts,r.failure_reason AS failureReason
+        FROM deadline_reminders r JOIN candidates c ON c.id=r.employee_id LEFT JOIN courses k ON k.id=r.course_id {where} ORDER BY r.id DESC LIMIT 100""", params)]}
 
 
 def delete_assignment(db, user, identity):
@@ -862,20 +959,12 @@ def my_calendar(db, user):
 # ---------------------------------------------------------------- notifications and reminders
 
 def refresh_reminders(db, employee, progress, assigned):
-    """Create deadline, inactivity, and session reminders; dedupe keys stop repeats."""
+    """Create staff overdue, inactivity, and session reminders; dedupe keys stop repeats. Employee deadline reminders are in reminders.py."""
     titles = {r[0]: r[1] for r in db.execute('SELECT id,title FROM courses')}
-    soon = (date.today() + timedelta(days=7)).isoformat()
     for pair, a in assigned.items():
-        status = pair_status(progress.get(pair), a)
-        if status == 'completed' or not a['dueDate']:
-            continue
-        title = titles.get(pair[1], 'Assigned course')
-        if status == 'overdue':
+        if a['dueDate'] and pair_status(progress.get(pair), a) == 'overdue':
             from notifications import staff_event
-            staff_event(db, employee['id'], f'Overdue training: {employee["name"]}', f'{title} was due on {a["dueDate"]}.', f'team-overdue:{employee["id"]}:{pair[1]}:{a["dueDate"]}')
-            notify(db, [employee['id']], 'deadline', f'Overdue: {title}', f'This training was due on {a["dueDate"]}.', 'courses', f'overdue:{pair[1]}:{a["dueDate"]}')
-        elif a['dueDate'] <= soon:
-            notify(db, [employee['id']], 'deadline', f'Due soon: {title}', f'Complete this training by {a["dueDate"]}.', 'courses', f'due-soon:{pair[1]}:{a["dueDate"]}')
+            staff_event(db, employee['id'], f'Overdue training: {employee["name"]}', f'{titles.get(pair[1], "Assigned course")} was due on {a["dueDate"]}.', f'team-overdue:{employee["id"]}:{pair[1]}:{a["dueDate"]}')
     stale = (datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%dT%H:%M')
     week = date.today().isocalendar()
     for (e, course), item in progress.items():
@@ -902,8 +991,16 @@ def my_notifications(db, user):
         for person in team:
             refresh_reminders(db, person, by_progress.get(person['id'], {}), by_assignment.get(person['id'], {}))
     refresh_reminders(db, employee, progress_index(db, [user['id']]), assignment_index(db, [user['id']]))
+    if user['role'] != 'admin':
+        # Fallback only: the scheduler sends these whether or not the employee ever opens the portal.
+        reminders.process_employee(db, user['id'])
     items = [dict(r) for r in db.execute('SELECT id,kind,title,body,link,created_at AS createdAt,read_at AS readAt FROM notifications WHERE employee_id=? ORDER BY id DESC LIMIT 50', (user['id'],))]
     return {'notifications': items, 'unread': db.execute('SELECT COUNT(*) FROM notifications WHERE employee_id=? AND read_at IS NULL', (user['id'],)).fetchone()[0]}
+
+
+def unread_count(db, user):
+    """The bell's light polling endpoint: a count only, with no reminder processing."""
+    return {'unread': db.execute('SELECT COUNT(*) FROM notifications WHERE employee_id=? AND read_at IS NULL', (user['id'],)).fetchone()[0]}
 
 
 def read_notifications(db, user, data):
@@ -923,6 +1020,7 @@ def catalog(db, user):
     """Published catalog with the employee's own progress and assignment details."""
     progress, assigned = progress_index(db, [user['id']]), assignment_index(db, [user['id']])
     lesson_counts = {r[0]: r[1] for r in db.execute('SELECT course_id,COUNT(*) FROM course_lessons GROUP BY course_id')}
+    soon = reminders.due_soon_seconds(db)
     items = []
     for row in db.execute("SELECT * FROM courses WHERE status='published' ORDER BY title"):
         p, a = progress.get((user['id'], row['id'])), assigned.get((user['id'], row['id']))
@@ -930,7 +1028,7 @@ def catalog(db, user):
             continue
         item = course_view(row, False, db)
         item.update({'progress': p['progress'] if p else 0, 'enrolled': p is not None, 'started': bool(p and p['started']), 'completed': bool(p and p['completed']), 'lastActivity': p['lastActivity'] if p else '',
-                     'assignment': a, 'status': pair_status(p, a), 'lessonCount': lesson_counts.get(row['id'], 0)})
+                     'assignment': a, 'status': pair_status(p, a), 'deadline': deadline_view(p, a, soon), 'lessonCount': lesson_counts.get(row['id'], 0)})
         items.append(item)
     return items
 
@@ -1146,7 +1244,7 @@ def development_action(db, user, method, route, query, data):
     check(parts[0] == 'manage', f'Endpoint was not found: {method} /api/{route}', 404)
     check(user['role'] != 'employee', 'You do not have permission for this area.', 403)
     p = parts[1:]
-    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync', 'settings', 'run', 'history') else '*' for i, x in enumerate(p)))
     handlers = {
         ('POST', 'announcements'): lambda: announce(db, user, data),
         ('GET', 'org'): lambda: org(db, user),
@@ -1159,6 +1257,12 @@ def development_action(db, user, method, route, query, data):
         ('GET', 'assignments'): lambda: (check(allowed(user, 'courses.assign') or allowed(user, 'courses.manage'), 'You do not have permission to view assignments.', 403), {'assignments': assignment_rows(db, user, query.get('courseId', [None])[0])})[1],
         ('POST', 'assignments'): lambda: create_assignment(db, user, data),
         ('POST', 'assignments/*/delete'): lambda: delete_assignment(db, user, p[1]),
+        ('GET', 'deadlines'): lambda: course_deadlines(db, user, query),
+        ('GET', 'compliance'): lambda: compliance.monitoring(db, user, query),
+        ('GET', 'reminders/settings'): lambda: reminder_settings_view(db, user),
+        ('POST', 'reminders/settings'): lambda: save_reminder_settings(db, user, data),
+        ('POST', 'reminders/run'): lambda: run_reminders(db, user),
+        ('GET', 'reminders/history'): lambda: reminder_history(db, user, query),
         ('GET', 'courses/*/preview'): lambda: preview(db, user, p[1]),
         ('GET', 'courses/*/builder'): lambda: course_builder(db, user, p[1]),
         ('POST', 'courses/*/resources'): lambda: save_resource(db, user, p[1], data),
@@ -1190,7 +1294,7 @@ def development_action(db, user, method, route, query, data):
 
 
 def employee_action(db, user, method, p, query, data):
-    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read', 'unread') else '*' for i, x in enumerate(p)))
     handlers = {
         ('GET', 'dashboard'): lambda: my_dashboard(db, user),
         ('GET', 'paths'): lambda: my_paths(db, user),
@@ -1204,6 +1308,7 @@ def employee_action(db, user, method, p, query, data):
         ('POST', 'assessments/*/submit'): lambda: submit_assessment(db, user, p[1], data),
         ('POST', 'assessments/*/terminate'): lambda: terminate_assessment(db, user, p[1], data),
         ('GET', 'notifications'): lambda: my_notifications(db, user),
+        ('GET', 'notifications/unread'): lambda: unread_count(db, user),
         ('POST', 'notifications/read'): lambda: read_notifications(db, user, data),
         ('GET', 'history'): lambda: my_history(db, user, query),
         ('POST', 'records'): lambda: save_record(db, user, data),

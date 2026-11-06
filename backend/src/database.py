@@ -7,8 +7,11 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from deadlines import end_of_day
+
 BACKEND = Path(__file__).resolve().parents[1]
 COURSE_ID = 'python-programming'
+SCHEMA_VERSION = 9
 # Columns added after a table first shipped (versions 4-6); added only where missing.
 ADDED_COLUMNS = [
     ('courses', 'format', "TEXT NOT NULL DEFAULT 'modules' CHECK(format IN ('modules','lessons'))"),
@@ -42,6 +45,12 @@ ADDED_COLUMNS = [
     ('candidates', 'keka_employee_id', "TEXT NOT NULL DEFAULT ''"),
     ('candidates', 'keka_employee_number', "TEXT NOT NULL DEFAULT ''"),
     ('candidates', 'keka_synced_at', "TEXT NOT NULL DEFAULT ''"),
+    # Version 9: exact deadlines in UTC with their original value and last change, and the deadline in force at completion.
+    ('course_assignments', 'deadline_at', 'TEXT'),
+    ('course_assignments', 'original_deadline_at', 'TEXT'),
+    ('course_assignments', 'deadline_updated_at', 'TEXT'),
+    ('course_assignments', 'deadline_updated_by', 'TEXT REFERENCES candidates(id) ON DELETE SET NULL'),
+    ('course_runs', 'deadline_at_completion', 'TEXT'),
 ]
 GENAI_COURSE = BACKEND / 'data/generative-ai-course.json'
 RAG_COURSE = BACKEND / 'data/rag-course.json'
@@ -75,7 +84,7 @@ def initialize(path):
     try:
         db.execute('PRAGMA journal_mode=WAL')
         version = db.execute('PRAGMA user_version').fetchone()[0]
-        if version not in (0, 1, 2, 3, 4, 5, 6, 7, 8):
+        if version not in range(0, SCHEMA_VERSION + 1):
             raise RuntimeError('Unsupported database schema version')
         if version == 1:
             db.executescript((BACKEND / 'database/migrations/002_roles_and_courses.sql').read_text(encoding='utf-8'))
@@ -101,7 +110,12 @@ def initialize(path):
                 if db.execute('SELECT 1 FROM certificates WHERE certificate_number=?', (number,)).fetchone() is None:
                     db.execute('UPDATE certificates SET certificate_number=? WHERE id=?', (number, row['id']))
                     break
-        db.execute('PRAGMA user_version=8')
+        # Date-only deadlines become the end of that day, which is when they already became overdue.
+        for row in db.execute('SELECT id,due_date FROM course_assignments WHERE due_date IS NOT NULL AND deadline_at IS NULL').fetchall():
+            exact = end_of_day(row['due_date'])
+            db.execute('UPDATE course_assignments SET deadline_at=?,original_deadline_at=? WHERE id=?', (exact, exact, row['id']))
+        db.execute('INSERT OR IGNORE INTO reminder_settings(id) VALUES (1)')
+        db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
         # Indexes on columns added by migration 003 are created here so the base schema stays valid for older tables.
         db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;CREATE UNIQUE INDEX IF NOT EXISTS candidates_keka_employee ON candidates(keka_employee_id) WHERE length(keka_employee_id)>0;')
         stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')

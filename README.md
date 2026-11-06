@@ -24,7 +24,7 @@ roles, events and artifacts, user stories and estimation, and Kanban, each with 
 check, plus a 10-question final assessment and a certificate. It is based on
 [Atlassian's Agile Coach](https://www.atlassian.com/agile).
 
-ShimentoX's internal employee learning & development portal. It brings together course and training management, assignments and mandatory deadlines, learning paths, skills and competencies, assessments with question banks, instructor-led sessions, notifications, certificates, and learning analytics. Accounts and progress are stored in SQLite. See [learning & development](docs/learning-and-development.md) for roles, metric definitions, and the API.
+ShimentoX's internal employee learning & development portal. It brings together course and training management, assignments and mandatory deadlines, learning paths, skills and competencies, assessments with question banks, instructor-led sessions, notifications, certificates, and learning analytics. Accounts and progress are stored in SQLite. See [learning & development](docs/learning-and-development.md) for roles, metric definitions, and the API, and [course deadlines](docs/course-deadlines.md) for deadlines and automated reminders.
 
 ## Run locally
 
@@ -35,9 +35,9 @@ cd C:\Users\DELL\Desktop\shimento_LMS\shimentox-lms
 npm start
 ```
 
-`npm start` opens **http://localhost:5010** in your default browser automatically once the server is ready. Stop the server with **Ctrl+C**. Use `npm run start:server` to start without opening a browser.
+`npm start` opens **http://localhost:5007** in your default browser automatically once the server is ready. Stop the server with **Ctrl+C**. Use `npm run start:server` to start without opening a browser.
 
-Without npm, run `python backend/server.py` from this directory. The same server serves both the frontend and the API. Stop any previous static server on port 5010 before starting it. Opening the HTML directly or using a static-only server will not provide login or database access.
+Without npm, run `python backend/server.py` from this directory. The same server serves both the frontend and the API. Stop any previous static server on port 5007 before starting it. Opening the HTML directly or using a static-only server will not provide login or database access.
 
 If `backend/data/admin-seed.json` is present, a new database starts with that administrator, so a fresh clone opens on the login page. Create or refresh it with `python backend/tools/export_admin.py`, which saves the local admin's name, email and salted password hash (never the password). Otherwise, if no administrator exists, the browser opens a one-time **Set up your admin account** form automatically. Enter your full name, email, and password there. If the email already has an account, enter its current password to preserve and promote it. Setup is available only on the local server computer and closes permanently once an admin exists. No terminal account-creation command is required.
 
@@ -50,8 +50,8 @@ Login -> Authentication -> Identify role
   Employee -> My Learning
 ```
 
-- **Admin** opens on the **Admin Dashboard** and also has **My Learning** and **Courses**, plus Manage Courses, Users & Teams, Assessments, Training Calendar, Certificates, Reports & Analytics, Activity Log and My Profile.
-- **Manager** opens on the **Manager View**, showing the progress, overdue training and recent activity of their direct reports, and also has **My Learning**, Courses, Training Calendar, My Certificates, My Profile and Team Reports.
+- **Admin** opens on the **Admin Dashboard** and also has **My Learning** and **Courses**, plus Training Compliance, Manage Courses, Users & Teams, Assessments, Training Calendar, Certificates, Reports & Analytics, Activity Log and My Profile.
+- **Manager** opens on the **Manager View**, showing the progress, overdue training and recent activity of their direct reports, and also has **My Learning**, Courses, Training Calendar, My Certificates, My Profile, Team Compliance and Team Reports.
 - **Employee** opens on **My Learning**, and also has Courses, My Dashboard, Training Calendar, My Certificates and My Profile.
 
 My Learning lists the courses the user has started or completed; Courses lists every published course. In Users & Teams, admins create Employee and Manager accounts. HR and Trainer accounts created before this change keep working with their existing pages. Backend permissions protect every API, not just sidebar visibility.

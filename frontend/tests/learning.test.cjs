@@ -29,7 +29,7 @@ async function main() {
     assert.equal(options.credentials, 'same-origin');
     assert.equal(options.headers['X-Portal-Request'], '1');
     let status = 200, result;
-    if (path === 'session') result = { user: server.user, csrfToken: server.user ? 'csrf-test' : null,setupRequired:server.setupRequired,setupAllowed:true,apiVersion:server.apiVersion===undefined?9:server.apiVersion };
+    if (path === 'session') result = { user: server.user, csrfToken: server.user ? 'csrf-test' : null,setupRequired:server.setupRequired,setupAllowed:true,apiVersion:server.apiVersion===undefined?13:server.apiVersion };
     else if(path==='setup/admin'){server.user={id:'owner',name:data.name,email:data.email,role:'admin',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};server.setupRequired=false;result={user:server.user,csrfToken:'csrf-test'};}
     else if (path === 'auth/login') {
       if (server.failLogin) { status = 401; result = { error: 'Email or password is incorrect.' }; }
@@ -45,6 +45,11 @@ async function main() {
     else if(path==='manage/org')result={departments:[{id:'d1',name:'Engineering',employees:5}],jobRoles:[],categories:['Technical Skills'],skills:[{id:'s1',name:'Python'}],courses:[{id:'python-programming',title:'PYTHON PROGRAMMING',status:'published'}],trainers:[],managers:[],levels:[]};
     else if(path==='manage/people')result={people:[]};
     else if(path==='manage/assessments')result={assessments:[]};
+    else if(path.startsWith('manage/compliance'))result={scope:server.user?.role==='manager'?'team':'organisation',timezone:'IST',updatedDisplay:'5 November 2026, 11:00 AM',filters:{},summary:{total:5,completed:1,completedOnTime:1,completedLate:0,inProgress:2,notStarted:1,overdue:1,completionRate:20},
+      departments:[{department:'Finance',total:4,completed:1,pending:3,overdue:0,completionRate:25},{department:'Sales <b>',total:1,completed:0,pending:0,overdue:1,completionRate:0}],
+      table:{rows:[{employee:'Asha <i>',employeeId:'11111111-2222-3333-4444-555555555555',email:'asha@shimentox.com',department:'Finance',jobRole:'Analyst',courseId:'c1',course:'Security',mandatory:true,assignedDate:'2026-05-01',assignedDisplay:'1 May 2026, 9:00 AM',deadlineDate:'2026-06-01',deadlineDisplay:'1 June 2026, 9:00 AM',originalDeadlineDisplay:'1 June 2026, 9:00 AM',completedDate:null,completedDisplay:null,lastActivityDisplay:null,progress:40,status:'in_progress',statusLabel:'In Progress',dueSoon:true}],total:5,page:1,pages:2},
+      overdue:{rows:[{employee:'Esha Rao',employeeId:'emp-2',department:'Sales',jobRole:'Unassigned',course:'Privacy',mandatory:true,originalDeadlineAt:'a',deadlineAt:'b',originalDeadlineDisplay:'1 April 2026, 9:00 AM',deadlineDisplay:'1 May 2026, 9:00 AM',overdueBy:'3 days, 2 hours',progress:10,lastActivityDisplay:null,status:'overdue'}],total:1,page:1,pages:1,mandatory:1},
+      options:{employees:[['emp-1','Asha'],['emp-2','Esha']],departments:[['d1','Finance']],courses:[['c1','Security']],jobRoles:[['__none__','Unassigned']]}};
     else if(path.startsWith('manage/reports'))result={type:'enrollments',title:'Course enrollment and completion',columns:[{key:'employee',label:'Employee'},{key:'status',label:'Status'}],rows:[{employee:'=HYPERLINK("x")',status:'Completed'}],summary:{Enrollments:1},total:1,page:1,pages:1};
     else if(path==='admin/overview')result={stats:{candidates:1,courses:1,certificates:0,exams:0}};
     else if(path==='admin/candidates')result=options.body?{candidate:{id:'new-account'}}:{candidates:[server.user,{...server.user,id:'existing-one',name:'Existing Employee',email:'existing@shimentox.com',role:'employee',active:true,certificates:0,courseRuns:1,training:{year:2026,targetHours:null,completedHours:3,percent:null}}]};
@@ -125,11 +130,48 @@ async function main() {
   context.location.hash='#courses';run('render()');
   assert.equal(run('JSON.stringify(portalNavigation().map(n=>n[2]))'),JSON.stringify(['My Learning','Courses','My Dashboard','Training Calendar','My Certificates','My Profile']));
   context.location.hash='';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
-  // My Learning shows only started or completed courses; the Courses page lists every published course.
-  run(`courseCatalog=[{...courseCatalog[0],id:'started-course',title:'Started Course',started:true,completed:false},{...courseCatalog[0],id:'done-course',title:'Done Course',started:true,completed:true},{...courseCatalog[0],id:'new-course',title:'New Course',started:false,completed:false,status:'not_started'}]`);
+  // My Learning shows assigned, started or completed courses; the Courses page lists every published course.
+  run(`courseCatalog=[{...courseCatalog[0],id:'started-course',title:'Started Course',started:true,completed:false},{...courseCatalog[0],id:'done-course',title:'Done Course',started:true,completed:true},{...courseCatalog[0],id:'new-course',title:'New Course',started:false,completed:false,status:'not_started',assignment:null}]`);
   context.location.hash='#courses';run('render()');
   assert.ok(app.innerHTML.includes('Started Course')&&app.innerHTML.includes('Done Course')&&!app.innerHTML.includes('New Course'));
   assert.ok(app.innerHTML.includes('2 STARTED'));
+  // Deadlines: assigned courses are listed with their deadline, status and a countdown from server time.
+  const hour=3600,day=86400,inFuture=seconds=>new Date(Date.now()+seconds*1000).toISOString();
+  const savedCatalog=run('JSON.stringify(courseCatalog)');
+  run(`courseCatalog=${JSON.stringify([
+    {...courseInfo,id:'due-soon',title:'Due Soon Course',started:false,completed:false,assignment:{mandatory:true},deadline:{at:inFuture(2*day+4*hour+60),display:'8 November 2026, 6:00 PM',timezone:'IST',status:'due_soon',label:'Due Soon',dueSoonSeconds:7*day,started:false,completedAt:null}},
+    {...courseInfo,id:'late',title:'Late Course',started:true,completed:false,assignment:{mandatory:false},deadline:{at:inFuture(-(day+3*hour+60)),display:'1 November 2026, 9:00 AM',timezone:'IST',status:'overdue',label:'Overdue',dueSoonSeconds:7*day,started:true,completedAt:null}},
+    {...courseInfo,id:'on-time',title:'On Time Course',started:true,completed:true,assignment:{mandatory:true},deadline:{at:inFuture(-day),display:'2 November 2026, 9:00 AM',timezone:'IST',status:'completed_on_time',label:'Completed On Time',dueSoonSeconds:7*day,started:true,completedAt:'2026-11-01T00:00:00Z',completedDisplay:'1 November 2026, 5:30 AM'}},
+    {...courseInfo,id:'done-late',title:'Finished Late Course',started:true,completed:true,assignment:{mandatory:true},deadline:{at:inFuture(-day),display:'2 November 2026, 9:00 AM',timezone:'IST',status:'completed_late',label:'Completed Late',dueSoonSeconds:7*day,started:true,completedAt:'2026-11-03T00:00:00Z',completedDisplay:'3 November 2026, 5:30 AM'}},
+  ])}`);
+  run('render()');
+  assert.ok(app.innerHTML.includes('Due Soon Course'),'An assigned course appears before it is started.');
+  assert.ok(app.innerHTML.includes('3 STARTED · 1 ASSIGNED'));
+  assert.ok(app.innerHTML.includes('Deadline:</b> 8 November 2026, 6:00 PM IST'));
+  assert.ok(app.innerHTML.includes('Time remaining: 2 days, 4 hours'));
+  assert.ok(app.innerHTML.includes('Overdue by 1 day, 3 hours'));
+  assert.ok(app.innerHTML.includes('deadline-box due-soon')&&app.innerHTML.includes('deadline-box danger')&&app.innerHTML.includes('deadline-box success'),'Yellow, red and green states.');
+  assert.ok(app.innerHTML.includes('COMPLETED ON TIME')&&app.innerHTML.includes('COMPLETED LATE')&&app.innerHTML.includes('MANDATORY')&&app.innerHTML.includes('OPTIONAL'));
+  assert.ok(app.innerHTML.indexOf('Late Course')<app.innerHTML.indexOf('Due Soon Course'),'The nearest deadline comes first.');
+  assert.ok(!app.innerHTML.includes('datetime-local'),'Employees get no way to edit a deadline.');
+  assert.equal(run(`formatSpan(${2*day+4*hour+59})`),'2 days, 4 hours');
+  assert.equal(run('formatSpan(61)'),'1 minute, 1 second');
+  assert.equal(run('formatSpan(0)'),'0 seconds');
+  const stateAt=(left,started)=>run(`deadlineState(new Date(1000000000000).toISOString(),604800,${started},${1000000000000-left*1000})`);
+  assert.equal(stateAt(30*day,false).status,'not_started');assert.equal(stateAt(30*day,true).status,'in_progress');assert.equal(stateAt(7*day,false).status,'due_soon');assert.equal(stateAt(0,true).status,'overdue');
+  // The countdown changes the card in place, without a page render, and turns red when the deadline passes.
+  const fakeTag={},fakeClock={},box={dataset:{deadlineAt:inFuture(-5),deadlineSoon:String(7*day),deadlineStarted:'1'},className:'deadline-box',querySelector:s=>s==='[data-deadline-tag]'?fakeTag:fakeClock};
+  const before=app.innerHTML;context.document.querySelectorAll=s=>s==='[data-deadline-at]'?[box]:[];
+  run('updateDeadlineClocks()');
+  assert.equal(box.className,'deadline-box danger');assert.equal(fakeTag.textContent,'OVERDUE');assert.ok(fakeClock.textContent.startsWith('Overdue by 5 second'));assert.equal(app.innerHTML,before);
+  // A server clock ahead of the browser moves the countdown: the browser's clock does not decide.
+  run(`serverClockOffset=${2*day*1000}`);box.dataset.deadlineAt=inFuture(day);run('updateDeadlineClocks()');run('serverClockOffset=0');
+  context.document.querySelectorAll=()=>[];
+  assert.equal(fakeTag.textContent,'OVERDUE');
+  // The bell filters unread deadline reminders and links to the course.
+  run(`notificationState={items:[{id:9,kind:'deadline',title:'Course Deadline Reminder',body:'Your assigned course must be completed.',link:'course:due-soon',createdAt:'2026-11-04T00:00:00Z',readAt:null},{id:8,kind:'announcement',title:'Learning week',body:'Hello',link:'dashboard',createdAt:'2026-11-03T00:00:00Z',readAt:null}],unread:2,open:true,filter:'deadline'};render()`);
+  assert.ok(app.innerHTML.includes('Unread deadlines (1)')&&app.innerHTML.includes('data-link="course:due-soon"')&&!app.innerHTML.includes('Learning week'));
+  run(`notificationState={items:[],unread:0,open:false};courseCatalog=${savedCatalog};render()`);
   context.location.hash='#catalog';run('render()');
   assert.equal(context.document.title,'Courses • ShimentoX');
   assert.ok(['Started Course','Done Course','New Course'].every(t=>app.innerHTML.includes(t)));
@@ -210,7 +252,7 @@ async function main() {
   context.location.hash='#dashboard';run('render()');assert.ok(app.innerHTML.includes('ADMINISTRATOR WORKSPACE'));
   // Architecture: the admin opens on the Admin Dashboard and also has My Learning and Courses.
   assert.equal(context.document.title,'Admin Dashboard • ShimentoX');
-  assert.equal(run('JSON.stringify(portalNavigation().slice(0,3).map(n=>n[2]))'),JSON.stringify(['Admin Dashboard','My Learning','Courses']));
+  assert.equal(run('JSON.stringify(portalNavigation().slice(0,4).map(n=>n[2]))'),JSON.stringify(['Admin Dashboard','Training Compliance','My Learning','Courses']));
   context.location.hash='#courses';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX');
   context.location.hash='#dashboard';run('render()');
   context.location.hash='#admin-users';run('render()');assert.ok(app.innerHTML.includes('id="create-candidate-form"'));
@@ -330,6 +372,24 @@ async function main() {
   assert.ok(app.innerHTML.includes('Department-wise training')&&app.innerHTML.includes('Late Learner')&&app.innerHTML.includes('Security Awareness'));
   context.location.hash='#reports';run('render()');await new Promise(resolve=>setImmediate(resolve));
   assert.ok(app.innerHTML.includes('Export CSV')&&app.innerHTML.includes('=HYPERLINK(&quot;x&quot;)'));
+  // Training compliance: figures come from the API, filters and sorting reach the server, values are escaped, and roles are kept apart.
+  const settle=()=>new Promise(resolve=>setImmediate(resolve));
+  context.location.hash='#compliance';run('render()');await settle();
+  for(const text of ['Training Compliance &amp; Deadline Monitoring','Last updated: 5 November 2026, 11:00 AM IST','Export Report','Export CSV','Export Excel','Overview','Employee Progress','Department Compliance','Overdue Training','Total Assignments','Completed On Time','Completed Late','Overall Completion Rate','20%','Department-wise Compliance','Training Status Distribution','Overdue Courses (1)','3 days overdue','View All','Employee Training Records','Due Soon','data-act="compliance-sort"','data-act="compliance-details"','Rows per page'])assert.ok(app.innerHTML.includes(text),text);
+  assert.ok(app.innerHTML.includes('Asha &lt;i&gt;')&&app.innerHTML.includes('Sales &lt;b&gt;')&&!app.innerHTML.includes('Sales <b>'));
+  assert.ok(app.innerHTML.includes('11111111…'),'Long IDs are shortened in the table.');
+  assert.equal(run('portalNavigation()[1][0]'),'compliance','Directly under the Admin Dashboard.');
+  // Every tab shows real content and keeps the filters.
+  for(const [tab,text] of [['employees','Employee Training Records'],['departments','Assigned courses by status'],['overdue','No activity yet'],['reports','Other learning reports'],['overview','Training Status Distribution']]){run(`compliance.tab='${tab}';render()`);assert.ok(app.innerHTML.includes(text),tab);assert.ok(app.innerHTML.includes('Apply Filters'),tab);}
+  // Details open from the row.
+  run(`compliance.open='11111111-2222-3333-4444-555555555555|c1';render()`);assert.ok(app.innerHTML.includes('asha@shimentox.com')&&app.innerHTML.includes('Manage deadline'));run('compliance.open=null');
+  run(`compliance.filters={department:'d1',status:'overdue'};compliance.sort={key:'deadline',dir:'desc'};render()`);await settle();
+  assert.ok(requests.some(r=>r.path.startsWith('manage/compliance?')&&['department=d1','status=overdue','sort=deadline','dir=desc','size=10'].every(part=>r.path.includes(part))));
+  assert.ok(app.innerHTML.includes('<option value="d1" selected>Finance</option>'),'The chosen filter stays selected.');
+  assert.ok(app.innerHTML.includes('Department: <b>Finance</b>')&&app.innerHTML.includes('Status: <b>Overdue</b>'),'Active filters are shown.');
+  run('compliance=COMPLIANCE_DEFAULTS()');
+  for(const [role,visible] of [['hr',true],['manager',true],['trainer',false],['employee',false]]){context.roleUser={...testAdmin,role};run('currentUser=roleUser');assert.equal(run("portalNavigation().some(n=>n[0]==='compliance')"),visible,role);assert.equal(run("resolvePage('compliance')")==='compliance',visible,role);}
+  context.adminUser={...testAdmin};run('currentUser=adminUser');
   const csv=run(`toCSV([{key:'a',label:'Name'},{key:'b',label:'Note'}],[{a:'=SUM(A1)',b:'Hello, "team"'}])`);
   assert.equal(csv.split('\r\n')[1],`'=SUM(A1),"Hello, ""team"""`);
   // Learning paths, skills and goals were removed from the admin screens as well.
@@ -343,7 +403,7 @@ async function main() {
   context.location.hash='#calendar';run('render()');assert.ok(app.innerHTML.includes('older version of the portal')&&app.innerHTML.includes('npm start'));
   context.empUser={id:'employee-one',name:'Sai Charan',email:'sai@shimentox.com',role:'employee',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};run('currentUser=empUser');run('render()');
   assert.ok(app.innerHTML.includes('browser and server versions do not match')&&!app.innerHTML.includes('npm start'));
-  server.apiVersion=10;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
+  server.apiVersion=13;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
   console.log('PASS outdated-server detection with role-appropriate guidance');
   for (let i = 1; i <= 6; i++) {
     assert.ok(fs.statSync(__dirname + `/../public/assets/videos/lesson-${i}.webm`).size > 1000);

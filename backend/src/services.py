@@ -260,7 +260,12 @@ def issue_certificate(db, candidate, run):
         name = db.execute('SELECT full_name FROM candidates WHERE id=?', (candidate,)).fetchone()[0]
         timestamp = now()
         title = db.execute('SELECT title FROM courses WHERE id=(SELECT course_id FROM course_runs WHERE id=?)',(run,)).fetchone()[0]
-        db.execute('UPDATE course_runs SET completed_at=COALESCE(completed_at,?) WHERE id=?', (timestamp, run))
+        # The server clock records completion, once, along with the deadline in force at that moment.
+        owner = db.execute('SELECT course_id,completed_at FROM course_runs WHERE id=?', (run,)).fetchone()
+        if owner['completed_at'] is None:
+            from analytics import assignment_index
+            assignment = assignment_index(db, [candidate], [owner['course_id']]).get((candidate, owner['course_id']))
+            db.execute('UPDATE course_runs SET completed_at=?,deadline_at_completion=? WHERE id=?', (timestamp, assignment['deadlineAt'] if assignment else None, run))
         # One certificate per qualifying run (UNIQUE run_id); notify only when a new one is created.
         while True:
             certificate_number = 'SX-' + secrets.token_hex(6).upper()

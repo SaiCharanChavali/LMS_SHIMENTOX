@@ -17,6 +17,10 @@ The schema lives in `backend/database/schema.sql`. It is automatically initializ
 | `exam_attempts` | Every exam attempt, number, deadline, answers, score, status, termination reason |
 | `certificates` | One certificate per completed run, candidate-name snapshot, course, issue time |
 | `admin_events` | Acting admin, action, target record, non-secret detail, timestamp |
+| `course_assignments` | Course, target (employee, department, job role), mandatory flag, `deadline_at` (exact UTC), `original_deadline_at`, `deadline_updated_at/by`, `due_date` (the deadline's local date, used by reports) |
+| `course_runs.deadline_at_completion` | The deadline in force when the run was completed, so later extensions do not rewrite a late completion |
+| `reminder_settings` | Single row: reminder intervals, deadline-day and overdue switches, Due Soon window, last pass and its result |
+| `deadline_reminders` | Reminder history: employee, assignment, course, type, deadline, channel, scheduled and sent times, delivery status, attempts, next retry, failure reason, notification, unique idempotency key |
 
 ```mermaid
 erDiagram

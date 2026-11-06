@@ -104,7 +104,7 @@ class DevelopmentTests(PortalFixture):
             PortalServer(('127.0.0.1', self.server.server_port), PortalHandler, self.db_path).server_close()
 
     def test_session_reports_api_version_and_unknown_endpoints_are_named(self):
-        self.assertEqual(Client(self.base).request('session')[1]['apiVersion'], 9)
+        self.assertEqual(Client(self.base).request('session')[1]['apiVersion'], 13)
         employee = self.account(name='Route Checker')
         for route, expected in (('manage/unknown', 'GET /api/manage/unknown'), ('me/unknown', 'GET /api/me/unknown'), ('nothing-here', 'GET /api/nothing-here')):
             status, payload, _ = (self.admin if route.startswith('manage') else employee).request(route)
@@ -178,7 +178,7 @@ class DevelopmentTests(PortalFixture):
         self.assertEqual([c['id'] for c in dashboard['assigned']], ['python-programming'])
         self.assertTrue(dashboard['assigned'][0]['assignment']['mandatory'])
         with closing(connect(self.db_path)) as db, db:
-            db.execute("UPDATE course_assignments SET due_date='2020-01-01' WHERE target_id=?", (engineering,))
+            db.execute("UPDATE course_assignments SET due_date='2020-01-01',deadline_at='2020-01-01T18:29:59.000Z' WHERE target_id=?", (engineering,))
         first = learner.request('me/notifications')[1]
         second = learner.request('me/notifications')[1]
         self.assertEqual(len(first['notifications']), len(second['notifications']))

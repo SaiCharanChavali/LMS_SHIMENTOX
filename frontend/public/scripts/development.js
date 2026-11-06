@@ -5,12 +5,16 @@ const LEVEL_LABELS=['Not assessed','Beginner','Intermediate','Advanced','Expert'
 const PERMS={'users.manage':['admin','hr'],'org.manage':['admin','hr'],'courses.manage':['admin','hr','trainer'],'courses.assign':['admin','hr','manager'],'paths.manage':['admin','hr','trainer'],'skills.manage':['admin','hr'],'competencies.manage':['admin','hr','manager'],'skills.record':['admin','hr','manager'],'assessments.manage':['admin','hr','trainer'],'sessions.manage':['admin','hr','trainer'],'reports.view':['admin','hr','manager','trainer'],'audit.view':['admin']};
 const KIND_LABELS={pre:'Pre-training',post:'Post-training',knowledge:'Knowledge check',skill:'Skill assessment'};
 const STATUS_TAGS={completed:['Completed','success'],overdue:['Overdue','danger'],in_progress:['In progress',''],not_started:['Not started','gray'],locked:['Locked','gray'],unavailable:['Unavailable','gray']};
+const DEADLINE_TONES={not_started:'gray',in_progress:'',due_soon:'due-soon',overdue:'danger',completed_on_time:'success',completed_late:'success'};
+const DEADLINE_LABELS={not_started:'Not Started',in_progress:'In Progress',due_soon:'Due Soon',overdue:'Overdue'};
+const REMINDER_TYPES={assigned:'Course assigned',deadline_changed:'Deadline changed',deadline_day:'Deadline day',overdue:'Overdue'};
+let deadlineCourseId='',reminderPanelOpen=false;
 const can=permission=>Boolean(currentUser&&PERMS[permission]?.includes(currentUser.role));
 const isLearner=()=>Boolean(currentUser);
 let pageCache={},devMessage='',devFilters={dashboard:{},report:{type:'enrollments',page:1}},notificationState={items:[],unread:0,open:false};
 let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,historyPage=1,courseFilter='all',courseArea='all',courseSearch='',assistantAnswer=null;
 
-function resetDevelopment(){selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;historyPage=1;courseFilter='all';courseArea='all';courseSearch='';}
+function resetDevelopment(){selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;historyPage=1;courseFilter='all';courseArea='all';courseSearch='';}
 function loadData(key,path){
   if(pageCache[key])return pageCache[key];
   pageCache[key]={loading:true};
@@ -55,23 +59,68 @@ function targetFields(prefix,managerOnly){
   return `<label for="${prefix}-type">Assign to</label><select id="${prefix}-type" name="targetType" data-change="target-type" data-target="${prefix}-target">${options(types,'employee')}</select><label for="${prefix}-target">Target</label><select id="${prefix}-target" name="targetId" required>${options(targetChoices('employee'),'','Select…')}</select>`;
 }
 
+// ---------------------------------------------------------------- course deadlines
+
+function formatSpan(seconds){
+  const s=Math.max(0,Math.floor(seconds)),unit=(n,name)=>n?`${n} ${name}${n===1?'':'s'}`:'';
+  const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);
+  const parts=d?[unit(d,'day'),unit(h,'hour')]:h?[unit(h,'hour'),unit(m,'minute')]:m?[unit(m,'minute'),unit(s%60,'second')]:[unit(s,'second')||'0 seconds'];
+  return parts.filter(Boolean).join(', ');
+}
+// Status and time left for an open course. The server is the record; this only keeps the page current between loads.
+function deadlineState(at,dueSoonSeconds,started,nowMs=Date.now()+serverClockOffset){
+  const left=(Date.parse(at)-nowMs)/1000,status=left<=0?'overdue':left<=dueSoonSeconds?'due_soon':started?'in_progress':'not_started';
+  return {status,label:DEADLINE_LABELS[status],clock:left<=0?`Overdue by ${formatSpan(-left)}`:`Time remaining: ${formatSpan(left)}`};
+}
+function deadlineBlock(d){
+  if(!d)return '';
+  const live=d.completedAt?null:deadlineState(d.at,d.dueSoonSeconds,d.started),status=live?live.status:d.status,tone=DEADLINE_TONES[status];
+  const attrs=live?`data-deadline-at="${esc(d.at)}" data-deadline-soon="${Number(d.dueSoonSeconds)}" data-deadline-started="${d.started?1:0}"`:'';
+  return `<div class="deadline-box ${tone}" ${attrs}><span class="tag ${tone}" data-deadline-tag>${esc((live?live.label:d.label).toUpperCase())}</span><div class="deadline-line"><b>Deadline:</b> ${esc(d.display)} ${esc(d.timezone)}</div><div class="deadline-clock" role="timer" data-deadline-clock>${esc(live?live.clock:'Completed '+(d.completedDisplay||''))}</div></div>`;
+}
+function updateDeadlineClocks(){
+  document.querySelectorAll('[data-deadline-at]').forEach(box=>{
+    const live=deadlineState(box.dataset.deadlineAt,Number(box.dataset.deadlineSoon),box.dataset.deadlineStarted==='1'),tone=DEADLINE_TONES[live.status];
+    box.className=`deadline-box ${tone}`;
+    const tag=box.querySelector('[data-deadline-tag]');tag.className=`tag ${tone}`;tag.textContent=live.label.toUpperCase();
+    box.querySelector('[data-deadline-clock]').textContent=live.clock;
+  });
+}
+setInterval(updateDeadlineClocks,1000);
+
 // ---------------------------------------------------------------- notifications
 
+// Keeps the bell's count current. Only the badge is updated, so a page being read or a form being filled in is left alone.
+async function pollNotifications(){
+  if(!currentUser||currentUser.mustChangePassword||document.hidden)return;
+  try{
+    const {unread}=await api('me/notifications/unread');
+    if(unread===notificationState.unread)return;
+    notificationState.unread=unread;
+    const bell=document.getElementById('notifications');if(!bell)return;
+    bell.querySelector('.notification-count')?.remove();
+    bell.setAttribute('aria-label',`Notifications${unread?`, ${unread} unread`:''}`);
+    if(unread)bell.insertAdjacentHTML('beforeend',`<span class="notification-count">${unread>99?'99+':unread}</span>`);
+  }catch{/* The next poll tries again. */}
+}
+setInterval(pollNotifications,60000);
 async function refreshNotifications(){
   if(!currentUser||currentUser.mustChangePassword)return;
   try{const data=await api('me/notifications');notificationState.items=data.notifications;notificationState.unread=data.unread;render();}catch{/* Notifications are optional; the page keeps working. */}
 }
 function notificationPanel(){
   if(!notificationState.open)return '';
-  const items=notificationState.items;
+  const deadlineOnly=notificationState.filter==='deadline',unreadDeadlines=notificationState.items.filter(n=>n.kind==='deadline'&&!n.readAt);
+  const items=deadlineOnly?unreadDeadlines:notificationState.items;
+  const tabs=`<div class="notification-tabs"><button class="${deadlineOnly?'':'active'}" data-act="notification-filter" data-value="all" aria-pressed="${!deadlineOnly}">All</button><button class="${deadlineOnly?'active':''}" data-act="notification-filter" data-value="deadline" aria-pressed="${deadlineOnly}">Unread deadlines (${unreadDeadlines.length})</button></div>`;
   const composer=['admin','hr'].includes(currentUser.role)?`<details class="announcement-composer"><summary>Post an announcement</summary><form data-form="announcement-send"><label for="announcement-title">Title</label><input id="announcement-title" name="title" minlength="2" maxlength="200" required><label for="announcement-body">Message</label><textarea id="announcement-body" name="body" minlength="2" maxlength="500" rows="3" required></textarea><button class="btn" type="submit">Publish to everyone</button><p class="form-status" role="status"></p></form></details>`:'';
-  return `<div class="notification-panel" role="dialog" aria-label="Notifications"><div class="section-heading"><h3>Notifications</h3>${notificationState.unread?'<button class="auth-link" data-act="notifications-read-all">Mark all read</button>':''}</div>${composer}${items.length?items.map(n=>`<button class="notification ${n.readAt?'':'unread'}" data-act="notification-open" data-id="${n.id}" data-link="${esc(n.link)}"><small class="notification-kind">${esc(n.kind)}</small><strong>${esc(n.title)}</strong><span>${esc(n.body)}</span><small>${esc(fmtDateTime(n.createdAt))}</small></button>`).join(''):'<p class="muted">You are all caught up. Assignments, deadlines, results and certificates will appear here.</p>'}</div>`;
+  return `<div class="notification-panel" role="dialog" aria-label="Notifications"><div class="section-heading"><h3>Notifications</h3>${notificationState.unread?'<button class="auth-link" data-act="notifications-read-all">Mark all read</button>':''}</div>${tabs}${composer}${items.length?items.map(n=>`<button class="notification ${n.readAt?'':'unread'}" data-act="notification-open" data-id="${n.id}" data-link="${esc(n.link)}"><small class="notification-kind">${esc(n.kind)}</small><strong>${esc(n.title)}</strong><span>${esc(n.body)}</span><small>${esc(fmtDateTime(n.createdAt))}</small></button>`).join(''):`<p class="muted">${deadlineOnly?'No unread deadline reminders.':'You are all caught up. Assignments, deadlines, results and certificates will appear here.'}</p>`}</div>`;
 }
 
 // ---------------------------------------------------------------- organisation dashboard (admin, HR, team scope)
 
 function quickActions(){
-  return [can('courses.manage')&&`<a class="btn" href="#admin-courses">Create course ${icon('arrow')}</a>`,can('users.manage')&&'<a class="btn secondary" href="#admin-users">Add employee</a>',can('reports.view')&&'<a class="btn secondary" href="#reports">View analytics</a>'].filter(Boolean).join('');
+  return [can('courses.manage')&&`<a class="btn" href="#admin-courses">Create course ${icon('arrow')}</a>`,can('users.manage')&&'<a class="btn secondary" href="#admin-users">Add employee</a>',['admin','hr'].includes(currentUser.role)&&'<a class="btn secondary" href="#compliance">Training compliance</a>',can('reports.view')&&'<a class="btn secondary" href="#reports">View analytics</a>'].filter(Boolean).join('');
 }
 function orgDashboard(){
   const filters=devFilters.dashboard,key=`dash:${filters.from||''}:${filters.to||''}`,entry=loadData(key,'manage/dashboard'+qs(filters));
@@ -132,7 +181,7 @@ function employeeDashboard(){
 // Manager View: learning progress of the manager's direct reports; the server scopes the dashboard data to them.
 function managerView(){
   const entry=loadData('mgr-dash','manage/dashboard');
-  const head=`<div class="intro"><div><h1>Manager View</h1><p>How your team is learning: progress, overdue training and recent activity for your direct reports.</p></div><span class="tag">MANAGER WORKSPACE</span></div><div class="admin-actions quick-actions"><a class="btn" href="#reports">Team reports ${icon('arrow')}</a><a class="btn secondary" href="#courses">My Learning</a></div>`;
+  const head=`<div class="intro"><div><h1>Manager View</h1><p>How your team is learning: progress, overdue training and recent activity for your direct reports.</p></div><span class="tag">MANAGER WORKSPACE</span></div><div class="admin-actions quick-actions"><a class="btn" href="#reports">Team reports ${icon('arrow')}</a><a class="btn secondary" href="#compliance">Team compliance</a><a class="btn secondary" href="#courses">My Learning</a></div>`;
   if(!entry.data)return head+stateBlock(entry,'team progress','mgr-dash');
   const k=entry.data.kpis;
   return head+`<div class="stats">${kpi('users',k.totalEmployees,'Direct reports')}${kpi('play',k.activeLearners,'Active learners','Learning activity in the last 30 days')}${kpi('check',k.completionRate+'%','Course completion rate',`${k.completions} of ${k.enrollments} enrollments`)}${kpi('bell',k.pendingMandatory,'Pending mandatory training')}</div>
@@ -239,6 +288,109 @@ function toCSV(columns,rows){
   return [columns.map(c=>cell(c.label)).join(','),...rows.map(r=>columns.map(c=>cell(r[c.key])).join(','))].join('\r\n');
 }
 function download(name,text,type){const url=URL.createObjectURL(new Blob(['﻿'+text],{type}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+// ---------------------------------------------------------------- training compliance & deadline monitoring
+
+const COMPLIANCE_DEFAULTS=()=>({filters:{},pages:{page:1,overduePage:1},sort:{},size:10,tab:'overview',open:null});
+let compliance=COMPLIANCE_DEFAULTS(),complianceOptions=null;
+const COMPLIANCE_TABS=[['overview','Overview'],['employees','Employee Progress'],['departments','Department Compliance'],['overdue','Overdue Training'],['reports','Reports']];
+const COMPLIANCE_STATUSES=[['completed','Completed'],['completed_on_time','Completed on time'],['completed_late','Completed late'],['in_progress','In progress'],['not_started','Not started'],['overdue','Overdue']];
+// Chart colours are status colours in this fixed order, so neighbouring segments stay distinct for colour-blind readers.
+const COMPLIANCE_SERIES=[['completedOnTime','Completed On Time','on-time'],['inProgress','In Progress','progress'],['completedLate','Completed Late','late'],['overdue','Overdue','overdue'],['notStarted','Not Started','waiting']];
+const compliancePill=(text,tone='')=>`<span class="tag compliance-pill ${tone}">${esc(text)}</span>`;
+const complianceStatus=r=>compliancePill(r.statusLabel,r.status==='completed_late'?'warn':DEADLINE_TONES[r.status])+(r.dueSoon?compliancePill('Due Soon','due-soon'):'');
+const complianceType=mandatory=>mandatory?compliancePill('Mandatory','warn'):compliancePill('Optional','gray');
+const complianceInitials=name=>esc(name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase());
+const complianceShortId=id=>`<span title="${esc(id)}">${esc(id.length>8?id.slice(0,8)+'…':id)}</span>`;
+const complianceDate=(day,full,blank='—')=>day?`<span title="${esc(full||'')}">${esc(fmtDate(day))}</span>`:esc(blank);
+const compliancePager=(t,field)=>t.pages>1?`<span class="table-actions"><button data-act="compliance-page" data-field="${field}" data-page="${t.page-1}" ${t.page<=1?'disabled':''}>Previous</button><button data-act="compliance-page" data-field="${field}" data-page="${t.page+1}" ${t.page>=t.pages?'disabled':''}>Next</button></span>`:'';
+const complianceExportMenu=(label,primary)=>`<details class="export-menu"><summary class="btn ${primary?'':'secondary'}">${icon('download')} ${esc(label)}</summary><div class="export-options"><button data-act="compliance-export" data-format="csv">Export CSV</button><button data-act="compliance-export" data-format="xlsx">Export Excel</button></div></details>`;
+
+function complianceChips(){
+  const f=compliance.filters,o=complianceOptions||{},find=(list,value)=>(list||[]).find(([id])=>id===value)?.[1]||value;
+  const chips=[f.q&&['q','Search',f.q],f.employee&&['employee','Employee',find(o.employees,f.employee)],f.department&&['department','Department',find(o.departments,f.department)],f.jobRole&&['jobRole','Job role',find(o.jobRoles,f.jobRole)],f.course&&['course','Course',find(o.courses,f.course)],f.type&&['type','Type',capital(f.type)],f.status&&['status','Status',find(COMPLIANCE_STATUSES,f.status)],f.from&&['from','Deadline from',fmtDate(f.from)],f.to&&['to','Deadline to',fmtDate(f.to)]].filter(Boolean);
+  return chips.length?`<div class="filter-chips" aria-label="Active filters">${chips.map(([field,label,value])=>`<button type="button" class="filter-chip" data-act="compliance-clear" data-field="${field}" aria-label="Remove filter ${esc(label)}: ${esc(value)}">${esc(label)}: <b>${esc(value)}</b> <span aria-hidden="true">×</span></button>`).join('')}</div>`:'';
+}
+function complianceFilterForm(){
+  const f=compliance.filters,o=complianceOptions||{employees:[],departments:[],courses:[],jobRoles:[]};
+  const select=(name,label,items,blank)=>`<div><label for="compliance-${name}">${label}</label><select id="compliance-${name}" name="${name}">${options(items,f[name],blank)}</select></div>`;
+  return `<form class="compliance-filters panel" data-form="compliance-filters"><div class="filters-head"><h2>${icon('filter')} Filters</h2><div class="filter-actions"><button class="btn secondary" type="button" data-act="compliance-reset">Reset</button><button class="btn" type="submit">Apply Filters</button></div></div><div class="filters-grid"><div class="filter-search"><label for="compliance-q">Search Employee</label><input id="compliance-q" name="q" type="search" maxlength="100" list="compliance-people" placeholder="Name, email or ID" value="${esc(f.q||'')}"><datalist id="compliance-people">${[...new Set(o.employees.map(([,name])=>name))].map(name=>`<option value="${esc(name)}"></option>`).join('')}</datalist></div>${select('department','Department',o.departments,'All departments')}${select('jobRole','Job Role',o.jobRoles,'All job roles')}${select('course','Course',o.courses,'All courses')}${select('type','Mandatory / Optional',[['mandatory','Mandatory'],['optional','Optional']],'All types')}${select('status','Training Status',COMPLIANCE_STATUSES,'All statuses')}<div class="filter-range"><span class="field-label" id="compliance-range">Deadline Range</span><div role="group" aria-labelledby="compliance-range"><input type="date" name="from" aria-label="Deadline from" value="${esc(f.from||'')}"><span aria-hidden="true">–</span><input type="date" name="to" aria-label="Deadline to" value="${esc(f.to||'')}"></div></div></div>${f.employee?`<input type="hidden" name="employee" value="${esc(f.employee)}">`:''}${complianceChips()}</form>`;
+}
+function complianceKpis(s){
+  const card=(name,value,label,tone='',extra='')=>`<div class="stat compliance-kpi ${tone}"><div class="stat-icon">${icon(name)}</div><div class="kpi-body"><strong>${esc(value)}</strong><small>${esc(label)}</small>${extra}</div></div>`;
+  return `<div class="compliance-kpis">${card('book',s.total,'Total Assignments')}${card('check',s.completed,'Completed')}${card('play',s.inProgress,'In Progress')}${card('bell',s.overdue,'Overdue',s.overdue?'alert':'')}${card('calendar',s.completedOnTime,'Completed On Time')}${card('clock',s.completedLate,'Completed Late')}${card('user',s.completionRate+'%','Overall Completion Rate','rate',`<div class="meter" role="img" aria-label="Overall completion ${s.completionRate}%"><span style="width:${s.completionRate}%"></span></div>`)}</div>`;
+}
+// One scale, 0–100%, so departments compare directly. More departments than fit as columns become rows, which have room for long names.
+function departmentRates(departments,columns=4){
+  if(!departments.length)return '<p class="muted">No assignments match these filters.</p>';
+  const tipFor=d=>`${d.department}: ${d.completed} of ${d.total} completed (${d.completionRate}%)`;
+  if(departments.length>columns)return departments.map(d=>`<div class="chart-row" tabindex="0" data-tip="${esc(tipFor(d))}"><span class="chart-label">${esc(d.department)}<small>${d.completed} of ${d.total} completed</small></span>${meter(d.completionRate,d.department+' completion')}</div>`).join('');
+  const grid=[100,75,50,25,0].map(v=>`<i style="bottom:${v}%"><b>${v}%</b></i>`).join('');
+  return `<div class="dept-chart"><div class="dept-plot">${grid}${departments.map(d=>`<div class="dept-col" tabindex="0" role="img" aria-label="${esc(tipFor(d))}" data-tip="${esc(tipFor(d))}"><span class="dept-bar" style="height:${d.completionRate}%"></span><b style="bottom:${d.completionRate}%">${d.completionRate}%</b></div>`).join('')}</div><div class="dept-names">${departments.map(d=>`<span>${esc(d.department)}<small>${d.completed} of ${d.total}</small></span>`).join('')}</div></div>`;
+}
+function statusDonut(s){
+  let start=0;
+  const total=s.total,present=COMPLIANCE_SERIES.filter(([key])=>s[key]),gap=present.length>1?.7:0;
+  const arcs=present.map(([key,label,tone])=>{const share=s[key]/total*100,arc=`<circle class="donut-arc ${tone}" cx="70" cy="70" r="54" pathLength="100" stroke-dasharray="${Math.max(share-gap,.2)} ${100-Math.max(share-gap,.2)}" stroke-dashoffset="${-start}"><title>${esc(label)}: ${s[key]} (${Math.round(share)}%)</title></circle>`;start+=share;return arc;}).join('');
+  const legend=COMPLIANCE_SERIES.map(([key,label,tone])=>`<li><i class="legend-mark ${tone}"></i><span>${esc(label)}</span><small>${total?Math.round(s[key]/total*100):0}%</small><b>${s[key]}</b></li>`).join('');
+  return `<div class="donut-wrap"><svg class="donut" viewBox="0 0 140 140" role="img" aria-label="${total} assignments by status"><g transform="rotate(-90 70 70)"><circle class="donut-track" cx="70" cy="70" r="54"></circle>${arcs}</g><text x="70" y="68" class="donut-total">${total}</text><text x="70" y="85" class="donut-caption">Assignments</text></svg><ul class="donut-legend">${legend}</ul></div>`;
+}
+function overdueList(o){
+  if(!o.total)return emptyState('No overdue courses','Everyone matching these filters is within their deadline or has finished.');
+  return `<ul class="overdue-list">${o.rows.slice(0,4).map(r=>`<li class="${r.mandatory?'is-mandatory':''}"><span class="avatar">${complianceInitials(r.employee)}</span><div class="overdue-who"><strong>${esc(r.employee)}</strong><small>${complianceShortId(r.employeeId)} · ${esc(r.department)}</small><span class="overdue-course">${esc(r.course)}</span></div><div class="overdue-state">${compliancePill(r.overdueBy.split(', ')[0]+' overdue','danger')}${meter(r.progress,'Progress')}</div></li>`).join('')}</ul>`;
+}
+function complianceAnalytics(d){
+  const viewAll=`<button class="link-action" data-act="compliance-tab" data-tab="overdue">View All ${icon('arrow')}</button>`;
+  return `<div class="compliance-analytics">${panel('Department-wise Compliance',departmentRates(d.departments))}${panel('Training Status Distribution',statusDonut(d.summary))}${panel(`Overdue Courses (${d.overdue.total})`,overdueList(d.overdue),d.overdue.total?viewAll:'')}</div>`;
+}
+function recordDetails(r){
+  const fact=(label,value)=>`<div><dt>${esc(label)}</dt><dd>${esc(value||'—')}</dd></div>`,manage=['admin','hr'].includes(currentUser.role);
+  return `<tr class="record-details"><td colspan="12"><dl>${fact('Employee ID',r.employeeId)}${fact('Email',r.email)}${fact('Assigned',r.assignedDisplay)}${fact('Deadline in force',r.deadlineDisplay||'No deadline')}${fact('Original deadline',r.originalDeadlineDisplay)}${fact('Completed',r.completedDisplay)}${fact('Last activity',r.lastActivityDisplay||'No activity yet')}${r.overdueBy?fact('Overdue by',r.overdueBy):''}</dl><div class="table-actions"><button data-act="compliance-employee" data-id="${esc(r.employeeId)}">All records for ${esc(r.employee)}</button>${manage?`<a href="#admin-courses" data-act="compliance-manage" data-id="${esc(r.courseId)}">Manage deadline</a>`:''}</div></td></tr>`;
+}
+function recordsTable(t){
+  if(!t.total)return panel('Employee Training Records',emptyState('No assignments match these filters','Change or reset the filters to see more records.'));
+  const {key,dir}=compliance.sort;
+  const head=(field,label)=>`<th aria-sort="${key===field?(dir==='desc'?'descending':'ascending'):'none'}"><button class="sort-head" data-act="compliance-sort" data-key="${field}">${esc(label)}<span aria-hidden="true">${key===field?(dir==='desc'?'▼':'▲'):'↕'}</span></button></th>`;
+  const cell=(label,html,cls='')=>`<td data-label="${esc(label)}" class="${cls}">${html}</td>`;
+  const row=r=>{const id=r.employeeId+'|'+r.courseId,open=compliance.open===id;return `<tr>${cell('Employee Name',`<strong>${esc(r.employee)}</strong>`)}${cell('Employee ID',complianceShortId(r.employeeId),'record-id')}${cell('Department',esc(r.department))}${cell('Job Role',esc(r.jobRole))}${cell('Course Name',esc(r.course))}${cell('Type',complianceType(r.mandatory))}${cell('Assigned',complianceDate(r.assignedDate,r.assignedDisplay),'record-date')}${cell('Deadline',complianceDate(r.deadlineDate,r.deadlineDisplay,'No deadline'),'record-date')}${cell('Completed',complianceDate(r.completedDate,r.completedDisplay),'record-date')}${cell('Progress',meter(r.progress,'Progress'))}${cell('Status',complianceStatus(r))}${cell('Actions',`<button class="icon-action" data-act="compliance-details" data-id="${esc(id)}" aria-expanded="${open}" aria-label="View details for ${esc(r.employee)}, ${esc(r.course)}" title="View details">${icon('eye')}</button>`)}</tr>${open?recordDetails(r):''}`;};
+  return panel('Employee Training Records',`<div class="admin-table-scroll"><table class="admin-table records-table"><thead><tr>${head('employee','Employee Name')}${head('employeeId','Employee ID')}${head('department','Department')}${head('jobRole','Job Role')}${head('course','Course Name')}${head('type','Type')}${head('assigned','Assigned')}${head('deadline','Deadline')}${head('completed','Completed')}${head('progress','Progress')}${head('status','Status')}<th>Actions</th></tr></thead><tbody>${t.rows.map(row).join('')}</tbody></table></div><div class="pager"><span class="muted">${t.total} record${t.total===1?'':'s'} · page ${t.page} of ${t.pages}</span><label class="page-size">Rows per page <select data-change="compliance-size" aria-label="Rows per page">${options([[10,'10'],[25,'25'],[50,'50']],compliance.size)}</select></label>${compliancePager(t,'page')}</div>`,complianceExportMenu('Export',false));
+}
+function departmentTab(departments){
+  if(!departments.length)return panel('Department Compliance','<p class="muted">No assignments match these filters.</p>');
+  const largest=Math.max(...departments.map(d=>d.total));
+  const stack=d=>{const tip=`${d.department}: ${d.completed} completed, ${d.pending} pending, ${d.overdue} overdue, ${d.total} assigned`;return `<div class="chart-row" tabindex="0" role="img" aria-label="${esc(tip)}" data-tip="${esc(tip)}"><span class="chart-label">${esc(d.department)}</span><div class="chart-track"><div class="chart-stack" style="width:${d.total/largest*100}%">${[['on-time',d.completed],['progress',d.pending],['overdue',d.overdue]].filter(([,n])=>n).map(([k,n])=>`<span class="chart-seg ${k}" style="flex-grow:${n}"></span>`).join('')}</div></div><b>${d.total}</b></div>`;};
+  const legend=[['on-time','Completed'],['progress','Pending'],['overdue','Overdue']].map(([k,label])=>`<span><i class="legend-mark ${k}"></i>${label}</span>`).join('');
+  const rows=departments.map(d=>`<tr><td><strong>${esc(d.department)}</strong></td><td>${d.total}</td><td>${d.completed}</td><td>${d.pending}</td><td>${d.overdue}</td><td>${meter(d.completionRate,d.department+' completion')}</td></tr>`).join('');
+  return `<div class="compliance-pair">${panel('Completion rate',departmentRates(departments,6))}${panel('Assigned courses by status',`<div class="chart-legend">${legend}</div>${departments.map(stack).join('')}`)}</div>${panel('Department Compliance',`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Department</th><th>Assigned</th><th>Completed</th><th>Pending</th><th>Overdue</th><th>Completion</th></tr></thead><tbody>${rows}</tbody></table></div><p class="muted">Pending courses are assigned, not completed and not yet overdue.</p>`)}`;
+}
+function overdueTab(o){
+  const row=r=>`<tr class="${r.mandatory?'overdue-mandatory':''}"><td><strong>${esc(r.employee)}</strong><small>${complianceShortId(r.employeeId)} · ${esc(r.department)} · ${esc(r.jobRole)}</small></td><td>${esc(r.course)}<small>${complianceType(r.mandatory)}</small></td><td>${esc(r.originalDeadlineDisplay)}${r.originalDeadlineAt!==r.deadlineAt?`<small>Changed to ${esc(r.deadlineDisplay)}</small>`:''}</td><td><strong>${esc(r.overdueBy)}</strong></td><td>${meter(r.progress,'Progress')}</td><td>${r.lastActivityDisplay?esc(r.lastActivityDisplay):'No activity yet'}</td></tr>`;
+  const count=`<span class="tag ${o.total?'danger':'gray'}">${o.total} OVERDUE${o.mandatory?` · ${o.mandatory} MANDATORY`:''}</span>`;
+  return panel('Overdue Training',o.total?`<div class="admin-table-scroll"><table class="admin-table overdue-table"><thead><tr><th>Employee</th><th>Course</th><th>Original deadline</th><th>Overdue by</th><th>Completion</th><th>Last activity</th></tr></thead><tbody>${o.rows.map(row).join('')}</tbody></table></div><div class="pager"><span class="muted">Overdue time runs from the deadline now in force. Mandatory courses are highlighted and listed first.</span>${compliancePager(o,'overduePage')}</div>`:emptyState('No overdue courses','Everyone matching these filters is within their deadline or has finished.'),count);
+}
+function reportsTab(d){
+  const columns=['Employee Name','Employee ID','Department','Job Role','Course Name','Mandatory/Optional','Assignment Date','Deadline','Original Deadline','Completion Date','Progress %','Current Status','Overdue By','Last Activity'];
+  return `<div class="compliance-pair">${panel('Training compliance report',`<p class="muted">Download all <b>${d.table.total}</b> record${d.table.total===1?'':'s'} matching the current filters, in the current sort order. Each export is recorded in the Activity Log.</p><div class="admin-actions">${d.table.total?'<button class="btn" data-act="compliance-export" data-format="csv">Export CSV</button><button class="btn secondary" data-act="compliance-export" data-format="xlsx">Export Excel</button>':'<span class="muted">Change the filters to include some records.</span>'}</div><h3 class="sub-heading">Included columns</h3><p class="muted">${columns.map(esc).join(' · ')}</p>`)}${panel('Other learning reports',`<p class="muted">Enrollment, assessment, certificate and mandatory-training reports stay in ${currentUser.role==='manager'?'Team Reports':'Reports &amp; Analytics'}, with their own date filters.</p><div class="admin-actions"><a class="btn secondary" href="#reports" data-act="report-preset" data-type="compliance">Mandatory training report ${icon('arrow')}</a><a class="btn secondary" href="#reports" data-act="report-preset" data-type="enrollments">Enrollment report</a></div>`)}</div>`;
+}
+function complianceFirstPage(){compliance.pages={page:1,overduePage:1};compliance.open=null;render();}
+document.addEventListener('click',event=>document.querySelectorAll('.export-menu[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;}));
+async function complianceExport(format){
+  const {key,dir}=compliance.sort,response=await fetch('/api/manage/compliance/export'+qs({...compliance.filters,sort:key,dir,format}),{credentials:'same-origin',headers:{'X-Portal-Request':'1'}});
+  if(!response.ok)throw new Error((await response.json().catch(()=>({}))).error||'The report could not be exported.');
+  const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');
+  link.href=url;link.download=(/filename="([^"]+)"/.exec(response.headers.get('Content-Disposition')||'')||[])[1]||'shimentox-training-compliance.'+format;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Report exported.');
+}
+function compliancePage(){
+  const team=currentUser.role==='manager',{key:sort,dir}=compliance.sort,query={...compliance.filters,...compliance.pages,sort,dir,size:compliance.size},key='compliance:'+qs(query),entry=loadData(key,'manage/compliance'+qs(query));
+  if(entry.data)complianceOptions=entry.data.options;
+  const tabs=`<div class="compliance-tabs" role="tablist" aria-label="Training compliance views">${COMPLIANCE_TABS.map(([id,label])=>`<button role="tab" aria-selected="${compliance.tab===id}" class="${compliance.tab===id?'active':''}" data-act="compliance-tab" data-tab="${id}">${esc(label)}</button>`).join('')}</div>`;
+  const updated=entry.data?`<button class="updated-at" data-act="compliance-refresh" title="Refresh">${icon('refresh')} Last updated: ${esc(entry.data.updatedDisplay)} ${esc(entry.data.timezone)}</button>`:'';
+  const head=`<div class="compliance-head"><div><h1>Training Compliance &amp; Deadline Monitoring</h1><p>${team?'Monitor course assignments, completion status, deadlines and training compliance for your direct reports.':'Monitor course assignments, completion status, deadlines and employee training compliance across ShimentoX.'}</p></div><div class="compliance-head-actions">${updated}${complianceExportMenu('Export Report',true)}</div></div>${tabs}${complianceFilterForm()}`;
+  if(!entry.data)return head+stateBlock(entry,'training compliance',key);
+  const d=entry.data,views={overview:()=>complianceAnalytics(d)+recordsTable(d.table),employees:()=>recordsTable(d.table),departments:()=>departmentTab(d.departments),overdue:()=>overdueTab(d.overdue),reports:()=>reportsTab(d)};
+  return `<div class="compliance-page">${head}${complianceKpis(d.summary)}${views[compliance.tab]()}</div>`;
+}
 
 // ---------------------------------------------------------------- learning history
 
@@ -633,10 +785,23 @@ async function submitForm(form,task){
 const ACTIONS={
   retry:el=>{delete pageCache[el.dataset.key];render();},
   'notifications-read-all':async()=>{const data=await api('me/notifications/read',{all:true});notificationState.items=data.notifications;notificationState.unread=data.unread;render();},
-  'notification-open':async el=>{const data=await api('me/notifications/read',{ids:[Number(el.dataset.id)]});notificationState={items:data.notifications,unread:data.unread,open:false};if(el.dataset.link)location.hash=el.dataset.link;render();},
+  'notification-open':async el=>{const data=await api('me/notifications/read',{ids:[Number(el.dataset.id)]});notificationState={items:data.notifications,unread:data.unread,open:false};const link=el.dataset.link||'';if(link.startsWith('course:'))await loadCourse(link.slice(7));else if(link)location.hash=link;render();},
+  'reminder-panel':()=>{reminderPanelOpen=!reminderPanelOpen;render();},
+  'notification-filter':el=>{notificationState.filter=el.dataset.value;render();},
+  'reminders-run':async()=>{const data=await api('manage/reminders/run',{});pageCache['reminder-settings']={data:{settings:data.settings}};refreshData('reminder-history','deadlines');toast(`Reminders processed: ${data.summary.sent} sent, ${data.summary.failed} failed.`);render();},
   'dash-period-clear':()=>{devFilters.dashboard={};render();},
   'course-filter':el=>{courseFilter=el.dataset.value;render();},
   'course-area':el=>{courseArea=el.dataset.value;render();},
+  'compliance-reset':()=>{compliance.filters={};complianceFirstPage();},
+  'compliance-page':el=>{compliance.pages[el.dataset.field]=Number(el.dataset.page);render();},
+  'compliance-export':el=>{const menu=el.closest('details');if(menu)menu.open=false;return complianceExport(el.dataset.format);},
+  'compliance-tab':el=>{compliance.tab=el.dataset.tab;render();},
+  'compliance-clear':el=>{delete compliance.filters[el.dataset.field];complianceFirstPage();},
+  'compliance-sort':el=>{const k=el.dataset.key,s=compliance.sort;compliance.sort={key:k,dir:s.key===k&&s.dir==='asc'?'desc':'asc'};complianceFirstPage();},
+  'compliance-details':el=>{compliance.open=compliance.open===el.dataset.id?null:el.dataset.id;render();},
+  'compliance-employee':el=>{compliance.filters={employee:el.dataset.id};compliance.tab='employees';complianceFirstPage();},
+  'compliance-manage':el=>{deadlineCourseId=el.dataset.id;},
+  'compliance-refresh':()=>{refreshData('compliance');render();},
   'report-preset':el=>{devFilters.report={type:el.dataset.type,page:1};},
   'report-reset':()=>{devFilters.report={type:devFilters.report.type,page:1};render();},
   'report-page':el=>{devFilters.report.page=Number(el.dataset.page);render();},
@@ -684,11 +849,12 @@ const ACTIONS={
     try{if(!await enterExamFullscreen())return toast(FULLSCREEN_REQUIRED);const data=await api(`me/assessments/${el.dataset.id}/start`,{});inlineAttempt={assessmentId:el.dataset.id,attempt:data.attempt};inlineResult=null;render();window.scrollTo?.(0,0);updateAssessmentTimer();}
     catch(error){exitExamFullscreen();throw error;}finally{assessmentStarting=false;}},
   'resource-delete':async el=>{await api(`manage/resources/${el.dataset.id}/delete`,{});await loadAdminState();render();},
-  'assignment-delete':async el=>{await api(`manage/assignments/${el.dataset.id}/delete`,{});refreshData('assignments');render();},
+  'assignment-delete':async el=>{await api(`manage/assignments/${el.dataset.id}/delete`,{});refreshData('deadlines');courseCatalog=(await api('courses')).courses;render();},
 };
 const SUBMITS={
   'announcement-send':form=>submitForm(form,async()=>{await api('manage/announcements',formValues(form));await refreshNotifications();toast('Announcement published.');}),
   'dash-period':form=>{const v=formValues(form);devFilters.dashboard={from:v.from,to:v.to};render();},
+  'compliance-filters':form=>{compliance.filters=Object.fromEntries(Object.entries(formValues(form)).filter(([,v])=>v));complianceFirstPage();},
   'report-filters':form=>{const v=formValues(form);devFilters.report={type:v.type||devFilters.report.type,department:v.department,employee:v.employee,course:v.course,from:v.from,to:v.to,page:1};render();},
   'session-save':form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('manage/sessions',{...v,id:form.dataset.id||null,capacity:Number(v.capacity),courseId:v.courseId||null,trainerId:v.trainerId||null});pageCache['m-sessions']={data};sessionEditor=null;refreshData('me-cal');devMessage='Session saved.';render();}),
   'assessment-submit':form=>submitForm(form,async()=>{const a=activeAssessment,answers=a.attempt.questions.map((_,i)=>{const value=new FormData(form).get('q'+i);return value===null?null:Number(value);});if(answers.includes(null))throw new Error('Answer every question before submitting.');const data=await api(`me/assessments/${a.id}/submit`,{attemptId:a.attempt.id,answers});activeAssessment=null;exitExamFullscreen();assessmentResult=data.result;refreshData('me-assess','me-skills','me-dash');refreshNotifications();if(data.result.status==='passed'){try{learning.certificates=(await api('certificates')).certificates;}catch{/* The list refreshes on the next page load. */}}render();}),
@@ -697,13 +863,16 @@ const SUBMITS={
   'user-profile':form=>submitForm(form,async()=>{const v=formValues(form);await api(`admin/candidates/${form.dataset.id}/profile`,{name:v.name,role:v.role,departmentId:v.departmentId||null,jobRoleId:v.jobRoleId||null,managerId:v.managerId||null,jobTitle:v.jobTitle});editUserId=null;adminMessage='Employee profile updated.';await loadAdminState();refreshData('people','org');render();}),
   'org-save':form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('manage/'+form.dataset.kind,{name:v.name,departmentId:v.departmentId||null});pageCache.org={data};render();}),
   'resource-save':form=>submitForm(form,async()=>{const v=formValues(form);let url=v.url;const file=form.querySelector('input[type="file"]')?.files?.[0];if(file){url=(await uploadMaterial(file)).url;}if(!url)throw new Error('Choose a file to upload or enter a link.');await api(`manage/courses/${form.dataset.id}/resources`,{title:v.title,kind:v.kind,url,moduleIndex:intOrNull(v.moduleIndex)});await loadAdminState();adminMessage='Learning material added.';render();}),
-  'assignment-save':form=>submitForm(form,async()=>{const v=formValues(form);await api('manage/assignments',{courseId:form.dataset.id,targetType:v.targetType,targetId:v.targetId,mandatory:v.mandatory==='on',dueDate:v.dueDate||null,note:v.note});refreshData('assignments','me-dash');adminMessage='Course assigned. Employees have been notified.';render();}),
+  'deadline-save':form=>submitForm(form,async()=>{const v=formValues(form),target=form.dataset.target;await api('manage/assignments',{courseId:form.dataset.course,targetType:target?form.dataset.type:v.targetType,targetId:target||v.targetId,mandatory:v.mandatory==='on',deadline:v.deadline||null,note:v.note||''});refreshData('deadlines','reminder-history','me-dash');courseCatalog=(await api('courses')).courses;adminMessage='Deadline saved. Employees have been notified.';render();}),
+  'reminder-settings':form=>submitForm(form,async()=>{const v=formValues(form),intervalDays=String(v.intervalDays||'').split(',').map(x=>x.trim()).filter(Boolean).map(Number);const data=await api('manage/reminders/settings',{intervalDays,dueSoonDays:Number(v.dueSoonDays),deadlineDay:v.deadlineDay==='on',overdue:v.overdue==='on'});pageCache['reminder-settings']={data};refreshData('deadlines');courseCatalog=(await api('courses')).courses;toast('Reminder schedule saved.');render();}),
   'lesson-activity':form=>submitForm(form,async()=>{const lesson=currentCourseExtras.courseLessons.find(l=>l.id===form.dataset.lesson),answers=lesson.activity.tasks.map((_,i)=>(form.querySelector(`#answer-${i}`)?.value||'').trim());if(answers.some(a=>!a))throw new Error('Write a prompt for every task before submitting.');const result=await learningRequest('lesson-activity',{lessonId:lesson.id,answers});const r=result.activityResult;refreshData('me-dash','me-paths');toast(r.passed?`Passed with ${r.score}%. Review the feedback and model answers.`:`You scored ${r.score}%. You need ${r.passPercent}% — use the tips and try again.`);render();document.getElementById('activity-title')?.scrollIntoView?.({behavior:'smooth',block:'start'});}),
   'inline-assessment':form=>submitForm(form,async()=>{const id=form.dataset.id,questions=inlineAttempt.attempt.questions,values=new FormData(form),answers=questions.map((_,i)=>values.get('q'+i)===null?null:Number(values.get('q'+i)));if(answers.includes(null))throw new Error('Answer every question before submitting.');const data=await api(`me/assessments/${id}/submit`,{attemptId:inlineAttempt.attempt.id,answers});inlineResult={assessmentId:id,result:data.result};inlineAttempt=null;exitExamFullscreen();await refreshCourseExtras();refreshData('me-assess','me-dash');refreshNotifications();toast(data.result.status==='passed'?`Passed with ${data.result.percent}%.`:data.result.status==='expired'?'Time expired.':`You scored ${data.result.percent}%. Review the explanations and try again.`);render();}),
   'lesson-complete':form=>submitForm(form,async()=>{const v=formValues(form),list=currentCourseExtras.courseLessons,i=list.findIndex(l=>l.id===form.dataset.lesson);await learningRequest('lesson',{lessonId:form.dataset.lesson,response:v.response||''});selectedLessonId=list[i+1]?.id||form.dataset.lesson;refreshData('me-dash','me-paths');toast(list[i+1]?'Lesson completed. On to the next one.':'Lesson completed.');render();}),
   assistant:form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('me/assistant',{courseId:currentCourseInfo.id,mode:v.mode,lessonIndex:intOrNull(v.lessonIndex),question:v.question});assistantAnswer={courseId:currentCourseInfo.id,text:data.answer+(data.truncated?'\n\n(The answer was cut short.)':'')};render();}),
 };
 const CHANGES={
+  'deadline-course':el=>{deadlineCourseId=el.value;render();},
+  'compliance-size':el=>{compliance.size=Number(el.value);complianceFirstPage();},
   'target-type':el=>{const target=document.getElementById(el.dataset.target);if(target)target.innerHTML=options(targetChoices(el.value),'','Select…');},
   attendance:async el=>{try{const data=await api(`manage/sessions/${el.dataset.session}/attendance`,{employeeId:el.dataset.employee,attended:el.checked});pageCache['roster:'+el.dataset.session]={data};render();}catch(error){toast(error.message);el.checked=!el.checked;}},
 };

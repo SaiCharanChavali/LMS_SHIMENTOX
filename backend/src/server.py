@@ -23,11 +23,12 @@ from services import APIError, can_view_course, authenticate, auth_event, bundle
 from admin import admin_action, course_view, setup_initial_admin
 from development import MAX_MATERIAL_BYTES, catalog, course_video, course_extras, development_action, material_file, store_material
 import assistant
+import compliance
 
 PUBLIC = BACKEND.parent / 'frontend/public'
 COOKIE = 'shimentox_session'
 # Reported by /api/session so the browser can detect a server still running older code.
-API_VERSION = 10
+API_VERSION = 13
 
 
 class PortalServer(ThreadingHTTPServer):
@@ -66,8 +67,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
         self.send_header('Referrer-Policy', 'same-origin')
         self.send_header('Cache-Control', 'no-store')
         if sandbox:
-            host = self.headers.get('Host', 'localhost:5173')
-            host = host if re.fullmatch(r'[a-zA-Z0-9.\-\[\]:]+', host) else 'localhost:5173'
+            host = self.headers.get('Host', 'localhost:5007')
+            host = host if re.fullmatch(r'[a-zA-Z0-9.\-\[\]:]+', host) else 'localhost:5007'
             runtime = f'http://{host}/assets/python-runtime/ https://{host}/assets/python-runtime/'
             self.send_header('Content-Security-Policy', f"default-src 'none'; script-src 'self' {runtime} 'wasm-unsafe-eval'; worker-src blob:; connect-src {runtime}; frame-ancestors 'self'; base-uri 'none'; form-action 'none'; sandbox allow-scripts")
         else:
@@ -100,7 +101,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
 
         host = self.headers.get('Host', '')
         if not re.fullmatch(r'(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?', host):
-            host = 'localhost:5173'
+            host = 'localhost:5007'
         for candidate in (self.headers.get('Origin', ''), self.headers.get('Referer', '')):
             parsed = urlsplit(candidate)
             if parsed.scheme in ('http', 'https') and parsed.netloc.lower() == host.lower():
@@ -193,6 +194,14 @@ class PortalHandler(SimpleHTTPRequestHandler):
             self.send_header('Set-Cookie', cookie)
         self.end_headers()
         self.wfile.write(data)
+
+    def download_response(self, body, content_type, filename):
+        self.send_response(200)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+        self.end_headers()
+        self.wfile.write(body)
 
     def cookie_value(self):
         cookies = SimpleCookie()
@@ -351,6 +360,10 @@ class PortalHandler(SimpleHTTPRequestHandler):
                     payload=assistant.status() if method=='GET' else assistant.ask(db,user,data)
                     db.commit()
                     return self.json_response(200,payload)
+                if method=='GET' and path=='/api/manage/compliance/export':
+                    download=compliance.export(db,user,query)
+                    db.commit()
+                    return self.download_response(*download)
                 if path.startswith('/api/manage/') or path.startswith('/api/me/'):
                     payload=development_action(db,user,method,path.removeprefix('/api/'),query,data)
                     db.commit()

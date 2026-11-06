@@ -1,6 +1,6 @@
 # Backend
 
-Python standard-library HTTP API and SQLite database. No third-party runtime packages are needed. Run `npm start` at project root, or `python backend/server.py`. The default address is http://localhost:5173, bound to the local computer.
+Python standard-library HTTP API and SQLite database. No third-party runtime packages are needed. Run `npm start` at project root, or `python backend/server.py`. The default address is http://localhost:5007, bound to the local computer.
 
 ## Files
 
@@ -63,6 +63,17 @@ All learning POSTs except enrollment include `runId` and action-specific fields.
 | POST | `/api/manage/import/preview` | Retrieve and extract a course URL for review (`{url}`); returns a preview token. Runs outside the write transaction |
 | POST | `/api/manage/import/save` | Save a reviewed import (`{token, mode: full\|reference, rightsConfirmed, status: draft\|published, title, category, ...}`) |
 
+Course deadlines and reminders (see [course deadlines](../docs/course-deadlines.md)):
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/manage/assignments` | Assign a course or update its deadline (`{courseId, targetType, targetId, mandatory, deadline, note}`). Staff only |
+| GET | `/api/manage/deadlines?courseId=` | Assignment targets and each employee's effective deadline and status. Staff only; managers see their direct reports |
+| GET / POST | `/api/manage/reminders/settings` | Read or change the reminder schedule. Admin and HR |
+| POST | `/api/manage/reminders/run` | Run one reminder pass now. Admin and HR |
+| GET | `/api/manage/reminders/history?courseId=` | Latest 100 reminder deliveries. Admin and HR |
+| GET | `/api/me/notifications/unread` | The signed-in user's unread count |
+
 `src/admin.py` implements administration. `POST /api/setup/admin` configures the first admin from a loopback browser request and permanently locks once an admin exists. `database/migrations/002_roles_and_courses.sql` preserves version 1 records while adding roles, first-login flags, course content, and audit records. Initialization is repeatable and never promotes an account automatically.
 
 ## Configuration and operation
@@ -70,12 +81,14 @@ All learning POSTs except enrollment include `runId` and action-specific fields.
 Use PowerShell environment variables before `npm start` when needed:
 
 ```powershell
-$env:PORT = '5173'
+$env:PORT = '5007'
 $env:LMS_DB_PATH = 'C:\path\to\persistent\lms.sqlite3'
 $env:LMS_PUBLIC_BASE_URL = 'https://learning.example.com'
 ```
 
 Set `LMS_PUBLIC_BASE_URL` to the public HTTPS website origin for certificate links and social preview metadata. If unset, links use the incoming request host; LinkedIn cannot reach localhost or private network addresses.
+
+`LMS_TIMEZONE` sets the portal timezone for entering and displaying deadlines (default `Asia/Kolkata`; other zones need a system timezone database or the `tzdata` package on Windows). `LMS_REMINDER_INTERVAL_SECONDS` sets how often the server runs deadline reminders (default 300; 0 turns the background thread off).
 
 The default database is `backend/data/lms.sqlite3`. `LMS_COOKIE_SECURE=1` enables the Secure cookie flag when served through HTTPS; leave it off for local HTTP. `.env` files are not loaded automatically. `LMS_QUIET=1` silences access logs. Logs never include request bodies, passwords, or session tokens.
 

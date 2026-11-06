@@ -8,17 +8,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'src'))
 from database import BACKEND, initialize, seed_admin
+from deadlines import portal_timezone
 from server import PortalServer, PortalHandler
+import reminders
 
 
 def main():
     parser = argparse.ArgumentParser(description='ShimentoX LMS server')
-    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', '5173')))
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', '5007')))
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--init-db', action='store_true')
     parser.add_argument('--open', action='store_true', help='Open the portal in the default browser after startup')
     args = parser.parse_args()
     path = Path(os.environ.get('LMS_DB_PATH', str(BACKEND / 'data/lms.sqlite3'))).resolve()
+    try:
+        portal_timezone()
+    except ValueError as error:
+        print(error, file=sys.stderr, flush=True)
+        sys.exit(1)
     initialize(path)
     seed_admin(path)
     if args.init_db:
@@ -46,6 +53,13 @@ def main():
                 pass
             print(f'Could not open the browser automatically. Open {url}', flush=True)
         threading.Thread(target=open_browser, daemon=True).start()
+    # Deadline reminders run for as long as this process does, whether or not anyone has the portal open.
+    try:
+        reminder_seconds = int(os.environ.get('LMS_REMINDER_INTERVAL_SECONDS', '300'))
+    except ValueError:
+        reminder_seconds = 300
+    if reminder_seconds > 0:
+        reminders.start_scheduler(path, reminder_seconds)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

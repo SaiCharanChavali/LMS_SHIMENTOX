@@ -7,7 +7,9 @@ let currentCourseInfo={id:null,title:'',category:'Development'};
 let portalReady = false;
 let operationQueue = Promise.resolve();
 // Must match API_VERSION in backend/src/server.py. A mismatch means the server process predates these files.
-const EXPECTED_API_VERSION = 10;
+const EXPECTED_API_VERSION = 13;
+// Server time minus browser time. Countdowns use it, so a wrong computer clock cannot show a wrong time remaining.
+let serverClockOffset = 0;
 let serverOutdated = false;
 
 async function api(path, body, options = {}) {
@@ -19,6 +21,8 @@ async function api(path, body, options = {}) {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }), keepalive: Boolean(options.keepalive)
     });
   } catch { throw new Error('Could not reach the server. Check your connection and try again.'); }
+  const serverDate = Date.parse(response.headers?.get?.('Date') || '');
+  if (!Number.isNaN(serverDate)) serverClockOffset = serverDate - Date.now();
   let data;
   try { data = await response.json(); } catch { throw new Error('Start the portal with npm start so the login server is available.'); }
   if (!response.ok) {
@@ -105,7 +109,7 @@ async function initializePortal() {
     render();
   } catch (error) {
     currentUser = null; portalReady = true;
-    document.getElementById('app').innerHTML = `<div class="portal-loading"><h1>Let’s get you connected.</h1><p>${esc(error.message)}</p><p>Run <code>npm start</code> from the shimentox-lms folder, then open http://localhost:5173.</p><button class="btn" id="retry-connection">Try again</button></div>`;
+    document.getElementById('app').innerHTML = `<div class="portal-loading"><h1>Let’s get you connected.</h1><p>${esc(error.message)}</p><p>Run <code>npm start</code> from the shimentox-lms folder, then open http://localhost:5007.</p><button class="btn" id="retry-connection">Try again</button></div>`;
     document.getElementById('retry-connection').onclick = initializePortal;
   }
 }

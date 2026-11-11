@@ -50,8 +50,8 @@ Login -> Authentication -> Identify role
   Employee -> My Learning
 ```
 
-- **Admin** opens on the **Admin Dashboard** and also has **My Learning** and **Courses**, plus Training Compliance, Manage Courses, Users & Teams, Assessments, Training Calendar, Certificates, Reports & Analytics, Activity Log and My Profile.
-- **Manager** opens on the **Manager View**, showing the progress, overdue training and recent activity of their direct reports, and also has **My Learning**, Courses, Training Calendar, My Certificates, My Profile, Team Compliance and Team Reports.
+- **Admin** opens on the **Admin Dashboard** and also has **My Learning** and **Courses**, plus Training Compliance, Manage Courses, Users & Teams, Onboarding, Assessments, Training Calendar, Certificates, Reports & Analytics, Activity Log and My Profile.
+- **Manager** opens on the **Manager View**, showing the progress, overdue training and recent activity of their direct reports, and also has **My Learning**, Courses, Training Calendar, My Certificates, My Profile, Team Compliance, Team Onboarding and Team Reports.
 - **Employee** opens on **My Learning**, and also has Courses, My Dashboard, Training Calendar, My Certificates and My Profile.
 
 My Learning lists the courses the user has started or completed; Courses lists every published course. In Users & Teams, admins create Employee and Manager accounts. HR and Trainer accounts created before this change keep working with their existing pages. Backend permissions protect every API, not just sidebar visibility.

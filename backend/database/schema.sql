@@ -530,3 +530,67 @@ CREATE TABLE IF NOT EXISTS deleted_courses (
     deleted_by TEXT,
     deleted_at TEXT NOT NULL
 );
+-- Version 10: automatic onboarding. Templates name published courses by milestone day; each employee onboarding keeps a
+-- snapshot of what it started with, so editing a template never rewrites an employee's plan or its history.
+-- Department and job-role references carry no foreign key on purpose: a removed department or role must stop a
+-- template matching anyone, not widen it to everyone.
+CREATE TABLE IF NOT EXISTS onboarding_templates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL CHECK(length(name) BETWEEN 2 AND 120),
+    description TEXT NOT NULL DEFAULT '',
+    department_id TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','inactive','archived')),
+    created_by TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL,
+    updated_by TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS onboarding_template_roles (
+    template_id TEXT NOT NULL REFERENCES onboarding_templates(id) ON DELETE CASCADE,
+    job_role_id TEXT NOT NULL,
+    PRIMARY KEY(template_id, job_role_id)
+);
+CREATE TABLE IF NOT EXISTS onboarding_template_milestones (
+    template_id TEXT NOT NULL REFERENCES onboarding_templates(id) ON DELETE CASCADE,
+    day INTEGER NOT NULL CHECK(day BETWEEN 1 AND 365),
+    title TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY(template_id, day)
+);
+CREATE TABLE IF NOT EXISTS onboarding_template_courses (
+    template_id TEXT NOT NULL REFERENCES onboarding_templates(id) ON DELETE CASCADE,
+    course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    day INTEGER NOT NULL CHECK(day BETWEEN 1 AND 365),
+    mandatory INTEGER NOT NULL DEFAULT 1 CHECK(mandatory IN (0,1)),
+    position INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(template_id, course_id)
+);
+CREATE TABLE IF NOT EXISTS employee_onboarding (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    template_id TEXT REFERENCES onboarding_templates(id) ON DELETE SET NULL,
+    template_name TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    joining_date TEXT,
+    source TEXT NOT NULL CHECK(source IN ('automatic','manual')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','cancelled')),
+    started_by TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+    started_at TEXT NOT NULL,
+    cancelled_by TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+    cancelled_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS one_active_onboarding ON employee_onboarding(employee_id) WHERE status='active';
+CREATE INDEX IF NOT EXISTS employee_onboarding_employee ON employee_onboarding(employee_id);
+CREATE TABLE IF NOT EXISTS employee_onboarding_courses (
+    onboarding_id TEXT NOT NULL REFERENCES employee_onboarding(id) ON DELETE CASCADE,
+    course_id TEXT NOT NULL,
+    course_title TEXT NOT NULL,
+    day INTEGER NOT NULL,
+    milestone_title TEXT NOT NULL DEFAULT '',
+    mandatory INTEGER NOT NULL CHECK(mandatory IN (0,1)),
+    deadline_at TEXT,
+    assignment_id TEXT,
+    link TEXT NOT NULL CHECK(link IN ('created','existing','skipped')),
+    note TEXT NOT NULL DEFAULT '',
+    position INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(onboarding_id, course_id)
+);

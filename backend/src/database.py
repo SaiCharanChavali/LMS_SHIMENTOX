@@ -11,7 +11,7 @@ from deadlines import end_of_day
 
 BACKEND = Path(__file__).resolve().parents[1]
 COURSE_ID = 'python-programming'
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 # Columns added after a table first shipped (versions 4-6); added only where missing.
 ADDED_COLUMNS = [
     ('courses', 'format', "TEXT NOT NULL DEFAULT 'modules' CHECK(format IN ('modules','lessons'))"),
@@ -51,6 +51,8 @@ ADDED_COLUMNS = [
     ('course_assignments', 'deadline_updated_at', 'TEXT'),
     ('course_assignments', 'deadline_updated_by', 'TEXT REFERENCES candidates(id) ON DELETE SET NULL'),
     ('course_runs', 'deadline_at_completion', 'TEXT'),
+    # Version 10: the joining date that automatic onboarding counts its milestones from (YYYY-MM-DD).
+    ('candidates', 'joining_date', 'TEXT'),
 ]
 GENAI_COURSE = BACKEND / 'data/generative-ai-course.json'
 RAG_COURSE = BACKEND / 'data/rag-course.json'

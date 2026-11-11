@@ -24,6 +24,7 @@ from admin import admin_action, course_view, setup_initial_admin
 from development import MAX_MATERIAL_BYTES, catalog, course_video, course_extras, development_action, material_file, store_material
 import assistant
 import compliance
+import onboarding
 import keka
 
 PUBLIC = BACKEND.parent / 'frontend/public'
@@ -31,7 +32,7 @@ COOKIE = 'shimentox_session'
 # Holds the Keka sign-in state between leaving for Keka and coming back, for 10 minutes.
 KEKA_COOKIE = 'shimentox_keka'
 # Reported by /api/session so the browser can detect a server still running older code.
-API_VERSION = 13
+API_VERSION = 14
 
 
 class PortalServer(ThreadingHTTPServer):
@@ -404,8 +405,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
                     payload=assistant.status() if method=='GET' else assistant.ask(db,user,data)
                     db.commit()
                     return self.json_response(200,payload)
-                if method=='GET' and path=='/api/manage/compliance/export':
-                    download=compliance.export(db,user,query)
+                if method=='GET' and path in ('/api/manage/compliance/export','/api/manage/onboarding/export'):
+                    download=(compliance if 'compliance' in path else onboarding).export(db,user,query)
                     db.commit()
                     return self.download_response(*download)
                 if path.startswith('/api/manage/') or path.startswith('/api/me/'):

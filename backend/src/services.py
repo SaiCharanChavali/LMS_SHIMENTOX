@@ -58,6 +58,7 @@ PERMISSIONS = {
     'assessments.manage': {'admin', 'hr', 'trainer'},
     'sessions.manage': {'admin', 'hr', 'trainer'},
     'reports.view': {'admin', 'hr', 'manager', 'trainer'},
+    'onboarding.manage': {'admin', 'hr'},
     'audit.view': {'admin'},
 }
 
@@ -75,7 +76,8 @@ def candidate_view(row):
     return {'id': row['id'], 'name': row['full_name'], 'email': row['email'], 'createdAt': row['created_at'], 'role': row['role'], 'mustChangePassword': bool(row['must_change_password']), 'active': bool(row['is_active']),
             'departmentId': row['department_id'] if 'department_id' in keys else None, 'jobRoleId': row['job_role_id'] if 'job_role_id' in keys else None,
             'managerId': row['manager_id'] if 'manager_id' in keys else None, 'jobTitle': row['job_title'] if 'job_title' in keys else '',
-            'source': row['auth_source'] if 'auth_source' in keys else 'local', 'kekaEmployeeNumber': row['keka_employee_number'] if 'keka_employee_number' in keys else ''}
+            'source': row['auth_source'] if 'auth_source' in keys else 'local', 'kekaEmployeeNumber': row['keka_employee_number'] if 'keka_employee_number' in keys else '',
+            'joiningDate': row['joining_date'] if 'joining_date' in keys else None}
 
 
 def can_view_course(db, user, course):

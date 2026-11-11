@@ -66,10 +66,14 @@ def provision(db, actor, data):
     department,job_role,manager,title=org_fields(db,data)
     check(db.execute('SELECT 1 FROM candidates WHERE email=?',(email,)).fetchone() is None,'This email is already assigned.',409)
     identity,timestamp=uid(),now()
+    from onboarding import auto_start, date_value  # onboarding imports this module for the audit log
+    joining=date_value(data.get('joiningDate'),'Joining date')
     db.execute('INSERT INTO candidates(id,full_name,email,password_hash,created_at,updated_at,role,must_change_password,created_by,department_id,job_role_id,manager_id,job_title) VALUES (?,?,?,?,?,?,?,1,?,?,?,?,?)',(identity,name,email,password_hash(password),timestamp,timestamp,role,actor['id'],department,job_role,manager,title))
+    db.execute('UPDATE candidates SET joining_date=? WHERE id=?',(joining,identity))
     create_run(db,identity)
     audit(db,actor['id'],'employee_created',identity,f'{role}: {email}')
-    return candidate_view(db.execute('SELECT * FROM candidates WHERE id=?',(identity,)).fetchone())
+    onboarding=auto_start(db,actor,identity)
+    return candidate_view(db.execute('SELECT * FROM candidates WHERE id=?',(identity,)).fetchone()),onboarding
 
 
 def update_profile(db, actor, target, data):
@@ -78,6 +82,9 @@ def update_profile(db, actor, target, data):
     check(target['id']!=actor['id'] or role==target['role'],'You cannot change your own role.')
     department,job_role,manager,title=org_fields(db,data,target['id'])
     db.execute('UPDATE candidates SET full_name=?,role=?,department_id=?,job_role_id=?,manager_id=?,job_title=?,updated_at=? WHERE id=?',(name,role,department,job_role,manager,title,now(),target['id']))
+    if 'joiningDate' in data:  # Older clients that do not send it keep the stored date.
+        from onboarding import date_value
+        db.execute('UPDATE candidates SET joining_date=? WHERE id=?',(date_value(data.get('joiningDate'),'Joining date'),target['id']))
     audit(db,actor['id'],'employee_updated',target['id'],f'{role}: {target["email"]}')
     return candidate_view(db.execute('SELECT * FROM candidates WHERE id=?',(target['id'],)).fetchone())
 
@@ -421,7 +428,9 @@ def admin_action(db, actor, method, route, data):
         employees=db.execute("SELECT COUNT(*) FROM candidates WHERE role<>'admin'").fetchone()[0]
         return {'stats':{'employees':employees,'candidates':employees, 'courses':db.execute('SELECT COUNT(*) FROM courses').fetchone()[0], 'certificates':db.execute('SELECT COUNT(*) FROM certificates').fetchone()[0], 'exams':db.execute('SELECT COUNT(*) FROM exam_attempts').fetchone()[0]}}
     if method=='GET' and route=='candidates': require(actor,'users.manage');return {'candidates':candidate_list(db)}
-    if method=='POST' and route=='candidates': require(actor,'users.manage');return {'candidate':provision(db,actor,data)}
+    if method=='POST' and route=='candidates':
+        require(actor,'users.manage');candidate,onboarding=provision(db,actor,data)
+        return {'candidate':candidate,'onboarding':onboarding}
     if method=='GET' and route=='courses':
         require(actor,'courses.manage')
         return {'courses':course_list(db,actor)}

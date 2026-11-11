@@ -7,7 +7,7 @@ let currentCourseInfo={id:null,title:'',category:'Development'};
 let portalReady = false;
 let operationQueue = Promise.resolve();
 // Must match API_VERSION in backend/src/server.py. A mismatch means the server process predates these files.
-const EXPECTED_API_VERSION = 13;
+const EXPECTED_API_VERSION = 14;
 // Server time minus browser time. Countdowns use it, so a wrong computer clock cannot show a wrong time remaining.
 let serverClockOffset = 0;
 let serverOutdated = false;

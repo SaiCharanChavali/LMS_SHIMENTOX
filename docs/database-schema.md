@@ -58,6 +58,8 @@ The accounts table keeps its historical name, `candidates`, so existing referenc
 | `notifications` | In-app notifications, unique per employee and dedupe key |
 | `materials`, `course_resources` | Private uploaded files and course learning materials |
 | `assistant_usage` | AI assistant request timestamps for per-employee rate limits |
+| `onboarding_templates`, `onboarding_template_roles`, `onboarding_template_milestones`, `onboarding_template_courses` | Onboarding templates (version 10); see [onboarding.md](onboarding.md) |
+| `employee_onboarding`, `employee_onboarding_courses` | Each employee's onboarding and a snapshot of its courses and milestones (version 10) |
 
 ### Imported courses
 

@@ -16,6 +16,7 @@ from analytics import (LEVELS, UNITS, assignment_index, dashboard, employee_path
                        progress_index, recommendations, report, role_targets, skill_levels, today, training_progress)
 from notifications import announce
 import compliance
+import onboarding
 import course_generator
 import keka
 from database import BACKEND, MAX_EXAM_ATTEMPTS, VIDEO_ROOT, public_curriculum
@@ -1244,7 +1245,7 @@ def development_action(db, user, method, route, query, data):
     check(parts[0] == 'manage', f'Endpoint was not found: {method} /api/{route}', 404)
     check(user['role'] != 'employee', 'You do not have permission for this area.', 403)
     p = parts[1:]
-    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync', 'settings', 'run', 'history') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync', 'settings', 'run', 'history', 'templates', 'status', 'start', 'cancel') else '*' for i, x in enumerate(p)))
     handlers = {
         ('POST', 'announcements'): lambda: announce(db, user, data),
         ('GET', 'org'): lambda: org(db, user),
@@ -1259,6 +1260,13 @@ def development_action(db, user, method, route, query, data):
         ('POST', 'assignments/*/delete'): lambda: delete_assignment(db, user, p[1]),
         ('GET', 'deadlines'): lambda: course_deadlines(db, user, query),
         ('GET', 'compliance'): lambda: compliance.monitoring(db, user, query),
+        ('GET', 'onboarding'): lambda: onboarding.monitoring(db, user, query),
+        ('GET', 'onboarding/templates'): lambda: onboarding.templates_payload(db, user),
+        ('POST', 'onboarding/templates'): lambda: onboarding.save_template(db, user, data),
+        ('POST', 'onboarding/templates/*/status'): lambda: onboarding.set_status(db, user, p[2], data),
+        ('POST', 'onboarding/start'): lambda: onboarding.start_manual(db, user, data),
+        ('GET', 'onboarding/*'): lambda: onboarding.detail(db, user, p[1]),
+        ('POST', 'onboarding/*/cancel'): lambda: onboarding.cancel(db, user, p[1]),
         ('GET', 'reminders/settings'): lambda: reminder_settings_view(db, user),
         ('POST', 'reminders/settings'): lambda: save_reminder_settings(db, user, data),
         ('POST', 'reminders/run'): lambda: run_reminders(db, user),
@@ -1308,6 +1316,7 @@ def employee_action(db, user, method, p, query, data):
         ('POST', 'assessments/*/submit'): lambda: submit_assessment(db, user, p[1], data),
         ('POST', 'assessments/*/terminate'): lambda: terminate_assessment(db, user, p[1], data),
         ('GET', 'notifications'): lambda: my_notifications(db, user),
+        ('GET', 'onboarding'): lambda: onboarding.my_onboarding(db, user),
         ('GET', 'notifications/unread'): lambda: unread_count(db, user),
         ('POST', 'notifications/read'): lambda: read_notifications(db, user, data),
         ('GET', 'history'): lambda: my_history(db, user, query),

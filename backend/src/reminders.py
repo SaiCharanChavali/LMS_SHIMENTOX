@@ -193,6 +193,8 @@ def process_employee(db, employee, at=None):
             if due:
                 title, body = message(due[0].split('_')[0] if due[0].startswith('before_') else due[0], name, a, p, at)
                 counts[send(db, employee, course, a, due[0], due[1], title, body, at)] += 1
+    from onboarding import milestone_reminders  # imported here because onboarding imports this module
+    counts['sent'] += milestone_reminders(db, employee, at, progress, assigned)
     return counts
 
 
@@ -201,6 +203,16 @@ def announce_assignment(db, employee, course, name, assignment, title, at=None):
     at = at or datetime.now(timezone.utc)
     _, body = message('assigned', name, assignment, None, at)
     return send(db, employee, course, assignment, 'assigned', at, title, body, at)
+
+
+def record_announcement(db, employee, course, assignment, notification_id, at=None):
+    """Record that a notification sent elsewhere already announced this assignment (an onboarding plan announces all its
+    courses in one notice), so the next pass does not announce it again."""
+    at = at or datetime.now(timezone.utc)
+    stamp = utc_iso(at)
+    db.execute('''INSERT OR IGNORE INTO deadline_reminders(employee_id,assignment_id,course_id,reminder_type,deadline_at,scheduled_at,sent_at,status,attempts,notification_id,idempotency_key,created_at)
+        VALUES (?,?,?,'assigned',NULL,?,?,'sent',1,?,?,?)''', (employee, assignment['assignmentId'], course, stamp, stamp, notification_id,
+                                                            idempotency_key(employee, course, 'assigned', assignment['assignmentId']), stamp))
 
 
 def announce_change(db, employee, course, name, assignment, progress, at=None):

@@ -29,7 +29,7 @@ async function main() {
     assert.equal(options.credentials, 'same-origin');
     assert.equal(options.headers['X-Portal-Request'], '1');
     let status = 200, result;
-    if (path === 'session') result = { user: server.user, csrfToken: server.user ? 'csrf-test' : null,setupRequired:server.setupRequired,setupAllowed:true,apiVersion:server.apiVersion===undefined?13:server.apiVersion };
+    if (path === 'session') result = { user: server.user, csrfToken: server.user ? 'csrf-test' : null,setupRequired:server.setupRequired,setupAllowed:true,apiVersion:server.apiVersion===undefined?14:server.apiVersion };
     else if(path==='setup/admin'){server.user={id:'owner',name:data.name,email:data.email,role:'admin',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};server.setupRequired=false;result={user:server.user,csrfToken:'csrf-test'};}
     else if (path === 'auth/login') {
       if (server.failLogin) { status = 401; result = { error: 'Email or password is incorrect.' }; }
@@ -45,6 +45,13 @@ async function main() {
     else if(path==='manage/org')result={departments:[{id:'d1',name:'Engineering',employees:5}],jobRoles:[],categories:['Technical Skills'],skills:[{id:'s1',name:'Python'}],courses:[{id:'python-programming',title:'PYTHON PROGRAMMING',status:'published'}],trainers:[],managers:[],levels:[]};
     else if(path==='manage/people')result={people:[]};
     else if(path==='manage/assessments')result={assessments:[]};
+    else if(path==='me/onboarding')result={onboarding:server.onboarding===undefined?null:server.onboarding};
+    else if(path==='manage/onboarding/templates')result={templates:[{id:'t1',name:'Engineering <x>',description:'',status:'active',departmentId:'d1',department:'Engineering',jobRoleIds:[],jobRoles:[],milestones:[{day:1,title:'Day 1'},{day:30,title:'Day 30'}],courses:[{courseId:'c1',title:'Welcome',day:1,mandatory:true,published:true}],mandatoryCount:1,onboardingsActive:2,onboardingsTotal:3,updatedAt:'2026-11-01T00:00:00Z',updatedBy:'Admin',warnings:['"Old course" is not published, so it will be skipped.']}],options:{departments:[['d1','Engineering']],jobRoles:[['r1','Developer']],courses:[['c1','Welcome']]}};
+    else if(path.startsWith('manage/onboarding/o1'))result={onboarding:{...server.plan,employee:'Asha',email:'asha@shimentox.com',department:'Engineering',jobRole:'Developer',manager:'Mani'}};
+    else if(path.startsWith('manage/onboarding'))result={scope:'organisation',canManage:server.user?.role!=='manager',filters:{},summary:{onboarding:2,completed:1,pendingEmployees:2,overdueMandatory:1,overdueEmployees:1,averagePercent:58},
+      departments:[{id:'d1',name:'Engineering',employees:3,completed:1,overdue:1,averagePercent:58}],jobRoles:[{id:'__none__',name:'Unassigned',employees:3,completed:1,overdue:1,averagePercent:58}],
+      table:{rows:[{onboardingId:'o1',employeeId:'e1',employee:'Asha <b>',email:'asha@shimentox.com',department:'Engineering',jobRole:'Developer',template:'Engineering',joiningDate:'2026-11-01',startDate:'2026-11-01',status:'overdue',statusLabel:'Overdue',percent:50,mandatoryDone:1,mandatoryTotal:2,overdueMandatory:1,pendingMandatory:1,optionalDone:0,optionalTotal:1,nextMilestone:{title:'Day 30',date:'2026-11-30',state:'upcoming'},completedAt:null}],total:1,page:1,pages:1},
+      options:{departments:[['d1','Engineering']],jobRoles:[['__none__','Unassigned']]},needsOnboarding:{rows:[{employeeId:'e9',employee:'Nora',email:'nora@shimentox.com',department:'Marketing',jobRole:'Unassigned',joiningDate:'2020-01-01',defaultStartDate:'2026-11-11',templateId:null,template:null,reason:'no_template'}],total:1,page:1,pages:1},templates:[['t1','Engineering']]};
     else if(path.startsWith('manage/compliance'))result={scope:server.user?.role==='manager'?'team':'organisation',timezone:'IST',updatedDisplay:'5 November 2026, 11:00 AM',filters:{},summary:{total:5,completed:1,completedOnTime:1,completedLate:0,inProgress:2,notStarted:1,overdue:1,completionRate:20},
       departments:[{department:'Finance',total:4,completed:1,pending:3,overdue:0,completionRate:25},{department:'Sales <b>',total:1,completed:0,pending:0,overdue:1,completionRate:0}],
       table:{rows:[{employee:'Asha <i>',employeeId:'11111111-2222-3333-4444-555555555555',email:'asha@shimentox.com',department:'Finance',jobRole:'Analyst',courseId:'c1',course:'Security',mandatory:true,assignedDate:'2026-05-01',assignedDisplay:'1 May 2026, 9:00 AM',deadlineDate:'2026-06-01',deadlineDisplay:'1 June 2026, 9:00 AM',originalDeadlineDisplay:'1 June 2026, 9:00 AM',completedDate:null,completedDisplay:null,lastActivityDisplay:null,progress:40,status:'in_progress',statusLabel:'In Progress',dueSoon:true}],total:5,page:1,pages:2},
@@ -96,7 +103,7 @@ async function main() {
   };
   vm.createContext(context);
   const run = code => vm.runInContext(code, context);
-  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
+  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'onboarding.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(app.innerHTML.includes('id="login-form"'));
   // Sign in with Keka account: a link to the server's Keka start route, and a clear message when Keka sign-in fails.
@@ -390,6 +397,33 @@ async function main() {
   run('compliance=COMPLIANCE_DEFAULTS()');
   for(const [role,visible] of [['hr',true],['manager',true],['trainer',false],['employee',false]]){context.roleUser={...testAdmin,role};run('currentUser=roleUser');assert.equal(run("portalNavigation().some(n=>n[0]==='compliance')"),visible,role);assert.equal(run("resolvePage('compliance')")==='compliance',visible,role);}
   context.adminUser={...testAdmin};run('currentUser=adminUser');
+  // Onboarding: the employee's plan in My Learning and on the dashboard, and the HR and manager pages.
+  const plan={id:'o1',template:'Engineering',status:'in_progress',statusLabel:'In progress',percent:50,mandatoryDone:1,mandatoryTotal:2,optionalDone:0,optionalTotal:1,overdueMandatory:0,startDate:'2026-11-01',startedAt:'2026-11-01T05:00:00Z',source:'automatic',completedDisplay:null,
+    nextMilestone:{day:30,title:'Day 30',date:'2026-11-30',state:'upcoming',mandatoryTotal:1,mandatoryDone:0},milestones:[{day:1,title:'Day 1',date:'2026-11-01',deadlineDisplay:'1 November 2026, 11:59 PM',state:'completed',mandatoryTotal:1,mandatoryDone:1},{day:30,title:'Day 30 <i>',date:'2026-11-30',deadlineDisplay:'30 November 2026, 11:59 PM',state:'upcoming',mandatoryTotal:1,mandatoryDone:0}],
+    courses:[{courseId:'python-programming',title:'Welcome <s>',day:1,mandatory:true,link:'created',note:'',status:'completed_on_time',statusLabel:'Completed On Time',progress:100,completed:true,deadlineDisplay:'1 November 2026, 11:59 PM',dueSoon:false,assessment:{label:'3 of 3 module exams passed',passed:true}},
+      {courseId:'c2',title:'Security',day:30,mandatory:true,link:'existing',note:'Already assigned',status:'in_progress',statusLabel:'In Progress',progress:40,completed:false,deadlineDisplay:'30 November 2026, 11:59 PM',dueSoon:true,assessment:null},
+      {courseId:'c3',title:'Extras',day:30,mandatory:false,link:'created',note:'',status:'not_started',statusLabel:'Not Started',progress:0,completed:false,deadlineDisplay:null,dueSoon:false,assessment:null}]};
+  server.plan=plan;server.onboarding=plan;
+  context.learnerUser={...testAdmin,role:'employee'};run('currentUser=learnerUser;pageCache={}');
+  context.location.hash='#courses';run('render()');await settle();
+  for(const text of ['Your onboarding: Engineering','50%','1 of 2 mandatory courses','0 of 1 optional','Day 30 &lt;i&gt;','Welcome &lt;s&gt;','3 of 3 module exams passed','Already assigned to you','Due Soon','No deadline','data-open-course="python-programming"'])assert.ok(app.innerHTML.includes(text),text);
+  assert.ok(!app.innerHTML.includes('Welcome <s>'));
+  context.location.hash='#dashboard';run('pageCache={};render()');await settle();
+  assert.ok(app.innerHTML.includes('Your onboarding: Engineering')&&app.innerHTML.includes('Open in My Learning'),'A compact plan on My Dashboard.');
+  server.onboarding=null;run('pageCache={}');context.location.hash='#courses';run('render()');await settle();
+  assert.ok(!app.innerHTML.includes('Your onboarding'),'Nothing is shown without onboarding.');
+  run('currentUser=adminUser;pageCache={}');context.location.hash='#onboarding';run('render()');await settle();
+  for(const text of ['Employee Onboarding','Currently onboarding','Overdue mandatory courses','58%','Progress by department','Asha &lt;b&gt;','1 of 2 mandatory','Day 30','Needs onboarding','Templates','data-act="onb-export"'])assert.ok(app.innerHTML.includes(text),text);
+  run(`onb.open='o1';render()`);await settle();assert.ok(app.innerHTML.includes('Cancel onboarding')&&app.innerHTML.includes('Started automatically'));
+  run(`onb.tab='waiting';onb.open=null;render()`);await settle();assert.ok(app.innerHTML.includes('No matching template')&&app.innerHTML.includes('value="2026-11-11"'));
+  run(`onb.tab='templates';render()`);await settle();assert.ok(app.innerHTML.includes('Engineering &lt;x&gt;')&&app.innerHTML.includes('is not published')&&app.innerHTML.includes('+ New template'));
+  run(`ACTIONS['onb-template-new']()`);assert.ok(app.innerHTML.includes('New onboarding template')&&app.innerHTML.includes('Save and activate'));
+  run(`ACTIONS['onb-milestone-presets']()`);assert.ok(['Day 60','Day 90'].every(t=>app.innerHTML.includes(t)));
+  run(`onb=onbDefaults()`);
+  for(const [role,visible,label] of [['hr',true,'Onboarding'],['manager',true,'Team Onboarding'],['trainer',false],['employee',false]]){context.roleUser={...testAdmin,role};run('currentUser=roleUser');assert.equal(run("portalNavigation().some(n=>n[0]==='onboarding')"),visible,role);if(label)assert.equal(run("portalNavigation().find(n=>n[0]==='onboarding')[2]"),label);}
+  context.roleUser={...testAdmin,role:'manager'};run('currentUser=roleUser;pageCache={}');context.location.hash='#onboarding';run('render()');await settle();
+  assert.ok(app.innerHTML.includes('Team Onboarding')&&!app.innerHTML.includes('Needs onboarding')&&!app.innerHTML.includes('Cancel onboarding'));
+  context.adminUser={...testAdmin};run('currentUser=adminUser;pageCache={}');
   const csv=run(`toCSV([{key:'a',label:'Name'},{key:'b',label:'Note'}],[{a:'=SUM(A1)',b:'Hello, "team"'}])`);
   assert.equal(csv.split('\r\n')[1],`'=SUM(A1),"Hello, ""team"""`);
   // Learning paths, skills and goals were removed from the admin screens as well.
@@ -403,7 +437,7 @@ async function main() {
   context.location.hash='#calendar';run('render()');assert.ok(app.innerHTML.includes('older version of the portal')&&app.innerHTML.includes('npm start'));
   context.empUser={id:'employee-one',name:'Sai Charan',email:'sai@shimentox.com',role:'employee',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};run('currentUser=empUser');run('render()');
   assert.ok(app.innerHTML.includes('browser and server versions do not match')&&!app.innerHTML.includes('npm start'));
-  server.apiVersion=13;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
+  server.apiVersion=14;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
   console.log('PASS outdated-server detection with role-appropriate guidance');
   for (let i = 1; i <= 6; i++) {
     assert.ok(fs.statSync(__dirname + `/../public/assets/videos/lesson-${i}.webm`).size > 1000);

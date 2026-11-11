@@ -561,3 +561,36 @@ th[aria-sort=ascending] .sort-head span,th[aria-sort=descending] .sort-head span
 .onb-editor-actions{margin-top:18px}
 @media(max-width:1100px){.onb-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.onb-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.onb-summary{grid-template-columns:1fr}.onb-kpis,.onb-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.onb-course{grid-template-columns:1fr}.onb-course-row,.onb-row{grid-template-columns:1fr}}
+/* Courses page: company learning catalogue */
+.course-intro h1{margin-bottom:6px}
+.course-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:4px 0 22px}
+.course-toolbar .search{flex:1 1 260px;margin:0}
+.course-level{height:40px;min-width:150px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#fff;color:var(--ink);font:inherit;font-size:12px}
+.course-toolbar .btn{display:inline-flex;align-items:center;gap:7px}
+.course-toolbar .btn .ico svg{width:15px;height:15px}
+.course-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;align-items:stretch}
+.course-card{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.course-card:hover{transform:translateY(-3px);border-color:#e5c867;box-shadow:0 10px 24px #2632380f}
+.course-cover{position:relative;aspect-ratio:2/1;background:#fff6dc;overflow:hidden}
+.course-cover-art{display:block;width:100%;height:100%;padding:0;border:0;background:none;cursor:pointer}
+.course-cover-art svg{display:block;width:100%;height:100%;transition:transform .35s ease}
+.course-card:hover .course-cover-art svg{transform:scale(1.04)}
+.course-badge{position:absolute;left:12px;top:12px;max-width:calc(100% - 110px);padding:4px 9px;border-radius:6px;background:#fff;color:#795600;font-size:10px;font-weight:700;box-shadow:0 1px 3px #26323814;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.course-flag{position:absolute;right:12px;top:12px;padding:4px 9px;border-radius:6px;background:#f4f5f4;color:#5f716c;font-size:10px;font-weight:700;pointer-events:none}
+.course-flag.mandatory{background:#263238;color:#fbc02d}
+.course-card-body{display:flex;flex-direction:column;flex:1;gap:10px;padding:16px}
+.course-card-body h3{margin:0;font-size:15px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em;overflow-wrap:anywhere}
+.course-card-desc{margin:0;color:var(--muted);font-size:12px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:4.8em}
+.course-facts{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;margin:0;padding:0;font-size:11px;color:#5f716c}
+.course-facts li{display:inline-flex;align-items:center;gap:5px}
+.course-facts .ico svg{width:13px;height:13px;color:#b78a00}
+.course-card .deadline-box{margin:0}
+.course-assigned{margin:-4px 0 0;font-size:11px}
+.course-card-progress{margin-top:auto}
+.course-card-progress .progress-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.course-card-progress .tag{font-size:9px}
+.course-card-action{align-self:stretch;justify-content:center;display:inline-flex;align-items:center;gap:8px}
+@media(max-width:1300px){.course-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1000px){.course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.course-grid{grid-template-columns:1fr}.course-toolbar .btn{flex:1}}
+@media(prefers-reduced-motion:reduce){.course-card,.course-cover-art svg{transition:none}.course-card:hover,.course-card:hover .course-cover-art svg{transform:none}}

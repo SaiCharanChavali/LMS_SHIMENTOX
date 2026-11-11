@@ -103,6 +103,15 @@ class DevelopmentTests(PortalFixture):
         with self.assertRaises(OSError):
             PortalServer(('127.0.0.1', self.server.server_port), PortalHandler, self.db_path).server_close()
 
+    def test_catalog_counts_each_courses_assessments(self):
+        cards = {c['id']: c for c in self.admin.request('courses')[1]['courses']}
+        self.assertEqual(cards['python-programming']['assessmentCount'], 3, 'The 3-module course has three module exams.')
+        with closing(connect(self.db_path)) as db:
+            for identity, card in cards.items():
+                expected = db.execute("SELECT COUNT(*) FROM assessments WHERE course_id=? AND status='published'", (identity,)).fetchone()[0] \
+                    + db.execute('SELECT COUNT(*) FROM course_checkpoints WHERE course_id=?', (identity,)).fetchone()[0] + (3 if card['format'] != 'lessons' else 0)
+                self.assertEqual(card['assessmentCount'], expected, card['title'])
+
     def test_session_reports_api_version_and_unknown_endpoints_are_named(self):
         self.assertEqual(Client(self.base).request('session')[1]['apiVersion'], 14)
         employee = self.account(name='Route Checker')

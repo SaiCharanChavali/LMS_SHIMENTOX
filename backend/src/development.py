@@ -1021,6 +1021,10 @@ def catalog(db, user):
     """Published catalog with the employee's own progress and assignment details."""
     progress, assigned = progress_index(db, [user['id']]), assignment_index(db, [user['id']])
     lesson_counts = {r[0]: r[1] for r in db.execute('SELECT course_id,COUNT(*) FROM course_lessons GROUP BY course_id')}
+    # Assessments an employee takes in a course: its published assessments (lesson knowledge checks and the final one),
+    # its timed checkpoints, and the three module exams of a 3-module course.
+    assessment_counts = {r[0]: r[1] for r in db.execute("SELECT course_id,COUNT(*) FROM assessments WHERE course_id IS NOT NULL AND status='published' GROUP BY course_id")}
+    checkpoint_counts = {r[0]: r[1] for r in db.execute('SELECT course_id,COUNT(*) FROM course_checkpoints GROUP BY course_id')}
     soon = reminders.due_soon_seconds(db)
     items = []
     for row in db.execute("SELECT * FROM courses WHERE status='published' ORDER BY title"):
@@ -1029,7 +1033,8 @@ def catalog(db, user):
             continue
         item = course_view(row, False, db)
         item.update({'progress': p['progress'] if p else 0, 'enrolled': p is not None, 'started': bool(p and p['started']), 'completed': bool(p and p['completed']), 'lastActivity': p['lastActivity'] if p else '',
-                     'assignment': a, 'status': pair_status(p, a), 'deadline': deadline_view(p, a, soon), 'lessonCount': lesson_counts.get(row['id'], 0)})
+                     'assignment': a, 'status': pair_status(p, a), 'deadline': deadline_view(p, a, soon), 'lessonCount': lesson_counts.get(row['id'], 0),
+                     'assessmentCount': assessment_counts.get(row['id'], 0) + checkpoint_counts.get(row['id'], 0) + (3 if row['format'] != 'lessons' else 0)})
         items.append(item)
     return items
 

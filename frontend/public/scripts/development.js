@@ -12,9 +12,9 @@ let deadlineCourseId='',reminderPanelOpen=false;
 const can=permission=>Boolean(currentUser&&PERMS[permission]?.includes(currentUser.role));
 const isLearner=()=>Boolean(currentUser);
 let pageCache={},devMessage='',devFilters={dashboard:{},report:{type:'enrollments',page:1}},notificationState={items:[],unread:0,open:false};
-let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,historyPage=1,courseFilter='all',courseArea='all',courseSearch='',assistantAnswer=null;
+let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,historyPage=1,courseFilter='all',courseArea='all',courseDifficulty='all',courseSearch='',assistantAnswer=null;
 
-function resetDevelopment(){selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;historyPage=1;courseFilter='all';courseArea='all';courseSearch='';}
+function resetDevelopment(){selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;historyPage=1;courseFilter='all';courseArea='all';courseDifficulty='all';courseSearch='';}
 function loadData(key,path){
   if(pageCache[key])return pageCache[key];
   pageCache[key]={loading:true};
@@ -903,6 +903,7 @@ const SUBMITS={
 };
 const CHANGES={
   'deadline-course':el=>{deadlineCourseId=el.value;render();},
+  'course-difficulty':el=>{courseDifficulty=el.value;render();},
   'compliance-size':el=>{compliance.size=Number(el.value);complianceFirstPage();},
   'target-type':el=>{const target=document.getElementById(el.dataset.target);if(target)target.innerHTML=options(targetChoices(el.value),'','Select…');},
   attendance:async el=>{try{const data=await api(`manage/sessions/${el.dataset.session}/attendance`,{employeeId:el.dataset.employee,attended:el.checked});pageCache['roster:'+el.dataset.session]={data};render();}catch(error){toast(error.message);el.checked=!el.checked;}},

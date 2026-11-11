@@ -193,6 +193,13 @@ async function main() {
   assert.deepEqual(headings,['Technical','Non-Technical &amp; Professional Development','Compliance &amp; Security'],'All Courses is grouped; empty categories are left out.');
   assert.ok(app.innerHTML.includes('title="Cybersecurity and Data Protection">Compliance &amp; Security</span>')&&app.innerHTML.includes('title="Professional Development">Professional Development</span>'),'Badges show the learning area.');
   assert.ok(app.innerHTML.includes('Continue learning')&&app.innerHTML.includes('data-open-course="data-privacy-protection"'),'Progress and Start/Continue buttons are kept.');
+  // Corporate catalogue cards: area illustration, facts from the API, status, next step, and no marketplace content.
+  assert.ok(app.innerHTML.includes('Courses &amp; Programs')&&app.innerHTML.includes('Explore company learning resources'));
+  assert.ok(app.innerHTML.includes('class="course-card area-technical"')&&app.innerHTML.includes('<svg viewBox="0 0 400 200"'),'Each card has its area illustration.');
+  assert.ok(['class="course-facts"','Beginner','data-change="course-difficulty"','href="#assessments"','href="#history"'].every(t=>app.innerHTML.includes(t)));
+  assert.ok(!/\$\s?\d|₹|price|discount|buy now|add to cart|subscribe/i.test(app.innerHTML.replace(/\$\{/g,'')),'No pricing or purchase wording.');
+  run(`CHANGES['course-difficulty']({value:'expert'})`);assert.ok(app.innerHTML.includes('No courses in this view'),'The difficulty filter narrows the catalogue.');
+  run(`CHANGES['course-difficulty']({value:'all'})`);assert.ok(app.innerHTML.includes('data-course-card='));
   run(`ACTIONS['course-area']({dataset:{value:'technical'}})`);
   assert.ok(['Generative AI Fundamentals','Python Programming Senior','Java Full Stack Development'].every(t=>app.innerHTML.includes(t))&&!app.innerHTML.includes('>POSH<')&&!app.innerHTML.includes('>Agile and Scrum<'));
   run(`ACTIONS['course-filter']({dataset:{value:'in_progress'}})`);

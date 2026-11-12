@@ -22,6 +22,7 @@ from security import token, token_hash, password_hash, verify_password
 from services import APIError, can_view_course, authenticate, auth_event, bundle, candidate_view, candidate_certificates, set_certificate_sharing, check, current_run, create_run, expire_exams, learning_action, records, text, now
 from admin import admin_action, course_view, setup_initial_admin
 from development import MAX_MATERIAL_BYTES, catalog, course_video, course_extras, development_action, material_file, store_material
+import activity
 import assistant
 import compliance
 import onboarding
@@ -32,7 +33,7 @@ COOKIE = 'shimentox_session'
 # Holds the Keka sign-in state between leaving for Keka and coming back, for 10 minutes.
 KEKA_COOKIE = 'shimentox_keka'
 # Reported by /api/session so the browser can detect a server still running older code.
-API_VERSION = 14
+API_VERSION = 15
 
 
 class PortalServer(ThreadingHTTPServer):
@@ -440,6 +441,9 @@ class PortalHandler(SimpleHTTPRequestHandler):
                     # Department-only courses: employees who already started keep access if visibility later changes.
                     check(run is not None or can_view_course(db,user,course),'This course is not published or is unavailable.',404)
                     if not run:create_run(db,candidate,identity)
+                    # Only an employee opening the course page counts; loading the last course in the background at sign-in does not.
+                    if data.get('open') is True:
+                        activity.course_opened(db,candidate,db.execute('SELECT * FROM course_runs WHERE candidate_id=? AND course_id=? AND archived_at IS NULL',(candidate,identity)).fetchone())
                     payload={'learning':bundle(db,candidate,identity)}
                 elif method == 'GET' and path == '/api/learning':
                     identity=parse_qs(urlsplit(self.path).query).get('courseId',['python-programming'])[0]

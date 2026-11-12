@@ -15,6 +15,7 @@ from admin import audit, course_view, media_reference, owns_course
 from analytics import (UNITS, assignment_index, dashboard, local_now, pair_status, pending_assessments,
                        progress_index, recommendations, report, today, training_progress)
 from notifications import announce
+import activity
 import compliance
 import onboarding
 import games
@@ -667,6 +668,7 @@ def start_assessment(db, user, identity):
     attempt = uid()
     db.execute('INSERT INTO assessment_attempts(id,assessment_id,employee_id,attempt_number,question_ids_json,option_orders_json,status,started_at,deadline,total) VALUES (?,?,?,?,?,?,?,?,?,?)',
                (attempt, identity, user['id'], used + 1, json.dumps(chosen), json.dumps(orders), 'in-progress', now(), time.time() + a['time_limit_minutes'] * 60, len(chosen)))
+    activity.attempt_started(db, user['id'], 'assessment', attempt, course=a['course_id'], assessment=identity, title=a['title'], number=used + 1)
     return {'attempt': active_attempt_view(db, db.execute('SELECT * FROM assessment_attempts WHERE id=?', (attempt,)).fetchone())}
 
 
@@ -702,6 +704,8 @@ def submit_assessment(db, user, identity, data):
     percent = round(score / len(questions) * 100)
     status = 'passed' if percent >= a['pass_percent'] else 'failed'
     db.execute('UPDATE assessment_attempts SET status=?,score=?,percent=?,answers_json=?,finished_at=? WHERE id=?', (status, score, percent, json.dumps(answers), now(), attempt['id']))
+    activity.attempt_finished(db, user['id'], 'assessment', attempt['id'], status, score=score, total=len(questions), percent=percent, pass_percent=a['pass_percent'],
+                              course=a['course_id'], assessment=identity, title=a['title'], number=attempt['attempt_number'])
     if status == 'passed' and a['kind'] == 'post' and a['course_id']:
         run = db.execute('SELECT id FROM course_runs WHERE candidate_id=? AND course_id=? AND archived_at IS NULL', (user['id'], a['course_id'])).fetchone()
         if run:
@@ -1020,8 +1024,22 @@ def history_items(db, employee):
 
 
 def my_history(db, user, query):
+    """The employee's own learning activity timeline (filtered and paginated on the server), attended sessions and self-reported records."""
     records = [dict(r) for r in db.execute('SELECT id,title,provider,completed_on AS completedOn,hours FROM development_records WHERE employee_id=? ORDER BY completed_on DESC', (user['id'],))]
-    return {'records': records, **pages(history_items(db, user['id']), query, 20)}
+    sessions = [{'title': r['title'], 'at': r['starts_at']} for r in db.execute(
+        "SELECT s.title,s.starts_at FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.employee_id=? AND g.status='attended' ORDER BY s.starts_at DESC", (user['id'],))]
+    return {'records': records, 'sessions': sessions, **activity.my_activity(db, user, query)}
+
+
+def open_resource(db, user, identity):
+    """Record that an employee opened a course learning material, then hand back its address."""
+    resource = db.execute('SELECT * FROM course_resources WHERE id=?', (identity,)).fetchone()
+    check(resource is not None, 'Learning material was not found.', 404)
+    course = db.execute('SELECT * FROM courses WHERE id=?', (resource['course_id'],)).fetchone()
+    enrolled = db.execute('SELECT 1 FROM course_runs WHERE candidate_id=? AND course_id=?', (user['id'], resource['course_id'])).fetchone() is not None
+    check(course is not None and (enrolled or can_view_course(db, user, course)), 'Learning material was not found.', 404)
+    activity.resource_accessed(db, user['id'], resource)
+    return {'url': resource['url']}
 
 
 def save_record(db, user, data):
@@ -1071,7 +1089,7 @@ def development_action(db, user, method, route, query, data):
     check(parts[0] == 'manage', f'Endpoint was not found: {method} /api/{route}', 404)
     check(user['role'] != 'employee', 'You do not have permission for this area.', 403)
     p = parts[1:]
-    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync', 'settings', 'run', 'history', 'templates', 'status', 'start', 'cancel') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync', 'settings', 'run', 'history', 'templates', 'status', 'start', 'cancel', 'analytics', 'employees') else '*' for i, x in enumerate(p)))
     handlers = {
         ('POST', 'announcements'): lambda: announce(db, user, data),
         ('GET', 'org'): lambda: org(db, user),
@@ -1081,6 +1099,9 @@ def development_action(db, user, method, route, query, data):
         ('GET', 'people'): lambda: people(db, user),
         ('GET', 'dashboard'): lambda: (require(user, 'reports.view'), dashboard(db, user, query))[1],
         ('GET', 'reports'): lambda: (require(user, 'reports.view'), report(db, user, query))[1],
+        ('GET', 'activity'): lambda: (require(user, 'activity.view'), activity.staff_activity(db, user, query))[1],
+        ('GET', 'activity/analytics'): lambda: (require(user, 'activity.view'), activity.analytics(db, user, query))[1],
+        ('GET', 'activity/employees/*'): lambda: (require(user, 'activity.view'), activity.employee_activity(db, user, p[2], query))[1],
         ('GET', 'assignments'): lambda: (check(allowed(user, 'courses.assign') or allowed(user, 'courses.manage'), 'You do not have permission to view assignments.', 403), {'assignments': assignment_rows(db, user, query.get('courseId', [None])[0])})[1],
         ('POST', 'assignments'): lambda: create_assignment(db, user, data),
         ('POST', 'assignments/*/delete'): lambda: delete_assignment(db, user, p[1]),
@@ -1119,7 +1140,7 @@ def development_action(db, user, method, route, query, data):
 
 
 def employee_action(db, user, method, p, query, data):
-    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read', 'unread') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read', 'unread', 'open') else '*' for i, x in enumerate(p)))
     handlers = {
         ('GET', 'dashboard'): lambda: my_dashboard(db, user),
         ('GET', 'calendar'): lambda: my_calendar(db, user),
@@ -1134,6 +1155,7 @@ def employee_action(db, user, method, p, query, data):
         ('GET', 'notifications/unread'): lambda: unread_count(db, user),
         ('POST', 'notifications/read'): lambda: read_notifications(db, user, data),
         ('GET', 'history'): lambda: my_history(db, user, query),
+        ('POST', 'resources/*/open'): lambda: open_resource(db, user, p[1]),
         ('POST', 'records'): lambda: save_record(db, user, data),
         ('GET', 'games'): lambda: games.lesson_games(db, user, query),
     }

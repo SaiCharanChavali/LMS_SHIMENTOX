@@ -519,3 +519,25 @@ CREATE TABLE IF NOT EXISTS employee_onboarding_courses (
     position INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY(onboarding_id, course_id)
 );
+-- Learning activity history (version 11): one append-only row per meaningful learning event, written by the server.
+-- Rows are never updated or deleted by learning workflows. Related courses, lessons and assessments may later be removed,
+-- so those links become NULL and the metadata keeps the titles in force when the event happened. dedupe_key makes a
+-- retried request harmless: the same event for the same employee is stored once. Answers and answer keys are never stored.
+CREATE TABLE IF NOT EXISTS learning_activity_logs (
+    id TEXT PRIMARY KEY,
+    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    course_id TEXT REFERENCES courses(id) ON DELETE SET NULL,
+    lesson_id TEXT REFERENCES course_lessons(id) ON DELETE SET NULL,
+    assessment_id TEXT REFERENCES assessments(id) ON DELETE SET NULL,
+    run_id TEXT REFERENCES course_runs(id) ON DELETE SET NULL,
+    activity_type TEXT NOT NULL CHECK(length(activity_type) BETWEEN 3 AND 40),
+    activity_timestamp TEXT NOT NULL,
+    metadata TEXT NOT NULL DEFAULT '{}',
+    dedupe_key TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(employee_id, dedupe_key)
+);
+CREATE INDEX IF NOT EXISTS learning_activity_employee ON learning_activity_logs(employee_id, activity_timestamp);
+CREATE INDEX IF NOT EXISTS learning_activity_course ON learning_activity_logs(course_id, activity_type);
+CREATE INDEX IF NOT EXISTS learning_activity_type ON learning_activity_logs(activity_type, activity_timestamp);
+CREATE INDEX IF NOT EXISTS learning_activity_timestamp ON learning_activity_logs(activity_timestamp);

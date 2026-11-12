@@ -29,7 +29,7 @@ async function main() {
     assert.equal(options.credentials, 'same-origin');
     assert.equal(options.headers['X-Portal-Request'], '1');
     let status = 200, result;
-    if (path === 'session') result = { user: server.user, csrfToken: server.user ? 'csrf-test' : null,setupRequired:server.setupRequired,setupAllowed:true,apiVersion:server.apiVersion===undefined?14:server.apiVersion };
+    if (path === 'session') result = { user: server.user, csrfToken: server.user ? 'csrf-test' : null,setupRequired:server.setupRequired,setupAllowed:true,apiVersion:server.apiVersion===undefined?15:server.apiVersion };
     else if(path==='setup/admin'){server.user={id:'owner',name:data.name,email:data.email,role:'admin',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};server.setupRequired=false;result={user:server.user,csrfToken:'csrf-test'};}
     else if (path === 'auth/login') {
       if (server.failLogin) { status = 401; result = { error: 'Email or password is incorrect.' }; }
@@ -57,6 +57,19 @@ async function main() {
       table:{rows:[{employee:'Asha <i>',employeeId:'11111111-2222-3333-4444-555555555555',email:'asha@shimentox.com',department:'Finance',jobRole:'Analyst',courseId:'c1',course:'Security',mandatory:true,assignedDate:'2026-05-01',assignedDisplay:'1 May 2026, 9:00 AM',deadlineDate:'2026-06-01',deadlineDisplay:'1 June 2026, 9:00 AM',originalDeadlineDisplay:'1 June 2026, 9:00 AM',completedDate:null,completedDisplay:null,lastActivityDisplay:null,progress:40,status:'in_progress',statusLabel:'In Progress',dueSoon:true}],total:5,page:1,pages:2},
       overdue:{rows:[{employee:'Esha Rao',employeeId:'emp-2',department:'Sales',jobRole:'Unassigned',course:'Privacy',mandatory:true,originalDeadlineAt:'a',deadlineAt:'b',originalDeadlineDisplay:'1 April 2026, 9:00 AM',deadlineDisplay:'1 May 2026, 9:00 AM',overdueBy:'3 days, 2 hours',progress:10,lastActivityDisplay:null,status:'overdue'}],total:1,page:1,pages:1,mandatory:1},
       options:{employees:[['emp-1','Asha'],['emp-2','Esha']],departments:[['d1','Finance']],courses:[['c1','Security']],jobRoles:[['__none__','Unassigned']]}};
+    else if(path.startsWith('me/history')){const item=(id,type,label,group,extra={})=>({id,type,label,group,at:'2026-11-10T09:30:00.000Z',courseId:'c1',course:'Security <b>',lesson:null,subject:'Security <b>',status:null,detail:'',percent:null,backfilled:false,...extra});
+      result={records:[],sessions:[{title:'Workshop',at:'2026-11-01T10:00:00Z'}],total:server.historyTotal??3,page:Number((path.match(/page=(\d+)/)||[])[1]||1),pages:server.historyTotal>20?2:1,filters:{},courses:[{id:'c1',title:'Security <b>'}],types:[['course_opened','Course opened'],['assessment_passed','Assessment passed']],
+        items:server.historyTotal===0?[]:[item('a1','assessment_passed','Assessment passed','assessment',{subject:'Module 1 exam',status:'passed',detail:'Module exam · 100% · pass mark 75%',percent:100}),item('a2','lesson_completed','Lesson completed','lesson',{subject:'Phishing basics',lesson:'Phishing basics',status:'completed'}),item('a3','course_started','Course started','course',{status:'in_progress',backfilled:true})]};}
+    else if(path.startsWith('manage/activity/analytics'))result={period:{from:'2026-08-14',to:'2026-11-11',inactiveDays:30,department:null},scope:'organisation',mostAccessed:[{courseId:'c1',course:'Security <b>',learners:4,visits:9}],mostCompleted:[{courseId:'c1',course:'Security <b>',learners:2}],
+      abandonment:[{courseId:'c1',course:'Security <b>',started:4,completed:2,inProgress:1,abandoned:1,rate:25}],lessonPatterns:[{course:'Security <b>',lesson:'Intro',started:4,completed:3,rate:75}],completionsByWeekday:[0,3,1,0,2,0,0],
+      attemptRates:[{courseId:'c1',course:'Security <b>',accessed:4,attempted:2,rate:50}],assessmentResults:[{assessment:'Module 1 exam',kind:'Module exam',course:'Security <b>',passed:3,failed:1,passRate:75}],
+      inactive:[{employeeId:'e9',employee:'Nora <i>',department:'Sales',lastActivity:null}],inactiveTotal:1,departments:[{department:'Sales',employees:3,activeLearners:2,engagementRate:67,lessonsCompleted:5,coursesCompleted:1,assessmentsSubmitted:4}],
+      definitions:{access:'Access is not evidence of learning.',abandonment:'Abandoned rule.',attemptRate:'Attempt rule.',passRate:'Pass rule.',engagement:'Activity volume is not a measure of productivity.',dates:'UTC'},options:{employees:[],courses:[],types:[],departments:[{id:'d1',name:'Sales'}],jobRoles:[]}};
+    else if(path.startsWith('manage/activity/employees/'))result={employee:{id:'e1',name:'Asha <i>',employeeNumber:'EMP-7',department:'Finance',jobRole:'Analyst'},items:[{id:'x1',type:'course_completed',label:'Course completed',group:'course',at:'2026-11-09T08:00:00.000Z',courseId:'c1',course:'Security <b>',subject:'Security <b>',status:'completed',detail:''}],page:1,pages:1,total:1,filters:{},courses:[{id:'c1',title:'Security <b>'}],types:[['course_completed','Course completed']]};
+    else if(path.startsWith('manage/activity'))result={scope:server.user?.role==='manager'?'team':'organisation',summary:{totalActivities:42,activeLearners:5,coursesAccessed:3,lessonsCompleted:12,assessmentsAttempted:7,coursesCompleted:2},page:1,pages:2,total:42,filters:{},
+      items:[{id:'s1',type:'assessment_failed',label:'Assessment failed',group:'assessment',at:'2026-11-10T09:30:00.000Z',courseId:'c1',course:'Security <b>',subject:'Module 2 exam',status:'failed',detail:'Module exam · 25% · pass mark 75%',employeeId:'e1',employeeNumber:'EMP-7',employee:'Asha <i>',department:'Finance',jobRole:'Analyst',progress:40}],
+      options:{employees:[{id:'e1',name:'Asha <i>'}],courses:[{id:'c1',title:'Security <b>'}],types:[['assessment_failed','Assessment failed']],departments:[{id:'d1',name:'Finance'}],jobRoles:[{id:'j1',name:'Analyst'}]}};
+    else if(/^me\/resources\/[^/]+\/open$/.test(path))result={url:'api/materials/x'};
     else if(path.startsWith('manage/reports'))result={type:'enrollments',title:'Course enrollment and completion',columns:[{key:'employee',label:'Employee'},{key:'status',label:'Status'}],rows:[{employee:'=HYPERLINK("x")',status:'Completed'}],summary:{Enrollments:1},total:1,page:1,pages:1};
     else if(path==='admin/overview')result={stats:{candidates:1,courses:1,certificates:0,exams:0}};
     else if(path==='admin/candidates')result=options.body?{candidate:{id:'new-account'}}:{candidates:[server.user,{...server.user,id:'existing-one',name:'Existing Employee',email:'existing@shimentox.com',role:'employee',active:true,certificates:0,courseRuns:1,training:{year:2026,targetHours:null,completedHours:3,percent:null}}]};
@@ -103,7 +116,7 @@ async function main() {
   };
   vm.createContext(context);
   const run = code => vm.runInContext(code, context);
-  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'onboarding.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
+  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'onboarding.js', 'activity.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(app.innerHTML.includes('id="login-form"'));
   // Sign in with Keka account: a link to the server's Keka start route, and a clear message when Keka sign-in fails.
@@ -158,7 +171,8 @@ async function main() {
   assert.ok(app.innerHTML.includes('Time remaining: 2 days, 4 hours'));
   assert.ok(app.innerHTML.includes('Overdue by 1 day, 3 hours'));
   assert.ok(app.innerHTML.includes('deadline-box due-soon')&&app.innerHTML.includes('deadline-box danger')&&app.innerHTML.includes('deadline-box success'),'Yellow, red and green states.');
-  assert.ok(app.innerHTML.includes('COMPLETED ON TIME')&&app.innerHTML.includes('COMPLETED LATE')&&app.innerHTML.includes('MANDATORY')&&app.innerHTML.includes('OPTIONAL'));
+  // My Learning uses the Courses page tile, which flags assigned courses as Mandatory or Optional on the cover.
+  assert.ok(app.innerHTML.includes('COMPLETED ON TIME')&&app.innerHTML.includes('COMPLETED LATE')&&app.innerHTML.includes('course-flag mandatory">Mandatory')&&app.innerHTML.includes('course-flag">Optional'));
   assert.ok(app.innerHTML.indexOf('Late Course')<app.innerHTML.indexOf('Due Soon Course'),'The nearest deadline comes first.');
   assert.ok(!app.innerHTML.includes('datetime-local'),'Employees get no way to edit a deadline.');
   assert.equal(run(`formatSpan(${2*day+4*hour+59})`),'2 days, 4 hours');
@@ -438,13 +452,44 @@ async function main() {
   assert.ok(!run("Object.values(ROLE_NAV).flat().some(item=>['paths','skills'].includes(item[0]))"),'No role has Learning Paths or Skills in the sidebar.');
   assert.ok(!app.innerHTML.includes('learning plans')&&!app.innerHTML.includes('Skills developed'));
   console.log('PASS role navigation, organisation dashboard metrics, reports and safe CSV export');
+
+  // Learning activity history: the employee timeline, and the staff dashboard, drill-down and analytics.
+  context.employeeUser={...testAdmin,role:'employee'};run('currentUser=employeeUser;pageCache={};resetActivity()');context.location.hash='#history';run('render()');await settle();
+  assert.equal(context.document.title,'Learning history • ShimentoX');
+  assert.ok(app.innerHTML.includes('activity-timeline')&&app.innerHTML.includes('Assessment passed')&&app.innerHTML.includes('Module exam · 100% · pass mark 75%'));
+  assert.ok(app.innerHTML.includes('Security &lt;b&gt;')&&!app.innerHTML.includes('Security <b>'),'Course names are escaped.');
+  assert.ok(app.innerHTML.includes('From earlier records')&&app.innerHTML.includes('Attended sessions')&&app.innerHTML.includes('data-form="history-filters"'));
+  requests.length=0;run(`myHistory={filters:nonEmpty({course:'c1',type:'assessment',from:'2026-11-01',to:''}),page:1};render()`);await settle();
+  assert.ok(requests.some(r=>r.path==='me/history?course=c1&type=assessment&from=2026-11-01&page=1'),'Filters are sent to the server and empty ones are dropped.');
+  server.historyTotal=25;run(`resetActivity();pageCache={};render()`);await settle();
+  requests.length=0;run(`ACTIONS['history-page']({dataset:{page:'2'}})`);await settle();assert.ok(requests.some(r=>r.path==='me/history?page=2'));
+  server.historyTotal=0;run(`resetActivity();pageCache={};render()`);await settle();assert.ok(app.innerHTML.includes('No learning activity yet'));delete server.historyTotal;
+  assert.ok(!run("portalNavigation().some(n=>n[0]==='learning-activity')"),'Employees have no staff activity page.');
+  context.location.hash='#learning-activity';run('render()');assert.equal(context.document.title,'My Learning • ShimentoX','Employees are sent home from the staff page.');
+  for(const [role,label] of [['admin','Learning Activity'],['hr','Learning Activity'],['manager','Team Activity']]){context.roleUser={...testAdmin,role};run('currentUser=roleUser');assert.equal(run("portalNavigation().find(n=>n[0]==='learning-activity')?.[2]"),label);}
+  for(const role of ['trainer','employee']){context.roleUser={...testAdmin,role};run('currentUser=roleUser');assert.ok(!run("portalNavigation().some(n=>n[0]==='learning-activity')"));}
+  context.adminUser={...testAdmin};run('currentUser=adminUser;pageCache={};resetActivity()');context.location.hash='#learning-activity';run('render()');await settle();
+  for(const text of ['Learning activities','Active learners','Courses accessed','Lessons completed','Assessments attempted','Courses completed','<th>Department</th>','<th>Job role</th>','<th>Course progress</th>','<th>Assessment result</th>','EMP-7','Analyst','FAILED','Latest activity','not a measure of productivity'])assert.ok(app.innerHTML.includes(text),text);
+  assert.ok(app.innerHTML.includes('Asha &lt;i&gt;')&&!app.innerHTML.includes('Asha <i>'));
+  requests.length=0;run(`actv.filters=nonEmpty({q:'as',employee:'',department:'d1',jobRole:'j1',course:'',type:'assessment_failed',from:'2026-11-01',to:'2026-11-10'});actv.page=1;render()`);await settle();
+  assert.ok(requests.some(r=>r.path==='manage/activity?q=as&department=d1&jobRole=j1&type=assessment_failed&from=2026-11-01&to=2026-11-10&page=1'));
+  run(`ACTIONS['actv-employee']({dataset:{id:'e1'}})`);await settle();
+  assert.ok(app.innerHTML.includes('EMPLOYEE HISTORY')&&app.innerHTML.includes('Course completed')&&app.innerHTML.includes('Back to all activity'));
+  run(`ACTIONS['actv-tab']({dataset:{tab:'analytics'}})`);await settle();
+  for(const text of ['Most accessed courses','Most completed courses','Courses with high abandonment','Lesson completion patterns','Assessment attempt rates','Assessment pass and failure rates','No learning activity for 30 days','Department engagement','weekday-bars','Never','67%'])assert.ok(app.innerHTML.includes(text),text);
+  // Opening a course material is reported to the server without blocking the link.
+  requests.length=0;const link={closest:sel=>sel==='[data-resource-open]'?{dataset:{resourceOpen:'r1'}}:null};
+  for(const handler of docEvents.click||[])try{handler({target:link,preventDefault(){}});}catch{}
+  await settle();assert.ok(requests.some(r=>r.path==='me/resources/r1/open'));
+  run('currentUser=adminUser;pageCache={};resetActivity()');
+  console.log('PASS learning activity timeline, staff activity dashboard, drill-down, analytics and resource tracking');
   // A backend process started before an update reports an older (or no) API version: all users get a clear version-mismatch message.
   server.apiVersion=null;server.user={...testAdmin};server.setupRequired=false;await run('initializePortal()');
   assert.equal(run('serverOutdated'),true);
   context.location.hash='#calendar';run('render()');assert.ok(app.innerHTML.includes('older version of the portal')&&app.innerHTML.includes('npm start'));
   context.empUser={id:'employee-one',name:'Sai Charan',email:'sai@shimentox.com',role:'employee',mustChangePassword:false,createdAt:'2026-10-22T00:00:00Z'};run('currentUser=empUser');run('render()');
   assert.ok(app.innerHTML.includes('browser and server versions do not match')&&!app.innerHTML.includes('npm start'));
-  server.apiVersion=14;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
+  server.apiVersion=15;await run('initializePortal()');assert.equal(run('serverOutdated'),false);assert.ok(!app.innerHTML.includes('older version of the portal'));
   console.log('PASS outdated-server detection with role-appropriate guidance');
   for (let i = 1; i <= 6; i++) {
     assert.ok(fs.statSync(__dirname + `/../public/assets/videos/lesson-${i}.webm`).size > 1000);

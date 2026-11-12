@@ -11,7 +11,7 @@ from deadlines import end_of_day
 
 BACKEND = Path(__file__).resolve().parents[1]
 COURSE_ID = 'python-programming'
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 # Columns added after a table first shipped (versions 4-6); added only where missing.
 ADDED_COLUMNS = [
     ('courses', 'format', "TEXT NOT NULL DEFAULT 'modules' CHECK(format IN ('modules','lessons'))"),
@@ -118,6 +118,20 @@ def initialize(path):
             exact = end_of_day(row['due_date'])
             db.execute('UPDATE course_assignments SET deadline_at=?,original_deadline_at=? WHERE id=?', (exact, exact, row['id']))
         db.execute('INSERT OR IGNORE INTO reminder_settings(id) VALUES (1)')
+        if 0 < version < 12:
+            # learning_activity_logs arrived alongside the skills/paths removal, and both first shipped as "version 11" on
+            # different branches, so the merged schema is version 12. Any database below 12 (including one already at 11 from
+            # either branch) runs the backfill; it is safe to repeat because every event has a dedupe key.
+            from activity import backfill
+            db.execute('SAVEPOINT activity_backfill')
+            try:
+                backfill(db)
+                db.execute('RELEASE SAVEPOINT activity_backfill')
+            except sqlite3.Error as error:
+                # History is optional: an unexpected legacy layout must not stop the portal from starting.
+                db.execute('ROLLBACK TO SAVEPOINT activity_backfill')
+                db.execute('RELEASE SAVEPOINT activity_backfill')
+                print(f'Learning activity backfill skipped: {error}')
         db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
         # Indexes on columns added by migration 003 are created here so the base schema stays valid for older tables.
         db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;CREATE UNIQUE INDEX IF NOT EXISTS candidates_keka_employee ON candidates(keka_employee_id) WHERE length(keka_employee_id)>0;CREATE INDEX IF NOT EXISTS candidates_role ON candidates(role);CREATE INDEX IF NOT EXISTS development_records_employee ON development_records(employee_id,completed_on);')
@@ -212,7 +226,7 @@ SKILL_AND_PATH_TABLES = ('path_assignments', 'learning_path_courses', 'learning_
 
 
 def remove_skills_and_paths(db):
-    """Version 11: skills, competencies, goals and learning paths were removed from the portal.
+    """Version 11/12: skills, competencies, goals and learning paths were removed from the portal. Runs on every start and does nothing once done.
 
     Their tables are dropped, and assessments lose the skill columns and the 'skill' type. SQLite cannot drop a column
     that has a foreign key, so the assessments table is rebuilt once with every row kept; a leftover skill

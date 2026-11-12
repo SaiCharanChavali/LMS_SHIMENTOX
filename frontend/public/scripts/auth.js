@@ -7,7 +7,7 @@ let currentCourseInfo={id:null,title:'',category:'Development'};
 let portalReady = false;
 let operationQueue = Promise.resolve();
 // Must match API_VERSION in backend/src/server.py. A mismatch means the server process predates these files.
-const EXPECTED_API_VERSION = 14;
+const EXPECTED_API_VERSION = 15;
 // Server time minus browser time. Countdowns use it, so a wrong computer clock cannot show a wrong time remaining.
 let serverClockOffset = 0;
 let serverOutdated = false;
@@ -86,7 +86,8 @@ async function loadCourse(id,navigate=true) {
   if(typeof stopPythonExecution==='function'){stopPythonExecution();pythonPracticeState.clear();lessonKnowledgeState.clear();}
   if(activeExam)await finishExam('terminated','You changed courses during the examination.');
   await operationQueue;
-  const enrolled=await api('learning/enroll',{courseId:id});
+  // open:true records a course visit; the background load of the last course at sign-in is not one.
+  const enrolled=await api('learning/enroll',navigate?{courseId:id,open:true}:{courseId:id});
   applyLearning(enrolled.learning);
   const data=await api('learning?courseId='+encodeURIComponent(id));
   courseSets=data.course;lessons=data.lessons;currentCourseInfo=data.courseInfo;applyLearning(data.learning);

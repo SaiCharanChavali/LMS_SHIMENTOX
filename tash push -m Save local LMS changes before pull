@@ -1,0 +1,98 @@
+warning: in the working copy of 'backend/database/schema.sql', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/src/server.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/tests/test_development.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/public/scripts/auth.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/public/scripts/development.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/public/styles/development.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/backend/database/schema.sql b/backend/database/schema.sql[m
+[1mindex dcb3fb3..267ce3d 100644[m
+[1m--- a/backend/database/schema.sql[m
+[1m+++ b/backend/database/schema.sql[m
+[36m@@ -594,3 +594,25 @@[m [mCREATE TABLE IF NOT EXISTS employee_onboarding_courses ([m
+     position INTEGER NOT NULL DEFAULT 0,[m
+     PRIMARY KEY(onboarding_id, course_id)[m
+ );[m
+[32m+[m[32m-- Learning activity history (version 11): one append-only row per meaningful learning event, written by the server.[m
+[32m+[m[32m-- Rows are never updated or deleted by learning workflows. Related courses, lessons and assessments may later be removed,[m
+[32m+[m[32m-- so those links become NULL and the metadata keeps the titles in force when the event happened. dedupe_key makes a[m
+[32m+[m[32m-- retried request harmless: the same event for the same employee is stored once. Answers and answer keys are never stored.[m
+[32m+[m[32mCREATE TABLE IF NOT EXISTS learning_activity_logs ([m
+[32m+[m[32m    id TEXT PRIMARY KEY,[m
+[32m+[m[32m    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,[m
+[32m+[m[32m    course_id TEXT REFERENCES courses(id) ON DELETE SET NULL,[m
+[32m+[m[32m    lesson_id TEXT REFERENCES course_lessons(id) ON DELETE SET NULL,[m
+[32m+[m[32m    assessment_id TEXT REFERENCES assessments(id) ON DELETE SET NULL,[m
+[32m+[m[32m    run_id TEXT REFERENCES course_runs(id) ON DELETE SET NULL,[m
+[32m+[m[32m    activity_type TEXT NOT NULL CHECK(length(activity_type) BETWEEN 3 AND 40),[m
+[32m+[m[32m    activity_timestamp TEXT NOT NULL,[m
+[32m+[m[32m    metadata TEXT NOT NULL DEFAULT '{}',[m
+[32m+[m[32m    dedupe_key TEXT NOT NULL,[m
+[32m+[m[32m    created_at TEXT NOT NULL,[m
+[32m+[m[32m    UNIQUE(employee_id, dedupe_key)[m
+[32m+[m[32m);[m
+[32m+[m[32mCREATE INDEX IF NOT EXISTS learning_activity_employee ON learning_activity_logs(employee_id, activity_timestamp);[m
+[32m+[m[32mCREATE INDEX IF NOT EXISTS learning_activity_course ON learning_activity_logs(course_id, activity_type);[m
+[32m+[m[32mCREATE INDEX IF NOT EXISTS learning_activity_type ON learning_activity_logs(activity_type, activity_timestamp);[m
+[32m+[m[32mCREATE INDEX IF NOT EXISTS learning_activity_timestamp ON learning_activity_logs(activity_timestamp);[m
+[1mdiff --git a/backend/src/database.py b/backend/src/database.py[m
+[1mindex aa60a71..d8ff53e 100644[m
+[1m--- a/backend/src/database.py[m
+[1m+++ b/backend/src/database.py[m
+[36m@@ -11,7 +11,7 @@[m [mfrom deadlines import end_of_day[m
+ [m
+ BACKEND = Path(__file__).resolve().parents[1][m
+ COURSE_ID = 'python-programming'[m
+[31m-SCHEMA_VERSION = 10[m
+[32m+[m[32mSCHEMA_VERSION = 11[m
+ # Columns added after a table first shipped (versions 4-6); added only where missing.[m
+ ADDED_COLUMNS = [[m
+     ('courses', 'format', "TEXT NOT NULL DEFAULT 'modules' CHECK(format IN ('modules','lessons'))"),[m
+[36m@@ -117,6 +117,18 @@[m [mdef initialize(path):[m
+             exact = end_of_day(row['due_date'])[m
+             db.execute('UPDATE course_assignments SET deadline_at=?,original_deadline_at=? WHERE id=?', (exact, exact, row['id']))[m
+         db.execute('INSERT OR IGNORE INTO reminder_settings(id) VALUES (1)')[m
+[32m+[m[32m        if 0 < version < 11:[m
+[32m+[m[32m            # Version 11 adds learning_activity_logs; learning recorded before it is copied in once, marked as backfilled.[m
+[32m+[m[32m            from activity import backfill[m
+[32m+[m[32m            db.execute('SAVEPOINT activity_backfill')[m
+[32m+[m[32m            try:[m
+[32m+[m[32m                backfill(db)[m
+[32m+[m[32m                db.execute('RELEASE SAVEPOINT activity_backfill')[m
+[32m+[m[32m            except sqlite3.Error as error:[m
+[32m+[m[32m                # History is optional: an unexpected legacy layout must not stop the portal from starting.[m
+[32m+[m[32m                db.execute('ROLLBACK TO SAVEPOINT activity_backfill')[m
+[32m+[m[32m                db.execute('RELEASE SAVEPOINT activity_backfill')[m
+[32m+[m[32m                print(f'Learning activity backfill skipped: {error}')[m
+         db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')[m
+         # Indexes on columns added by migration 003 are created here so the base schema stays valid for older tables.[m
+         db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;CREATE UNIQUE INDEX IF NOT EXISTS candidates_keka_employee ON candidates(keka_employee_id) WHERE length(keka_employee_id)>0;')[m
+[1mdiff --git a/backend/src/development.py b/backend/src/development.py[m
+[1mindex d887d66..e0018f1 100644[m
+[1m--- a/backend/src/development.py[m
+[1m+++ b/backend/src/development.py[m
+[36m@@ -15,6 +15,7 @@[m [mfrom admin import audit, course_view, media_reference, owns_course[m
+ from analytics import (LEVELS, UNITS, assignment_index, dashboard, employee_paths, local_now, pair_status, pending_assessments,[m
+                        progress_index, recommendations, report, role_targets, skill_levels, today, training_progress)[m
+ from notifications import announce[m
+[32m+[m[32mimport activity[m
+ import compliance[m
+ import onboarding[m
+ import course_generator[m
+[36m@@ -813,6 +814,7 @@[m [mdef start_assessment(db, user, identity):[m
+     attempt = uid()[m
+     db.execute('INSERT INTO assessment_attempts(id,assessment_id,employee_id,attempt_number,question_ids_json,option_orders_json,status,started_at,deadline,total) VALUES (?,?,?,?,?,?,?,?,?,?)',[m
+                (attempt, identity, user['id'], used + 1, json.dumps(chosen), json.dumps(orders), 'in-progress', now(), time.time() + a['time_limit_minutes'] * 60, len(chosen)))[m
+[32m+[m[32m    activity.attempt_started(db, user['id'], 'assessment', attempt, course=a['course_id'], assessment=identity, title=a['title'], number=used + 1)[m
+     return {'attempt': active_attempt_view(db, db.execute('SELECT * FROM assessment_attempts WHERE id=?', (attempt,)).fetchone())}[m
+ [m
+ [m
+[36m@@ -848,6 +850,8 @@[m [mdef submit_assessment(db, user, identity, data):[m
+     percent = round(score / len(questions) * 100)[m
+     status = 'passed' if percent >= a['pass_percent'] else 'failed'[m
+     db.execute('UPDATE assessment_attempts SET status=?,score=?,percent=?,answers_json=?,finished_at=? WHERE id=?', (status, score, percent, json.dumps(answers), now(), attempt['id']))[m
+[32m+[m[32m    activity.attempt_finished(db, user['id'], 'assessment', attempt['id'], status, score=score, total=len(questions), percent=percent, pass_percent=a['pass_percent'],[m
+[32m+[m[32m                              course=a['course_id'], assessment=identity, title=a['title'], number=attempt['attempt_number'])[m
+     if status == 'passed' and a['kind'] == 'skill' and a['skill_id'] and a['skill_level']:[m
+         record_evidence(db, user['id'], a['skill_id'], a['skill_level'], 'assessment', attempt['id'], f'Passed {a["title"]} ({percent}%)', None)[m
+     if status == 'pass

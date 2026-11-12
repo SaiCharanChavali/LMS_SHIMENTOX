@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime, timezone
 
 from database import COURSE_ID, public_curriculum
+import activity as activity_log  # "activity" is also a local name in learning_action.
 from security import password_hash, verify_password, token, token_hash
 
 
@@ -56,6 +57,8 @@ PERMISSIONS = {
     'reports.view': {'admin', 'hr', 'manager', 'trainer'},
     'onboarding.manage': {'admin', 'hr'},
     'audit.view': {'admin'},
+    # Learning activity history of other employees: organisation-wide for admin and HR, direct reports for managers.
+    'activity.view': {'admin', 'hr', 'manager'},
 }
 
 
@@ -270,6 +273,7 @@ def issue_certificate(db, candidate, run):
             from analytics import assignment_index
             assignment = assignment_index(db, [candidate], [owner['course_id']]).get((candidate, owner['course_id']))
             db.execute('UPDATE course_runs SET completed_at=?,deadline_at_completion=? WHERE id=?', (timestamp, assignment['deadlineAt'] if assignment else None, run))
+            activity_log.course_completed(db, candidate, run)
         # One certificate per qualifying run (UNIQUE run_id); notify only when a new one is created.
         while True:
             certificate_number = 'SX-' + secrets.token_hex(6).upper()
@@ -278,6 +282,7 @@ def issue_certificate(db, candidate, run):
         created = db.execute('INSERT OR IGNORE INTO certificates (id,run_id,candidate_name,course_title,issued_at,certificate_number,public_token) VALUES (?,?,?,?,?,?,NULL)',
                              (uid(), run, name, title, timestamp, certificate_number)).rowcount
         if created:
+            activity_log.certificate_generated(db, candidate, run)
             from notifications import staff_event
             staff_event(db, candidate, f'Course completed: {name}', f'{title}: a completion certificate was earned.', f'team-certificate:{run}')
             notify(db, [candidate], 'certificate', f'Certificate earned: {title}', 'Your completion certificate is ready to view and print.', 'certificates', f'certificate:{run}')
@@ -306,19 +311,29 @@ def learning_action(db, candidate, action, data):
               'Finish the active assignment before continuing lessons.', 409)
     extra = {}
     lesson = None
+    lesson_done_before = None
     if action in ('lesson', 'lesson-open', 'lesson-video', 'lesson-activity', 'lesson-draft', 'lesson-quiz'):
         check(course_format == 'lessons', 'Lessons in this course are completed through its modules.', 409)
         lesson = db.execute('SELECT * FROM course_lessons WHERE id=? AND course_id=?', (data.get('lessonId'), run['course_id'])).fetchone()
         check(lesson is not None, 'Lesson was not found.', 404)
         check(checkpoints.lesson_unlocked(db, run_id, run['course_id'], lesson['id']), 'Pass the previous assignment to unlock this module.', 403)
+        lesson_done_before = db.execute('SELECT 1 FROM lesson_progress WHERE run_id=? AND lesson_id=?', (run_id, lesson['id'])).fetchone() is not None
     if action == 'lesson-open':
         # Remember the lesson the employee is reading so the course reopens there.
         db.execute('UPDATE course_runs SET last_lesson_id=? WHERE id=?', (lesson['id'], run_id))
+        activity_log.lesson_opened(db, candidate, run, lesson)
     elif action == 'checkpoint-start':
         check(course_format == 'lessons', 'This course has no lesson assignments.', 409)
         extra = checkpoints.start(db, run, data)
+        row = db.execute('SELECT a.id,a.attempt_number,c.title FROM checkpoint_attempts a JOIN course_checkpoints c ON c.id=a.checkpoint_id WHERE a.id=?', (extra['attempt']['id'],)).fetchone()
+        activity_log.attempt_started(db, candidate, 'assignment', row['id'], course=run['course_id'], run=run_id, title=row['title'], number=row['attempt_number'])
     elif action == 'checkpoint-finish':
         extra = checkpoints.finish(db, run, data)
+        row = db.execute('SELECT a.*,c.title,c.pass_percent FROM checkpoint_attempts a JOIN course_checkpoints c ON c.id=a.checkpoint_id WHERE a.id=?', (extra['attempt']['id'],)).fetchone()
+        if row and row['score'] is not None:
+            activity_log.attempt_finished(db, candidate, 'assignment', row['id'], row['status'], score=row['score'], total=row['total'],
+                                      percent=round(row['score'] * 100 / row['total']) if row['total'] else None, pass_percent=row['pass_percent'],
+                                      course=run['course_id'], run=run_id, title=row['title'], number=row['attempt_number'])
     elif action == 'lesson-draft':
         check(bool(lesson['practice_json']), 'This lesson has no coding practice.', 409)
         code = data.get('code')
@@ -333,7 +348,11 @@ def learning_action(db, candidate, action, data):
         check(all(type(a) is int and 0 <= a < len(q[1]) for a, q in zip(answers, questions)), 'Invalid knowledge-check answer.')
         correct = [a == q[2] for a, q in zip(answers, questions)]
         score = sum(correct)
-        db.execute('INSERT INTO lesson_quiz_attempts VALUES (?,?,?,?,?,?)', (uid(), run_id, lesson['id'], json.dumps(answers), score, now()))
+        quiz_attempt = uid()
+        db.execute('INSERT INTO lesson_quiz_attempts VALUES (?,?,?,?,?,?)', (quiz_attempt, run_id, lesson['id'], json.dumps(answers), score, now()))
+        activity_log.attempt_finished(db, candidate, 'quiz', quiz_attempt, 'passed' if all(correct) else 'failed', score=score, total=len(questions),
+                                  percent=round(score * 100 / len(questions)), pass_percent=100, course=run['course_id'], run=run_id, lesson=lesson['id'],
+                                  title=f"{lesson['title']} knowledge check")
         if all(correct):
             db.execute('''INSERT INTO lesson_progress(run_id,lesson_id,completed_at,score) VALUES (?,?,?,100)
                 ON CONFLICT(run_id,lesson_id) DO UPDATE SET score=100''', (run_id, lesson['id'], now()))
@@ -390,7 +409,11 @@ def learning_action(db, candidate, action, data):
         duration=db.execute('SELECT duration_seconds FROM videos WHERE course_id=? AND video_index=?',(run['course_id'],i)).fetchone()[0]
         check(type(watched) in (int,float) and math.isfinite(watched) and 0 <= watched <= duration,'Invalid watched duration.')
         completed = now() if data.get('complete') is True and watched >= duration * 0.9 else None
+        video_done_before = db.execute('SELECT 1 FROM video_progress WHERE run_id=? AND video_index=? AND completed_at IS NOT NULL', (run_id, i)).fetchone() is not None
         db.execute('INSERT INTO video_progress VALUES (?,?,?,?,?) ON CONFLICT(run_id,video_index) DO UPDATE SET watched_seconds=MAX(watched_seconds,excluded.watched_seconds),completed_at=COALESCE(completed_at,excluded.completed_at),updated_at=excluded.updated_at', (run_id, i, watched, completed, now()))
+        if completed and not video_done_before:
+            titles = json.loads(db.execute('SELECT lessons_json FROM courses WHERE id=?', (run['course_id'],)).fetchone()[0] or '[]')
+            activity_log.lesson_completed(db, candidate, run, video_index=i, title=titles[i].get('title') if i < len(titles) and isinstance(titles[i], dict) else None)
     elif action == 'exercise':
         s, e = index(data, 'setIndex', 2), index(data, 'exerciseIndex', 1)
         check(unlocked(db, run_id, s), 'Complete the previous set first.', 403)
@@ -409,6 +432,7 @@ def learning_action(db, candidate, action, data):
         identity = uid()
         db.execute('INSERT INTO exam_attempts(id,run_id,set_index,attempt_number,status,started_at,deadline) VALUES (?,?,?,?,?,?,?)', (identity, run_id, s, number, 'in-progress', now(), time.time() + 600))
         extra['attempt'] = attempt_view(db.execute('SELECT * FROM exam_attempts WHERE id=?', (identity,)).fetchone())
+        activity_log.attempt_started(db, candidate, 'exam', identity, course=run['course_id'], run=run_id, title=f'Module {s + 1} exam', number=number)
     elif action == 'exam-finish':
         identity = data.get('attemptId')
         check(isinstance(identity, str), 'Attempt ID is required.')
@@ -424,10 +448,16 @@ def learning_action(db, candidate, action, data):
                 course = db.execute('SELECT title,pass_percent FROM courses WHERE id=?', (run['course_id'],)).fetchone()
                 result = 'passed' if score * 25 >= course['pass_percent'] else 'failed'
                 db.execute('UPDATE exam_attempts SET status=?,score=?,answers_json=?,finished_at=? WHERE id=?', (result, score, json.dumps(answers), now(), identity))
+                activity_log.attempt_finished(db, candidate, 'exam', identity, result, score=score, total=4, percent=score * 25, pass_percent=course['pass_percent'],
+                                          course=run['course_id'], run=run_id, title=f"Module {attempt['set_index'] + 1} exam", number=attempt['attempt_number'])
                 notify(db, [candidate], 'assessment', f"Module {attempt['set_index'] + 1} exam {'passed' if result == 'passed' else 'not passed'}: {course['title']}", f"You scored {score * 25}% (pass mark {course['pass_percent']}%).", 'courses', f'exam:{identity}')
         extra['attempt'] = attempt_view(db.execute('SELECT * FROM exam_attempts WHERE id=?', (identity,)).fetchone())
     else:
         raise APIError(404, 'Endpoint was not found.')
+    if lesson is not None and lesson_done_before is False:
+        row = db.execute('SELECT completed_at FROM lesson_progress WHERE run_id=? AND lesson_id=?', (run_id, lesson['id'])).fetchone()
+        if row:
+            activity_log.lesson_completed(db, candidate, run, lesson_id=lesson['id'], at=row['completed_at'])
     from notifications import refresh
     if action != 'video' or data.get('complete') is True:
         refresh(db, {'id': candidate})

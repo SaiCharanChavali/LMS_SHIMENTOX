@@ -57,6 +57,7 @@ The accounts table keeps its historical name, `candidates`, so existing referenc
 | `assistant_usage` | AI assistant request timestamps for per-employee rate limits |
 | `onboarding_templates`, `onboarding_template_roles`, `onboarding_template_milestones`, `onboarding_template_courses` | Onboarding templates (version 10); see [onboarding.md](onboarding.md) |
 | `employee_onboarding`, `employee_onboarding_courses` | Each employee's onboarding and a snapshot of its courses and milestones (version 10) |
+| `learning_activity_logs` | Append-only learning activity events, unique per employee and dedupe key (version 11); see [learning-activity.md](learning-activity.md) |
 
 ### Imported courses
 

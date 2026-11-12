@@ -12,9 +12,9 @@ let deadlineCourseId='',reminderPanelOpen=false;
 const can=permission=>Boolean(currentUser&&PERMS[permission]?.includes(currentUser.role));
 const isLearner=()=>Boolean(currentUser);
 let pageCache={},devMessage='',devFilters={dashboard:{},report:{type:'enrollments',page:1}},notificationState={items:[],unread:0,open:false};
-let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,historyPage=1,courseFilter='all',courseArea='all',courseDifficulty='all',courseSearch='',assistantAnswer=null;
+let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,courseFilter='all',courseArea='all',courseDifficulty='all',courseSearch='',assistantAnswer=null;
 
-function resetDevelopment(){selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;historyPage=1;courseFilter='all';courseArea='all';courseDifficulty='all';courseSearch='';}
+function resetDevelopment(){if(typeof resetActivity==='function')resetActivity();selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;courseFilter='all';courseArea='all';courseDifficulty='all';courseSearch='';}
 function loadData(key,path){
   if(pageCache[key])return pageCache[key];
   pageCache[key]={loading:true};
@@ -419,13 +419,7 @@ function compliancePage(){
 
 // ---------------------------------------------------------------- learning history
 
-function historyPageView(){
-  const key='me-history:'+historyPage,entry=loadData(key,'me/history'+qs({page:historyPage}));
-  const head=intro('Learning history','Completions, results, attended sessions and your professional development records.','MY RECORDS')+devNotice();
-  if(!entry.data)return head+stateBlock(entry,'learning history',key);
-  const d=entry.data;
-  return head+`<div class="dash-grid"><div class="dash-main">${panel('Activity',d.items.length?d.items.map(h=>`<div class="activity"><span class="bubble">${icon(h.type==='session'?'calendar':h.type==='record'?'file':'check')}</span><p>${esc(h.text)}<br><small>${esc(fmtDate(h.at))}</small></p></div>`).join('')+`<div class="pager"><span class="muted">Page ${d.page} of ${d.pages}</span><span class="table-actions"><button data-act="history-page" data-page="${d.page-1}" ${d.page<=1?'disabled':''}>Previous</button><button data-act="history-page" data-page="${d.page+1}" ${d.page>=d.pages?'disabled':''}>Next</button></span></div>`:emptyState('No learning history yet','Completed courses, assessment results and attended sessions are recorded here.'))}</div><div class="dash-side">${panel('Professional development records',`${d.records.map(r=>`<div class="admin-list-row"><div><strong>${esc(r.title)}</strong><small>${esc(r.provider||'Self-reported')} · ${esc(fmtDate(r.completedOn))} · ${r.hours} h</small></div><button class="auth-link" data-act="record-delete" data-id="${r.id}">Delete</button></div>`).join('')||'<p class="muted">Record external courses, conferences or certifications.</p>'}<form class="admin-form compact-form" data-form="record-save"><label for="record-title">Title</label><input id="record-title" name="title" minlength="2" maxlength="150" required><label for="record-provider">Provider</label><input id="record-provider" name="provider" maxlength="150"><label for="record-date">Completed on</label><input id="record-date" type="date" name="completedOn" required><label for="record-hours">Hours</label><input id="record-hours" type="number" name="hours" min="0" max="1000" step="0.5" value="1"><button class="btn" type="submit">Add record</button><p class="form-status" role="status"></p></form><p class="muted">Self-reported records are shown separately from verified internal training.</p>`)}</div></div>`;
-}
+// historyPageView (the employee timeline) lives in activity.js.
 
 // ---------------------------------------------------------------- course preview, resources and assistant
 
@@ -438,7 +432,7 @@ function coursePreviewPage(){
 }
 function resourceList(resources){
   if(!resources?.length)return '';
-  return panel('Learning materials',resources.map(r=>`<div class="admin-list-row"><div><strong>${esc(r.title)}</strong><small>${esc(capital(r.kind))}${r.moduleIndex!=null?' · Module '+(r.moduleIndex+1):''}</small></div><a class="tag" href="${esc(r.url)}" target="_blank" rel="noopener">OPEN</a></div>`).join(''));
+  return panel('Learning materials',resources.map(r=>`<div class="admin-list-row"><div><strong>${esc(r.title)}</strong><small>${esc(capital(r.kind))}${r.moduleIndex!=null?' · Module '+(r.moduleIndex+1):''}</small></div><a class="tag" href="${esc(r.url)}" target="_blank" rel="noopener" data-resource-open="${esc(r.id)}">OPEN</a></div>`).join(''));
 }
 function courseExtras(){
   // Rendered below the course player for employees.
@@ -833,7 +827,6 @@ const ACTIONS={
   'report-reset':()=>{devFilters.report={type:devFilters.report.type,page:1};render();},
   'report-page':el=>{devFilters.report.page=Number(el.dataset.page);render();},
   'report-export':async el=>{const data=await api('manage/reports'+el.dataset.query);download(`shimentox-${data.type}-report.csv`,toCSV(data.columns,data.rows),'text/csv;charset=utf-8');toast(`Exported ${data.rows.length} records.`);},
-  'history-page':el=>{historyPage=Number(el.dataset.page);render();},
   'record-delete':async el=>{await api('me/records',{id:el.dataset.id,delete:true});refreshData('me-history');render();},
   'session-register':async el=>{const data=await api(`me/sessions/${el.dataset.id}/register`,{});pageCache['me-cal']={data};refreshData('m-sessions','me-dash');devMessage='You are registered for the session.';render();},
   'session-cancel':async el=>{const data=await api(`me/sessions/${el.dataset.id}/cancel`,{});pageCache['me-cal']={data};refreshData('m-sessions','me-dash');devMessage='Your registration was cancelled.';render();},
@@ -886,7 +879,7 @@ const SUBMITS={
   'session-save':form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('manage/sessions',{...v,id:form.dataset.id||null,capacity:Number(v.capacity),courseId:v.courseId||null,trainerId:v.trainerId||null});pageCache['m-sessions']={data};sessionEditor=null;refreshData('me-cal');devMessage='Session saved.';render();}),
   'assessment-submit':form=>submitForm(form,async()=>{const a=activeAssessment,answers=a.attempt.questions.map((_,i)=>{const value=new FormData(form).get('q'+i);return value===null?null:Number(value);});if(answers.includes(null))throw new Error('Answer every question before submitting.');const data=await api(`me/assessments/${a.id}/submit`,{attemptId:a.attempt.id,answers});activeAssessment=null;exitExamFullscreen();assessmentResult=data.result;refreshData('me-assess','me-dash');refreshNotifications();if(data.result.status==='passed'){try{learning.certificates=(await api('certificates')).certificates;}catch{/* The list refreshes on the next page load. */}}render();}),
   'assessment-save':form=>submitForm(form,async()=>{const v=formValues(form);let questions;try{questions=JSON.parse(v.questions);}catch{throw new Error('The question bank JSON is invalid. Check its syntax.');}const data=await api('manage/assessments',{id:form.dataset.id||null,title:v.title,description:v.description,kind:v.kind,courseId:v.courseId||null,passPercent:Number(v.passPercent),maxAttempts:Number(v.maxAttempts),questionCount:Number(v.questionCount),timeLimitMinutes:Number(v.timeLimitMinutes),status:v.status,questions});pageCache['m-assess']={data:{assessments:data.assessments}};assessmentEditor=null;refreshData('me-assess');devMessage='Assessment saved.';render();}),
-  'record-save':form=>submitForm(form,async()=>{const v=formValues(form);await api('me/records',{title:v.title,provider:v.provider,completedOn:v.completedOn,hours:Number(v.hours||0)});refreshData('me-history');historyPage=1;render();}),
+  'record-save':form=>submitForm(form,async()=>{const v=formValues(form);await api('me/records',{title:v.title,provider:v.provider,completedOn:v.completedOn,hours:Number(v.hours||0)});refreshData('me-history');myHistory.page=1;render();}),
   'training-target':form=>submitForm(form,async()=>{const v=formValues(form),ids=trainingTargetIds(v.target||'');if(!ids.length)throw new Error('No employees match this choice.');
     const data=await api('manage/training-targets',{employeeIds:ids,hours:v.hours===''?null:Number(v.hours)});
     for(const user of adminState.candidates||[])if(data.training[user.id])user.training=data.training[user.id];

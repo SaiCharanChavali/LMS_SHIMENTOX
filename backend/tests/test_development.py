@@ -113,7 +113,7 @@ class DevelopmentTests(PortalFixture):
                 self.assertEqual(card['assessmentCount'], expected, card['title'])
 
     def test_session_reports_api_version_and_unknown_endpoints_are_named(self):
-        self.assertEqual(Client(self.base).request('session')[1]['apiVersion'], 14)
+        self.assertEqual(Client(self.base).request('session')[1]['apiVersion'], 15)
         employee = self.account(name='Route Checker')
         for route, expected in (('manage/unknown', 'GET /api/manage/unknown'), ('me/unknown', 'GET /api/me/unknown'), ('nothing-here', 'GET /api/nothing-here')):
             status, payload, _ = (self.admin if route.startswith('manage') else employee).request(route)
@@ -327,7 +327,9 @@ class DevelopmentTests(PortalFixture):
         self.assertEqual(learner.request('me/records', {'title': 'External workshop', 'completedOn': '2099-01-01'})[0], 400)
         history = learner.request('me/records', {'title': 'External workshop', 'provider': 'Conference', 'completedOn': '2026-01-15', 'hours': 3})[1]
         self.assertEqual(history['records'][0]['title'], 'External workshop')
-        self.assertTrue(any('External workshop' in item['text'] for item in history['items']))
+        # Self-reported records are listed beside the verified activity timeline, not mixed into it.
+        self.assertFalse(any(item.get('subject') == 'External workshop' for item in history['items']))
+        self.assertEqual(learner.request('me/history')[1]['records'][0]['title'], 'External workshop')
         os.environ.pop('LMS_AI_ENABLED', None)
         self.assertFalse(learner.request('me/assistant')[1]['enabled'])
         self.assertEqual(learner.request('me/assistant', {'courseId': 'python-programming', 'mode': 'summarize'})[0], 503)

@@ -17,6 +17,7 @@ from analytics import (LEVELS, UNITS, assignment_index, dashboard, employee_path
 from notifications import announce
 import compliance
 import onboarding
+import games
 import course_generator
 import keka
 from database import BACKEND, MAX_EXAM_ATTEMPTS, VIDEO_ROOT, public_curriculum
@@ -1326,6 +1327,7 @@ def employee_action(db, user, method, p, query, data):
         ('POST', 'notifications/read'): lambda: read_notifications(db, user, data),
         ('GET', 'history'): lambda: my_history(db, user, query),
         ('POST', 'records'): lambda: save_record(db, user, data),
+        ('GET', 'games'): lambda: games.lesson_games(db, user, query),
     }
     check(key in handlers, f'Endpoint was not found: {method} /api/me/{"/".join(p)}', 404)
     return handlers[key]()

@@ -747,7 +747,7 @@ function lessonCoursePlayer(){
     const lessonHtml=lessonBody({...current,description:section.summary,tracked:true}),placed=Boolean(check)&&lessonHtml.includes(slot);
     const slotted=placed?lessonHtml.replace(slot,()=>check):lessonHtml;
     const meta=[current.quiz?.length?`${icon('check')} ${current.quiz.length}-question knowledge check`:'',current.assessmentId?`${icon('check')} Knowledge check`:'',current.exercise||current.activity?`${icon('file')} Practical exercise`:'',nextCheckpoint?`${icon('target')} Followed by an assessment`:''];
-    body=`<article class="panel lesson-content module-view">${lessonHeader(current,{unit,index,total:list.length,section,completed:state,meta})}${current.moduleTitle?`<p class="lesson-module">${esc(current.moduleTitle)}</p>`:''}${slotted}${videoStatus(current)}${current.practice?pythonPracticePanel(current):''}${placed?'':check}${completion}<nav class="lesson-nav module-pager" aria-label="${unit} navigation">${prev}${next}</nav></article>`;
+    body=`<article class="panel lesson-content module-view">${lessonHeader(current,{unit,index,total:list.length,section,completed:state,meta})}${current.moduleTitle?`<p class="lesson-module">${esc(current.moduleTitle)}</p>`:''}${slotted}${videoStatus(current)}${current.practice?pythonPracticePanel(current):''}${placed?'':check}${completion}${typeof gamesPanel==='function'?gamesPanel(current):''}<nav class="lesson-nav module-pager" aria-label="${unit} navigation">${prev}${next}</nav></article>`;
   }
   // Sidebar: course order, each module followed by its assessment, grouped by section when sections exist.
   const activeId=checkpoint?.id||(showFinal?'final':current.id),groups=[];

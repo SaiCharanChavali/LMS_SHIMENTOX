@@ -172,11 +172,13 @@ def already_notified_of_assignment(db, employee, assignment_id):
     return db.execute("SELECT 1 FROM notifications WHERE employee_id=? AND dedupe_key LIKE ?", (employee, f'assigned:{assignment_id}:%')).fetchone() is not None
 
 
-def process_employee(db, employee, at=None):
-    """Send everything due for one employee. The caller owns the transaction."""
+def process_employee(db, employee, at=None, assigned=None, progress=None):
+    """Send everything due for one employee. The caller owns the transaction.
+    `assigned` and `progress`, when the caller has just read them for this employee, are reused instead of read again."""
     at = at or datetime.now(timezone.utc)
     config = settings(db)
-    assigned, progress = assignment_index(db, [employee]), progress_index(db, [employee])
+    assigned = assignment_index(db, [employee]) if assigned is None else assigned
+    progress = progress_index(db, [employee]) if progress is None else progress
     retire_undelivered(db, employee, assigned, progress)
     counts = {'sent': 0, 'failed': 0, 'skipped': 0}
     titles = {r[0]: r[1] for r in db.execute('SELECT id,title FROM courses')}

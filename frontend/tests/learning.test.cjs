@@ -5,9 +5,9 @@ const assert = require('node:assert/strict');
 const curriculum = JSON.parse(fs.readFileSync(__dirname + '/../../backend/data/python-course.json', 'utf8'));
 const copy = value => JSON.parse(JSON.stringify(value));
 const fixtureLessons=JSON.parse(fs.readFileSync(__dirname+'/../../backend/data/python-lessons.json','utf8'));
-const courseInfo={id:'python-programming',title:'PYTHON PROGRAMMING',category:'Development',description:'Python basics',status:'published',progress:0,enrolled:true,completed:false,difficulty:'beginner',durationMinutes:90,skills:[{id:'s1',name:'Python',level:1}],passPercent:75,maxAttempts:3,assignment:{mandatory:true,dueDate:'2099-01-31',assignedBy:'HR Partner'}};
-const employeeDashboard={training:{year:2026,targetHours:30,completedHours:12,percent:40},profile:{name:'Sai Charan',email:'sai@shimentox.com',role:'employee',department:'Engineering',job_role:'Data Analyst',manager:'Line Manager',job_title:''},stats:{assigned:1,inProgress:0,completed:0,overdue:0,certificates:0,skillGaps:1},assigned:[{...courseInfo,status:'not_started'}],continue:[],recommendations:[{id:'sql',title:'SQL Foundations',description:'Query data.',difficulty:'beginner',durationMinutes:60,category:'Data Analytics',skills:['SQL'],reasons:['Closes your SQL gap (Not assessed now, Intermediate required for your role).']}],paths:[{id:'p1',title:'Generative AI Path',progress:50,completed:1,total:2,dueDate:null}],skills:[],sessions:[],pendingAssessments:[],goals:[],history:[]};
-const orgDashboardData={training:[{id:'r1',name:'Team Report',department:'Engineering',year:2026,targetHours:20,completedHours:5,percent:25}],scope:'organisation',kpis:{totalEmployees:12,activeLearners:7,publishedCourses:3,completionRate:42,enrollments:19,completions:8,certificatesEarned:8,trainingHours:15.5,pendingMandatory:4,employeesWithPlans:5},progress:{activelyLearning:6,completedAssigned:3,notStarted:2,overdue:1,overdueEmployees:[{id:'e1',name:'Late Learner',department:'Sales',overdue:1}]},departments:[{department:'Engineering',employees:5,participants:4,participationRate:80,completionRate:50,completionsInPeriod:3,averageScore:82,trainingHours:9.2}],period:{from:null,to:null},recent:[{type:'completion',at:'2026-10-20T10:00:00Z',text:'Asha completed SQL Foundations and earned a certificate'}],upcoming:{sessions:[],deadlines:[{courseId:'c1',course:'Security Awareness',dueDate:'2099-01-01',pending:4,overdue:false}],pendingAssessments:[]}};
+const courseInfo={id:'python-programming',title:'PYTHON PROGRAMMING',category:'Development',description:'Python basics',status:'published',progress:0,enrolled:true,completed:false,difficulty:'beginner',durationMinutes:90,passPercent:75,maxAttempts:3,assignment:{mandatory:true,dueDate:'2099-01-31',assignedBy:'HR Partner'}};
+const employeeDashboard={training:{year:2026,targetHours:30,completedHours:12,percent:40},profile:{name:'Sai Charan',email:'sai@shimentox.com',role:'employee',department:'Engineering',job_role:'Data Analyst',manager:'Line Manager',job_title:''},stats:{assigned:1,inProgress:0,completed:0,overdue:0,certificates:0},assigned:[{...courseInfo,status:'not_started'}],continue:[],recommendations:[{id:'sql',title:'SQL Foundations',description:'Query data.',difficulty:'beginner',durationMinutes:60,category:'Data Analytics',reasons:['Builds on Data Analytics courses you have completed.']}],sessions:[],pendingAssessments:[],history:[]};
+const orgDashboardData={training:[{id:'r1',name:'Team Report',department:'Engineering',year:2026,targetHours:20,completedHours:5,percent:25}],scope:'organisation',kpis:{totalEmployees:12,activeLearners:7,publishedCourses:3,completionRate:42,enrollments:19,completions:8,certificatesEarned:8,trainingHours:15.5,pendingMandatory:4},progress:{activelyLearning:6,completedAssigned:3,notStarted:2,overdue:1,overdueEmployees:[{id:'e1',name:'Late Learner',department:'Sales',overdue:1}]},departments:[{department:'Engineering',employees:5,participants:4,participationRate:80,completionRate:50,completionsInPeriod:3,averageScore:82,trainingHours:9.2}],period:{from:null,to:null},recent:[{type:'completion',at:'2026-10-20T10:00:00Z',text:'Asha completed SQL Foundations and earned a certificate'}],upcoming:{sessions:[],deadlines:[{courseId:'c1',course:'Security Awareness',dueDate:'2099-01-01',pending:4,overdue:false}],pendingAssessments:[]}};
 const safeCourse = copy(curriculum);
 for (const set of safeCourse) { set.exam = set.exam.map(q => q.slice(0, 2)); for (const ex of set.exercises) ex.questions = ex.questions.map(q => q.slice(0, 2)); }
 const empty = () => ({ version: 3, run: { id: 'run-one', runNumber: 1, videos: {}, exercises: {}, attempts: [[], [], []], completedAt: null }, certificates: [] });
@@ -42,7 +42,7 @@ async function main() {
     else if(path==='me/dashboard')result=employeeDashboard;
     else if(path==='me/assistant')result={enabled:false,reason:'The AI learning assistant has not been enabled by your administrator.'};
     else if(path.startsWith('manage/dashboard'))result=orgDashboardData;
-    else if(path==='manage/org')result={departments:[{id:'d1',name:'Engineering',employees:5}],jobRoles:[],categories:['Technical Skills'],skills:[{id:'s1',name:'Python'}],courses:[{id:'python-programming',title:'PYTHON PROGRAMMING',status:'published'}],trainers:[],managers:[],levels:[]};
+    else if(path==='manage/org')result={departments:[{id:'d1',name:'Engineering',employees:5}],jobRoles:[],categories:['Technical Skills'],courses:[{id:'python-programming',title:'PYTHON PROGRAMMING',status:'published'}],trainers:[],managers:[],levels:[]};
     else if(path==='manage/people')result={people:[]};
     else if(path==='manage/assessments')result={assessments:[]};
     else if(path==='me/onboarding')result={onboarding:server.onboarding===undefined?null:server.onboarding};
@@ -292,7 +292,7 @@ async function main() {
   assert.ok(app.innerHTML.includes('Not enough readable text')&&app.innerHTML.includes('>Create course<'));
   run("courseAddMode=null;generateState=null");
   // The builder keeps "10 questions drawn from a bank of 15" when a course is saved, and sends nothing extra otherwise.
-  const builderDraft=(count,size)=>`courseDraft=draftFromBuilder({course:{id:'c',title:'T',category:'C',description:'D',skills:[]},lessons:[],assessment:{title:'A',passPercent:70,maxAttempts:3,timeLimitMinutes:20,questionCount:${count},questions:Array.from({length:${size}},()=>['Q',['a','b'],0,''])}});builderPayload('draft').assessment.questionCount`;
+  const builderDraft=(count,size)=>`courseDraft=draftFromBuilder({course:{id:'c',title:'T',category:'C',description:'D'},lessons:[],assessment:{title:'A',passPercent:70,maxAttempts:3,timeLimitMinutes:20,questionCount:${count},questions:Array.from({length:${size}},()=>['Q',['a','b'],0,''])}});builderPayload('draft').assessment.questionCount`;
   assert.equal(run(builderDraft(10,15)),10);
   assert.equal(run(builderDraft(15,15)),undefined);
   run('courseDraft=null');
@@ -347,7 +347,7 @@ async function main() {
   run('currentUser=null');context.serverUser=server.user;run('currentUser=serverUser');await run('loadCandidate()');
   context.location.hash='#dashboard';run('render()');await new Promise(resolve=>setImmediate(resolve));
   assert.ok(app.innerHTML.includes('Assigned to me')&&app.innerHTML.includes('MANDATORY'));
-  assert.ok(app.innerHTML.includes('SQL Foundations')&&app.innerHTML.includes('Closes your SQL gap'));
+  assert.ok(app.innerHTML.includes('SQL Foundations')&&app.innerHTML.includes('Builds on Data Analytics courses you have completed.'));
   assert.ok(app.innerHTML.includes('Engineering · Manager: Line Manager')||app.innerHTML.includes('Data Analyst · Engineering'));
   assert.ok(!app.innerHTML.includes('href="#admin-users"')&&!app.innerHTML.includes('href="#reports"'));
   assert.equal(run('notificationState.unread'),1);assert.ok(app.innerHTML.includes('class="notification-count"'));

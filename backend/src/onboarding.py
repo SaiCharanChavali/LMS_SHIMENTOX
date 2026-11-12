@@ -206,12 +206,21 @@ def templates_payload(db, user):
 
 # ---------------------------------------------------------------- matching and starting
 
-def matching(db, employee):
+def active_templates(db):
+    """Active templates with their job roles, read in two queries whatever the number of templates."""
+    templates = db.execute("SELECT * FROM onboarding_templates WHERE status='active'").fetchall()
+    roles = {}
+    for template_id, role in db.execute("SELECT r.template_id,r.job_role_id FROM onboarding_template_roles r JOIN onboarding_templates t ON t.id=r.template_id WHERE t.status='active'"):
+        roles.setdefault(template_id, set()).add(role)
+    return [(t, roles.get(t['id'], set())) for t in templates]
+
+
+def matching(db, employee, templates=None):
     """(template, None) for the most specific active template, or (None, 'no_template' | 'ambiguous').
-    A template naming job roles is more specific than one naming only a department, which beats one for everyone."""
+    A template naming job roles is more specific than one naming only a department, which beats one for everyone.
+    Pass `templates` from active_templates() to match many employees without re-reading them."""
     found = []
-    for t in db.execute("SELECT * FROM onboarding_templates WHERE status='active'").fetchall():
-        roles = template_roles(db, t['id'])
+    for t, roles in active_templates(db) if templates is None else templates:
         if t['department_id'] and t['department_id'] != employee['department_id']:
             continue
         if roles and employee['job_role_id'] not in roles:
@@ -595,13 +604,19 @@ def monitoring(db, user, query):
         # Active employees with no onboarding in progress or finished: what HR still has to start, and why it did not start itself.
         started = {o['employee_id'] for o in onboardings}
         waiting = []
+        # Joining dates and templates are read once; the best template depends only on department and job role.
+        joining = {r[0]: r[1] for r in db.execute('SELECT id,joining_date FROM candidates WHERE is_active=1')}
+        templates, best = active_templates(db), {}
         for p in people.values():
             if p['id'] in started or p['role'] == 'admin':
                 continue
-            joined = db.execute('SELECT joining_date FROM candidates WHERE id=?', (p['id'],)).fetchone()[0]
+            joined = joining.get(p['id'])
             if not _matches(p, joined, f):
                 continue
-            template, reason = matching(db, {'department_id': p['department_id'], 'job_role_id': p['job_role_id']})
+            key = (p['department_id'], p['job_role_id'])
+            if key not in best:
+                best[key] = matching(db, {'department_id': key[0], 'job_role_id': key[1]}, templates)
+            template, reason = best[key]
             waiting.append({'employeeId': p['id'], 'employee': p['name'], 'email': p['email'], 'department': p['department'] or 'Unassigned', 'jobRole': p['job_role'] or 'Unassigned',
                             'joiningDate': joined, 'defaultStartDate': default_start_date({'joining_date': joined}), 'templateId': template['id'] if template else None,
                             'template': template['name'] if template else None, 'reason': reason})

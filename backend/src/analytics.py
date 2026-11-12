@@ -1,16 +1,14 @@
-"""Learning analytics computed from stored records: progress, assignments, paths, dashboards, reports, recommendations.
+"""Learning analytics computed from stored records: progress, assignments, dashboards, reports, recommendations.
 
 No figure here is hardcoded; every number is derived from SQLite rows at request time.
 """
 import json
 import heapq
-from itertools import groupby,chain
 from datetime import date, datetime, timedelta, timezone
 
 from deadlines import end_of_day
 from services import check, now
 
-LEVELS = {0: 'Not assessed', 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert'}
 UNITS = 15  # 6 videos + 6 exercises + 3 module exams per course run
 STATUS_LABELS = {'completed': 'Completed', 'overdue': 'Overdue', 'in_progress': 'In progress', 'not_started': 'Not started'}
 PAGE_SIZE = 25
@@ -214,102 +212,39 @@ def average(values):
     return round(sum(values) / len(values)) if values else None
 
 
-def path_assignment_employees(db):
-    rows = db.execute('''SELECT DISTINCT c.id FROM candidates c JOIN path_assignments a ON (a.target_type='employee' AND a.target_id=c.id) OR (a.target_type='department' AND a.target_id=c.department_id) OR (a.target_type='job_role' AND a.target_id=c.job_role_id)
-        JOIN learning_paths p ON p.id=a.path_id AND p.status='published' WHERE c.is_active=1''')
-    return {r[0] for r in rows}
+# ---------------------------------------------------------------- recommendations
 
-
-# ---------------------------------------------------------------- skills, paths, recommendations
-
-def skill_levels(db, employee_id):
-    """Current level = highest level supported by assessment or manager evidence."""
-    return {r[0]: r[1] for r in db.execute('SELECT skill_id,MAX(level) FROM skill_evidence WHERE employee_id=? GROUP BY skill_id', (employee_id,))}
-
-
-def role_targets(db, job_role_id):
-    return {r[0]: r[1] for r in db.execute('SELECT skill_id,target_level FROM role_competencies WHERE job_role_id=?', (job_role_id or '',))}
-
-
-def employee_paths(db, employee, progress):
-    rows = db.execute('''SELECT p.*,MIN(a.due_date) AS due_date FROM learning_paths p JOIN path_assignments a ON a.path_id=p.id
-        WHERE p.status='published' AND ((a.target_type='employee' AND a.target_id=?) OR (a.target_type='department' AND a.target_id=?) OR (a.target_type='job_role' AND a.target_id=?))
-        GROUP BY p.id ORDER BY p.title''', (employee['id'], employee['department_id'] or '', employee['job_role_id'] or '')).fetchall()
-    paths = []
-    for p in rows:
-        courses, blocked, next_course = [], False, None
-        for c in db.execute('SELECT k.id,k.title,k.description,k.status,k.difficulty,k.duration_minutes FROM learning_path_courses l JOIN courses k ON k.id=l.course_id WHERE l.path_id=? ORDER BY l.position', (p['id'],)):
-            item = progress.get((employee['id'], c['id']))
-            done = bool(item and item['completed'])
-            status = 'completed' if done else 'unavailable' if c['status'] != 'published' else 'locked' if blocked and p['sequential'] else 'in_progress' if item and item['started'] else 'not_started'
-            if not done and status in ('in_progress', 'not_started') and next_course is None:
-                next_course = c['id']
-            courses.append({'id': c['id'], 'title': c['title'], 'description': c['description'], 'difficulty': c['difficulty'], 'durationMinutes': c['duration_minutes'], 'status': status,
-                            'progress': 100 if done else (item['progress'] if item else 0), 'completedAt': item['completedAt'] if item else None})
-            blocked = blocked or not done
-        completed = sum(1 for c in courses if c['status'] == 'completed')
-        paths.append({'id': p['id'], 'title': p['title'], 'description': p['description'], 'sequential': bool(p['sequential']), 'dueDate': p['due_date'], 'courses': courses,
-                      'completed': completed, 'total': len(courses), 'progress': round(completed / len(courses) * 100) if courses else 0, 'nextCourseId': next_course,
-                      'milestones': [{'title': c['title'], 'completedAt': c['completedAt']} for c in courses if c['status'] == 'completed']})
-    return paths
-
-
-def recommendations(db, employee, progress, assigned, paths, limit=6):
+def recommendations(db, employee, progress, assigned, limit=6):
     """Transparent rule-based recommendations; every item lists the rules that selected it."""
-    levels, targets = skill_levels(db, employee['id']), role_targets(db, employee['job_role_id'])
-    skill_names = {r[0]: r[1] for r in db.execute('SELECT id,name FROM skills')}
-    goal_rows = db.execute("SELECT title,skill_id,target_level FROM learning_goals WHERE employee_id=? AND status='active' AND skill_id IS NOT NULL", (employee['id'],))
-    goals_by_skill={}
-    for goal in goal_rows:goals_by_skill.setdefault(goal['skill_id'],[]).append(dict(goal))
-    revision = {}
-    for r in db.execute('''SELECT a.title,a.skill_id,a.course_id,MAX(t.percent) AS best FROM assessment_attempts t JOIN assessments a ON a.id=t.assessment_id
-        WHERE t.employee_id=? AND t.status IN ('passed','failed') GROUP BY a.id HAVING MAX(CASE WHEN t.status='passed' THEN 1 ELSE 0 END)=0''', (employee['id'],)):
-        if r['skill_id']:
-            revision[r['skill_id']] = (r['title'], r['best'])
-    path_next = {p['nextCourseId']: p['title'] for p in paths if p['nextCourseId']}
     completed_categories = {c['category'] for c in db.execute('SELECT DISTINCT k.category FROM course_runs r JOIN courses k ON k.id=r.course_id WHERE r.candidate_id=? AND r.completed_at IS NOT NULL', (employee['id'],))}
     department = employee.get('department')
+
     def candidates():
         # Department-only courses are recommended only inside that department.
-        for _,group in groupby(db.execute("SELECT k.id,k.title,k.description,k.difficulty,k.duration_minutes,k.category,k.department_id,s.skill_id,s.level FROM courses k LEFT JOIN course_skills s ON s.course_id=k.id WHERE k.status='published' AND (k.visibility='everyone' OR k.department_id IS NULL OR k.department_id=?) ORDER BY k.title,k.rowid,s.skill_id",(employee.get('department_id') or '',)),key=lambda row:row['id']):
-            course=next(group)
-            skills=[{'skill_id':row['skill_id'],'level':row['level']} for row in chain((course,),group) if row['skill_id'] is not None]
+        for course in db.execute("""SELECT id,title,description,difficulty,duration_minutes,category,department_id FROM courses
+                WHERE status='published' AND (visibility='everyone' OR department_id IS NULL OR department_id=?) ORDER BY title,rowid""", (employee.get('department_id') or '',)):
             item = progress.get((employee['id'], course['id']))
             if (item and (item['completed'] or item['started'])) or (employee['id'], course['id']) in assigned:
                 continue
             reasons, score = [], 0
-            if course['id'] in path_next:
-                reasons.append(f'Next step in your learning path "{path_next[course["id"]]}".'); score += 4
-            for s in skills:
-                name, current = skill_names.get(s['skill_id'], 'a skill'), levels.get(s['skill_id'], 0)
-                target = targets.get(s['skill_id'], 0)
-                if current < target and s['level'] > current:
-                    reasons.append(f'Closes your {name} gap ({LEVELS[current]} now, {LEVELS[target]} required for your role).'); score += 3
-                for goal in goals_by_skill.get(s['skill_id'],()):
-                    if s['level'] > current:
-                        reasons.append(f'Supports your goal "{goal["title"]}".'); score += 3
-                if s['skill_id'] in revision:
-                    title, best = revision[s['skill_id']]
-                    reasons.append(f'Revision for {title} (best score {best}%).'); score += 2
             if department and course['department_id'] and course['department_id'] == employee['department_id']:
                 reasons.append(f'Designed for the {department} department.'); score += 1
             if course['category'] in completed_categories:
                 reasons.append(f'Builds on {course["category"]} courses you have completed.'); score += 1
             if score:
                 yield {'id': course['id'], 'title': course['title'], 'description': course['description'], 'difficulty': course['difficulty'], 'durationMinutes': course['duration_minutes'],
-                                'category': course['category'], 'skills': [skill_names.get(s['skill_id'], '') for s in skills], 'reasons': list(dict.fromkeys(reasons)), 'score': score}
-    rank=lambda row:(-row['score'],row['title'])
-    if limit is None or limit<0:
-        return sorted(candidates(),key=rank)[:limit]
-    return heapq.nsmallest(limit,candidates(),key=rank)
+                       'category': course['category'], 'reasons': reasons, 'score': score}
+    rank = lambda row: (-row['score'], row['title'])
+    if limit is None or limit < 0:
+        return sorted(candidates(), key=rank)[:limit]
+    return heapq.nsmallest(limit, candidates(), key=rank)
 
 
 def pending_assessments(db, employee, progress):
     """Assessments the employee is expected to take next, with the reason and remaining attempts."""
     used = {r[0]: (r[1], r[2]) for r in db.execute("SELECT assessment_id,COUNT(*),MAX(CASE WHEN status='passed' THEN 1 ELSE 0 END) FROM assessment_attempts WHERE employee_id=? GROUP BY assessment_id", (employee['id'],))}
-    levels, targets = skill_levels(db, employee['id']), role_targets(db, employee['job_role_id'])
     items = []
-    for a in db.execute("SELECT a.*,c.title AS course_title,s.name AS skill_name FROM assessments a LEFT JOIN courses c ON c.id=a.course_id LEFT JOIN skills s ON s.id=a.skill_id WHERE a.status='published' ORDER BY a.title"):
+    for a in db.execute("SELECT a.*,c.title AS course_title FROM assessments a LEFT JOIN courses c ON c.id=a.course_id WHERE a.status='published' ORDER BY a.title"):
         count, has_passed = used.get(a['id'], (0, 0))
         if count >= a['max_attempts']:
             continue
@@ -319,10 +254,6 @@ def pending_assessments(db, employee, progress):
             reason = f'Required to complete {a["course_title"]}.'
         elif a['kind'] == 'pre' and item and not item['completed'] and count == 0:
             reason = f'Pre-training check for {a["course_title"]}.'
-        elif a['kind'] == 'skill' and a['skill_id'] and not has_passed:
-            current, target = levels.get(a['skill_id'], 0), targets.get(a['skill_id'], 0)
-            if current < (a['skill_level'] or 0) <= max(target, current + 1) and target > current:
-                reason = f'Validates {a["skill_name"]} at {LEVELS[a["skill_level"]]} for your role.'
         if reason:
             items.append({'id': a['id'], 'title': a['title'], 'kind': a['kind'], 'reason': reason, 'attemptsLeft': a['max_attempts'] - count})
     return items
@@ -346,8 +277,6 @@ def dashboard(db, user, query):
     hours = training_seconds(db, course_scope)
     w, p = ids_clause(course_scope, 'r.course_id')
     certificates = [r for r in db.execute(f'SELECT r.candidate_id,x.issued_at FROM certificates x JOIN course_runs r ON r.id=x.run_id WHERE {w}', p) if r['candidate_id'] in id_set]
-    goal_owners = {r[0] for r in db.execute("SELECT DISTINCT employee_id FROM learning_goals WHERE status='active'")}
-    plan_owners = (path_assignment_employees(db) | goal_owners) & id_set
     completed = sum(1 for s in statuses.values() if s == 'completed')
     by_employee = {}
     for (employee, course), status in statuses.items():
@@ -364,7 +293,6 @@ def dashboard(db, user, query):
         'completionRate': round(completed / len(pairs) * 100) if pairs else 0, 'enrollments': len(pairs), 'completions': completed,
         'certificatesEarned': len(certificates), 'trainingHours': round(sum(hours.get(e, 0) for e in ids) / 3600, 1),
         'pendingMandatory': sum(1 for pair, a in assignments.items() if a['mandatory'] and statuses[pair] != 'completed'),
-        'employeesWithPlans': len(plan_owners),
     }
     progress_summary = {
         'activelyLearning': sum(1 for e in ids if any(s == 'in_progress' for _, s in by_employee.get(e, []))),
@@ -453,7 +381,7 @@ def upcoming_training(db, people, progress, assignments, statuses, courses):
 
 REPORTS = {
     'enrollments': 'Course enrollment and completion', 'employees': 'Employee learning progress', 'departments': 'Department training statistics',
-    'assessments': 'Assessment performance', 'skills': 'Skill-gap summary', 'compliance': 'Mandatory training compliance', 'certificates': 'Certificate records',
+    'assessments': 'Assessment performance', 'compliance': 'Mandatory training compliance', 'certificates': 'Certificate records',
 }
 TRAINER_REPORTS = ('enrollments', 'assessments', 'certificates')
 
@@ -469,7 +397,7 @@ def report(db, user, query):
     ids = [p['id'] for p in people]
     courses_in_scope = course_scope if course is None else [c for c in (course_scope if course_scope is not None else [course]) if c == course]
     builder = {'enrollments': report_enrollments, 'employees': report_employees, 'departments': report_departments, 'assessments': report_assessments,
-               'skills': report_skills, 'compliance': report_compliance, 'certificates': report_certificates}[kind]
+               'compliance': report_compliance, 'certificates': report_certificates}[kind]
     columns, rows, summary = builder(db, people, ids, courses_in_scope, start, end)
     total = len(rows)
     if query.get('export', [''])[0] == '1':
@@ -567,7 +495,7 @@ def report_assessments(db, people, ids, course_ids, start, end):
             rows.append({'employee': by_id[r['candidate_id']]['name'], 'department': by_id[r['candidate_id']]['department'] or 'Unassigned', 'assessment': f'{r["title"]}: Module {r["set_index"] + 1} exam',
                          'type': 'Module exam', 'attempt': r['attempt_number'], 'score': '' if r['score'] is None else r['score'] * 25, 'result': r['status'].capitalize(), 'date': (r['finished_at'] or r['started_at'])[:10]})
     w2, p2 = ids_clause(course_ids, 'a.course_id')
-    kinds = {'pre': 'Pre-training', 'post': 'Post-training', 'knowledge': 'Knowledge check', 'skill': 'Skill assessment'}
+    kinds = {'pre': 'Pre-training', 'post': 'Post-training', 'knowledge': 'Knowledge check'}
     for r in db.execute(f"SELECT t.employee_id,a.title,a.kind,t.attempt_number,t.percent,t.status,t.finished_at,t.started_at FROM assessment_attempts t JOIN assessments a ON a.id=t.assessment_id WHERE t.status<>'in-progress' AND {w2}", p2):
         if r['employee_id'] in by_id and in_range(r['finished_at'] or r['started_at'], start, end):
             rows.append({'employee': by_id[r['employee_id']]['name'], 'department': by_id[r['employee_id']]['department'] or 'Unassigned', 'assessment': r['title'], 'type': kinds[r['kind']],
@@ -576,19 +504,6 @@ def report_assessments(db, people, ids, course_ids, start, end):
     graded = [r['score'] for r in rows if r['score'] != '']
     return ([('employee', 'Employee'), ('department', 'Department'), ('assessment', 'Assessment'), ('type', 'Type'), ('attempt', 'Attempt'), ('score', 'Score %'), ('result', 'Result'), ('date', 'Date')], rows,
             {'Attempts': len(rows), 'Pass rate': f'{round(sum(1 for r in rows if r["result"] == "Passed") / len(rows) * 100) if rows else 0}%', 'Average score': f'{average(graded) or 0}%'})
-
-
-def report_skills(db, people, ids, course_ids, start, end):
-    names = {r[0]: r[1] for r in db.execute('SELECT id,name FROM skills')}
-    rows = []
-    for person in people:
-        levels, targets = skill_levels(db, person['id']), role_targets(db, person['job_role_id'])
-        for skill in sorted(set(levels) | set(targets), key=lambda s: names.get(s, '')):
-            current, target = levels.get(skill, 0), targets.get(skill)
-            rows.append({'employee': person['name'], 'department': person['department'] or 'Unassigned', 'jobRole': person['job_role'] or '', 'skill': names.get(skill, ''),
-                         'current': LEVELS[current], 'target': LEVELS[target] if target else '', 'gap': max(0, (target or 0) - current), 'status': 'Gap' if target and current < target else 'Meets target' if target else 'No role target'})
-    return ([('employee', 'Employee'), ('department', 'Department'), ('jobRole', 'Job role'), ('skill', 'Skill'), ('current', 'Current level'), ('target', 'Role target'), ('gap', 'Gap (levels)'), ('status', 'Status')], rows,
-            {'Skill records': len(rows), 'Open gaps': sum(1 for r in rows if r['status'] == 'Gap')})
 
 
 def report_compliance(db, people, ids, course_ids, start, end):

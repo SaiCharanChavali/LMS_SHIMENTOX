@@ -6,14 +6,10 @@ ShimentoX Learning is an internal employee portal. Every account is an employee.
 
 | Capability | Admin | HR / L&D | Trainer | Manager | Employee |
 | --- | --- | --- | --- | --- | --- |
-| Own learning, paths, skills & goals, calendar, certificates | Preview only | ✓ | ✓ | ✓ | ✓ |
+| Own learning, calendar, certificates | Preview only | ✓ | ✓ | ✓ | ✓ |
 | Users & Teams, departments, job roles, categories | ✓ | ✓ (not admin accounts) | | | |
 | Create, edit, publish and archive courses | ✓ | ✓ | Own courses | | |
-| Assign courses and learning paths | ✓ | ✓ | | Direct reports, optional only | |
-| Create learning paths | ✓ | ✓ | Own paths | | |
-| Define skills | ✓ | ✓ | | | |
-| Role competencies (target levels) | ✓ | ✓ | | Roles in own department or held by reports | |
-| Record skill evidence | ✓ | ✓ | | Direct reports | |
+| Assign courses | ✓ | ✓ | | Direct reports, optional only | |
 | Assessments and question banks | ✓ | ✓ | Own / own courses | | |
 | Training sessions and attendance | ✓ | ✓ | Own sessions | | |
 | Dashboard and reports | Organisation | Organisation | Own courses | Direct reports | |
@@ -30,21 +26,19 @@ All figures come from stored records at request time. Nothing is hardcoded.
 - **Course completion rate:** completed employee–course pairs divided by all pairs. A pair exists when the employee has enrolled in the course or it is assigned to them (directly, by department, or by job role). A course is complete once any run of it has been completed.
 - **Training hours:** verified video watch time plus attended instructor-led sessions.
 - **Pending mandatory training:** mandatory assignments that are not yet completed.
-- **Employees with learning plans:** employees with an assigned learning path or an active goal.
 - **Status of a course for an employee:** Completed, then Overdue (past the due date), then In progress (any activity), then Not started.
 
 ## Learning workflow
 
-1. **Create course → add lessons → add assessment → preview → save draft → publish** (Manage Courses). Courses have a category, difficulty, estimated duration, department, trainer, skill tags, module-exam pass mark (25–100%), retake limit (1–3 attempts per module), optional post-training assessment, and learning materials. Materials can be uploaded files (up to 50 MB) or HTTPS links.
+1. **Create course → add lessons → add assessment → preview → save draft → publish** (Manage Courses). Courses have a category, difficulty, estimated duration, department, trainer, module-exam pass mark (25–100%), retake limit (1–3 attempts per module), optional post-training assessment, and learning materials. Materials can be uploaded files (up to 50 MB) or HTTPS links.
 2. **Assign** a published course to an employee, department or job role. It can be mandatory (a deadline is required) or optional. Employees are notified once per assignment.
-3. **Learning paths** order several published courses. When a path is sequential, each course unlocks after the previous one is completed. Progress, the next recommended course and milestones update automatically from course completions.
-4. **Certificates** are issued only when every video, exercise and module exam is complete at the configured pass mark, and the selected post-training assessment has been passed during that course run. Each qualifying run gets exactly one certificate.
+3. **Certificates** are issued only when every video, exercise and module exam is complete at the configured pass mark, and the selected post-training assessment has been passed during that course run. Each qualifying run gets exactly one certificate.
 
 ## Building lesson-based courses (Manage Courses)
 
 New courses are built in six steps on the Manage Courses page, without leaving it:
 
-1. **Create course:** name, category, description, difficulty, duration, department, visibility (all employees or one department), publication status, assessment pass mark and attempts, owner, skills.
+1. **Create course:** name, category, description, difficulty, duration, department, visibility (all employees or one department), publication status, assessment pass mark and attempts, owner.
 2. **Learning materials:** add any number of lessons; reorder, edit or delete them before publishing. Each lesson can have a title, description, duration, a video (YouTube or Vimeo link, uploaded MP4/WebM, or direct HTTPS video file), an uploaded PDF or Office document (stored privately on the server), external resource links (with quick-add links to official sources such as Microsoft Generative AI for Beginners, Hugging Face Learn, Google's ML Crash Course, Databricks and AWS Skill Builder), text content, and a practical exercise.
 3. **Assessment:** multiple-choice and coding questions (a code snippet plus options), correct answers, explanations, pass mark, attempts and time limit. When present it is the course's required post-training assessment.
 4. **Preview:** the course exactly as employees will see it, including unsaved changes.
@@ -89,22 +83,14 @@ A single text lesson, *What is Retrieval-Augmented Generation (RAG)*, in Artific
 
 **Lesson text blocks** (in addition to the formatting described for course builders): `[text](https://…)` links; `:::acronym Title | subtitle` with `Letter | Word | description` rows; `:::flow Title` with `Step | caption` rows, drawn as boxes with arrows that stack vertically on narrow screens; `:::example Title` and `:::note Title` asides; and `:::slot knowledge-check`, where the inline knowledge check appears (*Mark as complete* stays at the end of the lesson).
 
-## Skills and competencies
-
-Skill levels are Beginner, Intermediate, Advanced and Expert. An employee's current level is the highest level supported by evidence: a passed skill assessment, or manager- or HR-recorded evidence with a note. **Completing a course never raises a skill level by itself.** A gap is the role target minus the current level. Goals tied to a skill and level complete automatically once evidence reaches that level.
-
 ## Assessments
 
-There are four types: pre-training, post-training, knowledge check, and skill assessment. Each has a question bank. Every attempt draws the configured number of questions at random. Scoring, the time limit and the attempt limit are enforced on the server. Employees see whether each answer was right, with the explanation, but not the answer key. Once an assessment has attempts, its question bank and type are locked; create a new assessment to change them.
+There are three types: pre-training, post-training, and knowledge check. Each has a question bank. Every attempt draws the configured number of questions at random. Scoring, the time limit and the attempt limit are enforced on the server. Employees see whether each answer was right, with the explanation, but not the answer key. Once an assessment has attempts, its question bank and type are locked; create a new assessment to change them.
 
 ## Recommendations
 
 Recommendations are rule-based and transparent. Each one lists the reasons it was chosen:
 
-- the next course in an assigned learning path,
-- closes a gap between the employee's level and their job role's target,
-- supports an active goal,
-- revision after a failed skill assessment,
 - designed for the employee's department,
 - builds on a category the employee has already completed.
 
@@ -128,24 +114,20 @@ Each notification has a unique key per employee, so the same reminder is never s
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | `/api/me/dashboard` | Profile, assigned and in-progress courses, recommendations, paths, skills, sessions, pending assessments, goals, history |
-| GET | `/api/me/paths` | Assigned learning paths with progress and milestones |
-| GET | `/api/me/skills` · POST `/api/me/goals` | Skills, gaps, evidence, skill assessments, goals |
+| GET | `/api/me/dashboard` | Profile, assigned and in-progress courses, recommendations, sessions, pending assessments, history |
 | GET | `/api/me/calendar` · POST `/api/me/sessions/{id}/register` and `/cancel` | Sessions, seats and registration |
 | GET | `/api/me/assessments` · POST `/api/me/assessments/{id}/start` and `/submit` | Assessments and attempts |
 | GET | `/api/me/notifications` · POST `/api/me/notifications/read` | Notifications |
 | GET | `/api/me/history` · POST `/api/me/records` | Learning history and self-reported development records |
 | GET / POST | `/api/me/assistant` | AI assistant status and requests (see [ai-assistant.md](ai-assistant.md)) |
 | GET | `/api/manage/dashboard?from=&to=` | Dashboard metrics for the caller's scope |
-| GET | `/api/manage/reports?type=&department=&employee=&course=&from=&to=&page=&export=1` | Reports (`enrollments`, `employees`, `departments`, `assessments`, `skills`, `compliance`, `certificates`); 25 rows per page; `export=1` returns up to 10,000 rows for CSV |
+| GET | `/api/manage/reports?type=&department=&employee=&course=&from=&to=&page=&export=1` | Reports (`enrollments`, `employees`, `departments`, `assessments`, `compliance`, `certificates`); 25 rows per page; `export=1` returns up to 10,000 rows for CSV |
 | GET | `/api/manage/org` · `/api/manage/people` | Reference data and employees in scope |
 | POST | `/api/manage/departments`, `/job-roles`, `/categories` | Organisation setup |
 | GET / POST | `/api/manage/assignments` · POST `/api/manage/assignments/{id}/delete` | Course assignments |
 | GET | `/api/manage/courses/{id}/preview` | Draft-safe course preview |
 | POST | `/api/manage/courses/{id}/resources` · `/api/manage/resources/{id}/delete` | Learning materials |
 | POST | `/api/manage/materials` (binary body, `X-File-Name` header) · GET `/api/materials/{id}` | Private file upload and download |
-| GET / POST | `/api/manage/paths` · POST `/paths/{id}/assign` · GET `/paths/{id}/progress` · POST `/path-assignments/{id}/delete` | Learning paths |
-| GET / POST | `/api/manage/skills` · POST `/competencies` · POST `/skill-evidence` | Skills framework |
 | GET / POST | `/api/manage/assessments` · GET `/assessments/{id}/attempts` | Question banks and attempt history |
 | GET / POST | `/api/manage/sessions` · GET `/sessions/{id}/registrations` · POST `/sessions/{id}/attendance` | Instructor-led training |
 | POST | `/api/admin/candidates/{id}/profile` | Edit an employee's name, role, department, job role, manager and title |

@@ -220,52 +220,6 @@ CREATE TABLE IF NOT EXISTS course_categories (
     name TEXT PRIMARY KEY COLLATE NOCASE CHECK(length(name) BETWEEN 2 AND 80),
     created_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS skills (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK(length(name) BETWEEN 2 AND 80),
-    category TEXT NOT NULL DEFAULT '',
-    description TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS course_skills (
-    course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-    skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
-    level INTEGER NOT NULL CHECK(level BETWEEN 1 AND 4),
-    PRIMARY KEY(course_id, skill_id)
-);
-CREATE TABLE IF NOT EXISTS role_competencies (
-    job_role_id TEXT NOT NULL REFERENCES job_roles(id) ON DELETE CASCADE,
-    skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
-    target_level INTEGER NOT NULL CHECK(target_level BETWEEN 1 AND 4),
-    updated_by TEXT REFERENCES candidates(id),
-    updated_at TEXT NOT NULL,
-    PRIMARY KEY(job_role_id, skill_id)
-);
--- Skill levels come only from passed skill assessments or manager-recorded evidence, never from course completion.
-CREATE TABLE IF NOT EXISTS skill_evidence (
-    id INTEGER PRIMARY KEY,
-    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
-    skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
-    level INTEGER NOT NULL CHECK(level BETWEEN 1 AND 4),
-    source TEXT NOT NULL CHECK(source IN ('assessment','manager')),
-    reference_id TEXT,
-    note TEXT NOT NULL DEFAULT '',
-    recorded_by TEXT REFERENCES candidates(id),
-    recorded_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS skill_evidence_employee ON skill_evidence(employee_id, skill_id);
-CREATE TABLE IF NOT EXISTS learning_goals (
-    id TEXT PRIMARY KEY,
-    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
-    title TEXT NOT NULL CHECK(length(title) BETWEEN 2 AND 150),
-    skill_id TEXT REFERENCES skills(id) ON DELETE SET NULL,
-    target_level INTEGER CHECK(target_level BETWEEN 1 AND 4),
-    target_date TEXT,
-    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','completed','cancelled')),
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS learning_goals_employee ON learning_goals(employee_id);
 CREATE TABLE IF NOT EXISTS course_assignments (
     id TEXT PRIMARY KEY,
     course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
@@ -279,41 +233,12 @@ CREATE TABLE IF NOT EXISTS course_assignments (
     UNIQUE(course_id, target_type, target_id)
 );
 CREATE INDEX IF NOT EXISTS course_assignments_target ON course_assignments(target_type, target_id);
-CREATE TABLE IF NOT EXISTS learning_paths (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL CHECK(length(title) BETWEEN 2 AND 150),
-    description TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
-    sequential INTEGER NOT NULL DEFAULT 1 CHECK(sequential IN (0,1)),
-    created_by TEXT REFERENCES candidates(id),
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS learning_path_courses (
-    path_id TEXT NOT NULL REFERENCES learning_paths(id) ON DELETE CASCADE,
-    position INTEGER NOT NULL CHECK(position >= 0),
-    course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-    PRIMARY KEY(path_id, position),
-    UNIQUE(path_id, course_id)
-);
-CREATE TABLE IF NOT EXISTS path_assignments (
-    id TEXT PRIMARY KEY,
-    path_id TEXT NOT NULL REFERENCES learning_paths(id) ON DELETE CASCADE,
-    target_type TEXT NOT NULL CHECK(target_type IN ('employee','department','job_role')),
-    target_id TEXT NOT NULL,
-    due_date TEXT,
-    assigned_by TEXT REFERENCES candidates(id),
-    assigned_at TEXT NOT NULL,
-    UNIQUE(path_id, target_type, target_id)
-);
 CREATE TABLE IF NOT EXISTS assessments (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL CHECK(length(title) BETWEEN 2 AND 150),
     description TEXT NOT NULL DEFAULT '',
-    kind TEXT NOT NULL CHECK(kind IN ('pre','post','knowledge','skill')),
+    kind TEXT NOT NULL CHECK(kind IN ('pre','post','knowledge')),
     course_id TEXT REFERENCES courses(id) ON DELETE SET NULL,
-    skill_id TEXT REFERENCES skills(id) ON DELETE SET NULL,
-    skill_level INTEGER CHECK(skill_level BETWEEN 1 AND 4),
     pass_percent INTEGER NOT NULL DEFAULT 70 CHECK(pass_percent BETWEEN 1 AND 100),
     max_attempts INTEGER NOT NULL DEFAULT 3 CHECK(max_attempts BETWEEN 1 AND 3),
     question_count INTEGER NOT NULL CHECK(question_count BETWEEN 1 AND 100),

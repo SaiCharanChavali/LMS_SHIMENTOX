@@ -32,10 +32,16 @@ def _quiz_questions(raw):
     return [q for q in items if q]
 
 
-def _bank_questions(db, assessment_id):
-    items = [_question(r['prompt'], json.loads(r['options_json']), r['correct_option'], r['explanation'] or '')
-             for r in db.execute('SELECT * FROM assessment_bank WHERE assessment_id=? ORDER BY position', (assessment_id,)) if not r['code']]
-    return [q for q in items if q]
+def _bank_questions(db, assessment_ids):
+    """assessment id -> playable questions in bank order, for many assessments in one query."""
+    ids = sorted(set(assessment_ids))
+    banks = {}
+    if ids:
+        for r in db.execute(f"SELECT * FROM assessment_bank WHERE assessment_id IN ({','.join('?' * len(ids))}) ORDER BY assessment_id,position", ids):
+            question = None if r['code'] else _question(r['prompt'], json.loads(r['options_json']), r['correct_option'], r['explanation'] or '')
+            if question:
+                banks.setdefault(r['assessment_id'], []).append(question)
+    return banks
 
 
 def lesson_games(db, user, query):
@@ -65,16 +71,18 @@ def lesson_games(db, user, query):
         if fresh:
             lessons.append({'id': identity, 'title': title, 'questions': fresh})
 
-    linked = set()
-    for row in db.execute('SELECT id,title,quiz_json,assessment_id FROM course_lessons WHERE course_id=? ORDER BY position', (course_id,)):
+    rows = db.execute('SELECT id,title,quiz_json,assessment_id FROM course_lessons WHERE course_id=? ORDER BY position', (course_id,)).fetchall()
+    linked = {row['assessment_id'] for row in rows if not row['quiz_json'] and row['assessment_id']}
+    final = course['post_assessment_id']
+    final_open = bool(final) and final not in linked and (completed or final in passed_checks)
+    # Every question bank that will be played is read in one query.
+    banks = _bank_questions(db, [a for a in linked if completed or a in passed_checks] + ([final] if final_open else []))
+    for row in rows:
         if row['quiz_json']:
             if completed or row['id'] in passed_lessons:
                 add(row['id'], row['title'], _quiz_questions(row['quiz_json']))
-        elif row['assessment_id']:
-            linked.add(row['assessment_id'])
-            if completed or row['assessment_id'] in passed_checks:
-                add(row['id'], row['title'], _bank_questions(db, row['assessment_id']))
-    final = course['post_assessment_id']
-    if final and final not in linked and (completed or final in passed_checks):
-        add('final', 'Final assessment', _bank_questions(db, final))
+        elif row['assessment_id'] and (completed or row['assessment_id'] in passed_checks):
+            add(row['id'], row['title'], banks.get(row['assessment_id'], []))
+    if final_open:
+        add('final', 'Final assessment', banks.get(final, []))
     return {'courseId': course_id, 'lessons': lessons}

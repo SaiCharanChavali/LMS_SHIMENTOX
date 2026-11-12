@@ -28,8 +28,6 @@ class PerformanceTests(unittest.TestCase):
         db.execute("INSERT INTO candidates(id,full_name,email,password_hash,created_at,updated_at,role) VALUES ('trainer','Trainer','trainer@example.com','unused',?,?,'trainer')",(stamp,stamp))
         db.execute("INSERT INTO departments VALUES ('department','Engineering',?)",(stamp,))
         db.execute("UPDATE courses SET trainer_id='trainer',department_id='department' WHERE id IN ('course-0002','course-0004')")
-        db.execute("INSERT INTO skills VALUES ('second','Automation','Technical','',?)",(stamp,))
-        db.execute("INSERT INTO course_skills VALUES ('course-0002','second',3)")
         for identity in ('resource-z','resource-a'):
             db.execute("INSERT INTO course_resources(id,course_id,title,kind,url,created_at) VALUES (?,'course-0002',?,'link','https://example.com',?)",(identity,identity,stamp))
         db.execute("INSERT INTO course_assignments(id,course_id,target_type,target_id,assigned_at) VALUES ('assignment','course-0002','employee','employee',?)",(stamp,))
@@ -38,7 +36,7 @@ class PerformanceTests(unittest.TestCase):
             expected=[course_view(row,True,db) for row in db.execute('SELECT * FROM courses ORDER BY title') if owns_course(actor,row)]
             actual,count=self.measured(lambda:admin_action(db,actor,'GET','courses',{})['courses'])
             self.assertEqual(actual,expected)
-            self.assertEqual(count,4)
+            self.assertEqual(count,3)
             if role=='trainer':self.assertEqual([c['id'] for c in actual],['course-0002','course-0004'])
 
     def test_curriculum_reads_database_questions_without_answer_keys(self):
@@ -55,19 +53,26 @@ class PerformanceTests(unittest.TestCase):
         self.assertEqual(actual[2]['exercises'][1]['questions'],[])
 
     def test_recommendation_ranking_ties_filters_and_query_budget(self):
-        self.db.execute("UPDATE courses SET title='A first' WHERE id IN ('course-0002','course-0004','course-0009')")
-        self.db.execute("DELETE FROM course_skills WHERE course_id='course-0003'")
-        employee=dict(self.db.execute("SELECT * FROM candidates WHERE id='employee'").fetchone());employee['department']=None
-        progress={('employee','course-0001'):{'completed':False,'started':True}}
+        db,stamp=self.db,'2026-01-01T00:00:00Z'
+        db.execute("INSERT INTO departments VALUES ('department','Engineering',?)",(stamp,))
+        db.execute("UPDATE candidates SET department_id='department' WHERE id='employee'")
+        db.execute("UPDATE courses SET title='A first' WHERE id IN ('course-0002','course-0004','course-0009')")
+        db.execute("UPDATE courses SET department_id='department' WHERE id IN ('course-0002','course-0004','course-0009')")
+        db.execute("UPDATE courses SET category='Data' WHERE id IN ('course-0003','course-0004','course-0005','course-0006')")
+        db.execute("UPDATE course_runs SET completed_at=? WHERE id='course-0003-run-9'",(stamp,))
+        # Courses for another department are never recommended.
+        db.execute("INSERT INTO departments VALUES ('other','Sales',?)",(stamp,))
+        db.execute("UPDATE courses SET department_id='other',visibility='department',category='Data' WHERE id='course-0007'")
+        employee=dict(db.execute("SELECT * FROM candidates WHERE id='employee'").fetchone());employee['department']='Engineering'
+        progress={('employee','course-0001'):{'completed':False,'started':True},('employee','course-0003'):{'completed':True,'started':True}}
         assigned={('employee','course-0000'):{}}
-        paths=[{'nextCourseId':'course-0004','title':'Fast track'}]
-        actual,count=self.measured(lambda:recommendations(self.db,employee,progress,assigned,paths))
-        self.assertEqual([r['id'] for r in actual],['course-0004','course-0002','course-0009','course-0005','course-0006','course-0007'])
-        self.assertEqual(count,7)
-        self.assertEqual(actual[0]['score'],7)
-        self.assertEqual(actual[0]['reasons'],['Next step in your learning path "Fast track".','Supports your goal "Learn Python".'])
-        all_results=recommendations(self.db,employee,progress,assigned,paths,limit=None)
-        for limit in (0,1,3,6,100,-1):self.assertEqual(recommendations(self.db,employee,progress,assigned,paths,limit=limit),all_results[:limit])
+        actual,count=self.measured(lambda:recommendations(db,employee,progress,assigned))
+        self.assertEqual([r['id'] for r in actual],['course-0004','course-0002','course-0009','course-0005','course-0006'])
+        self.assertEqual(count,2)
+        self.assertEqual(actual[0]['score'],2)
+        self.assertEqual(actual[0]['reasons'],['Designed for the Engineering department.','Builds on Data courses you have completed.'])
+        all_results=recommendations(db,employee,progress,assigned,limit=None)
+        for limit in (0,1,3,6,100,-1):self.assertEqual(recommendations(db,employee,progress,assigned,limit=limit),all_results[:limit])
 
     def test_activity_stream_preserves_events_and_filters(self):
         stamp='2026-01-01T00:00:00Z'

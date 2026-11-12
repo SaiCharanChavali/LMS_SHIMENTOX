@@ -1,6 +1,7 @@
 # AI-powered learning and development: gap analysis and roadmap
 
 **Status:** analysis and plan only. No source code or database was changed to produce it.
+**Update, 12 November 2026:** skills, competencies, goals, skill assessments and learning paths were removed from the portal (schema version 11 drops their tables). Every part of this plan that builds on them, including skill-gap recommendations, Individual Development Plans, skill-based adaptive assessments and skills analytics, is out of date and needs re-planning before use.
 **Analysed:** `main` at commit `ffdca07` (identical to GitHub `SaiCharanChavali/LMS_SHIMENTOX`), 10 November 2026.
 **Data snapshot:** the development database on the analyst's machine (`backend/data/lms.sqlite3`, read-only). Production data may differ; re-run the counts in [Appendix A](#appendix-a-how-to-re-check-the-data-snapshot) before planning sprints.
 

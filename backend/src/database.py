@@ -11,7 +11,7 @@ from deadlines import end_of_day
 
 BACKEND = Path(__file__).resolve().parents[1]
 COURSE_ID = 'python-programming'
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 # Columns added after a table first shipped (versions 4-6); added only where missing.
 ADDED_COLUMNS = [
     ('courses', 'format', "TEXT NOT NULL DEFAULT 'modules' CHECK(format IN ('modules','lessons'))"),
@@ -94,6 +94,7 @@ def initialize(path):
             db.executescript((BACKEND / 'database/migrations/003_employee_development.sql').read_text(encoding='utf-8'))
         db.executescript((BACKEND / 'database/schema.sql').read_text(encoding='utf-8'))
         upgrade_assessment_attempts(db)
+        remove_skills_and_paths(db)
         # Fresh and upgraded databases converge on the same columns without losing rows.
         for table, column, definition in ADDED_COLUMNS:
             if column not in {r[1] for r in db.execute(f'PRAGMA table_info({table})')}:
@@ -119,7 +120,7 @@ def initialize(path):
         db.execute('INSERT OR IGNORE INTO reminder_settings(id) VALUES (1)')
         db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
         # Indexes on columns added by migration 003 are created here so the base schema stays valid for older tables.
-        db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;CREATE UNIQUE INDEX IF NOT EXISTS candidates_keka_employee ON candidates(keka_employee_id) WHERE length(keka_employee_id)>0;')
+        db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;CREATE UNIQUE INDEX IF NOT EXISTS candidates_keka_employee ON candidates(keka_employee_id) WHERE length(keka_employee_id)>0;CREATE INDEX IF NOT EXISTS candidates_role ON candidates(role);CREATE INDEX IF NOT EXISTS development_records_employee ON development_records(employee_id,completed_on);')
         stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
         # Configurable defaults are seeded once, only into empty tables, so admin deletions are respected.
         if db.execute('SELECT 1 FROM departments').fetchone() is None:
@@ -205,6 +206,47 @@ def upgrade_assessment_attempts(db):
         COMMIT;
         PRAGMA foreign_keys=ON;
     ''')
+
+
+SKILL_AND_PATH_TABLES = ('path_assignments', 'learning_path_courses', 'learning_paths', 'learning_goals', 'skill_evidence', 'role_competencies', 'course_skills', 'skills')
+
+
+def remove_skills_and_paths(db):
+    """Version 11: skills, competencies, goals and learning paths were removed from the portal.
+
+    Their tables are dropped, and assessments lose the skill columns and the 'skill' type. SQLite cannot drop a column
+    that has a foreign key, so the assessments table is rebuilt once with every row kept; a leftover skill
+    assessment becomes a knowledge check so its questions and attempt history stay.
+    """
+    columns = {r[1] for r in db.execute('PRAGMA table_info(assessments)')}
+    if 'skill_id' in columns or 'skill_level' in columns:
+        db.executescript('''
+            PRAGMA foreign_keys=OFF;
+            BEGIN;
+            CREATE TABLE assessments_upgraded (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL CHECK(length(title) BETWEEN 2 AND 150),
+                description TEXT NOT NULL DEFAULT '',
+                kind TEXT NOT NULL CHECK(kind IN ('pre','post','knowledge')),
+                course_id TEXT REFERENCES courses(id) ON DELETE SET NULL,
+                pass_percent INTEGER NOT NULL DEFAULT 70 CHECK(pass_percent BETWEEN 1 AND 100),
+                max_attempts INTEGER NOT NULL DEFAULT 3 CHECK(max_attempts BETWEEN 1 AND 3),
+                question_count INTEGER NOT NULL CHECK(question_count BETWEEN 1 AND 100),
+                time_limit_minutes INTEGER NOT NULL DEFAULT 15 CHECK(time_limit_minutes BETWEEN 1 AND 240),
+                status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+                created_by TEXT REFERENCES candidates(id),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            INSERT INTO assessments_upgraded(id,title,description,kind,course_id,pass_percent,max_attempts,question_count,time_limit_minutes,status,created_by,created_at,updated_at)
+                SELECT id,title,description,CASE WHEN kind='skill' THEN 'knowledge' ELSE kind END,course_id,pass_percent,max_attempts,question_count,time_limit_minutes,status,created_by,created_at,updated_at FROM assessments;
+            DROP TABLE assessments;
+            ALTER TABLE assessments_upgraded RENAME TO assessments;
+            COMMIT;
+            PRAGMA foreign_keys=ON;
+        ''')
+    for table in SKILL_AND_PATH_TABLES:
+        db.execute(f'DROP TABLE IF EXISTS {table}')
 
 
 def seed_admin(path, source=ADMIN_SEED):

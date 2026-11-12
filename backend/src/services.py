@@ -51,10 +51,6 @@ PERMISSIONS = {
     'org.manage': {'admin', 'hr'},
     'courses.manage': {'admin', 'hr', 'trainer'},
     'courses.assign': {'admin', 'hr', 'manager'},
-    'paths.manage': {'admin', 'hr', 'trainer'},
-    'skills.manage': {'admin', 'hr'},
-    'competencies.manage': {'admin', 'hr', 'manager'},
-    'skills.record': {'admin', 'hr', 'manager'},
     'assessments.manage': {'admin', 'hr', 'trainer'},
     'sessions.manage': {'admin', 'hr', 'trainer'},
     'reports.view': {'admin', 'hr', 'manager', 'trainer'},
@@ -446,8 +442,6 @@ def records(db, candidate):
     result['assignment_attempts'] = [dict(r) for r in db.execute('''SELECT a.id,a.run_id,a.checkpoint_id,a.attempt_number,a.status,a.started_at,a.deadline,a.finished_at,a.score,a.total,a.reason
         FROM checkpoint_attempts a JOIN course_runs r ON r.id=a.run_id WHERE r.candidate_id=? ORDER BY a.started_at''', (candidate,))]
     result['assessment_attempts'] = [dict(r) for r in db.execute('SELECT id,assessment_id,attempt_number,status,started_at,finished_at,score,total,percent FROM assessment_attempts WHERE employee_id=? ORDER BY started_at', (candidate,))]
-    result['skill_evidence'] = [dict(r) for r in db.execute('SELECT skill_id,level,source,note,recorded_at FROM skill_evidence WHERE employee_id=? ORDER BY id', (candidate,))]
-    result['learning_goals'] = [dict(r) for r in db.execute('SELECT * FROM learning_goals WHERE employee_id=? ORDER BY created_at', (candidate,))]
     result['session_registrations'] = [dict(r) for r in db.execute('SELECT * FROM session_registrations WHERE employee_id=?', (candidate,))]
     result['development_records'] = [dict(r) for r in db.execute('SELECT * FROM development_records WHERE employee_id=? ORDER BY completed_on', (candidate,))]
     result['account_events'] = [dict(r) for r in db.execute('SELECT event,created_at FROM auth_events WHERE candidate_id=? ORDER BY id', (candidate,))]

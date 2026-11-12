@@ -1,4 +1,4 @@
-"""Employee L&D features over real HTTP: roles, assignments, paths, skills, assessments, certificates, analytics."""
+"""Employee L&D features over real HTTP: roles, assignments, assessments, certificates, analytics."""
 from contextlib import closing
 import copy
 import json
@@ -119,7 +119,23 @@ class DevelopmentTests(PortalFixture):
             status, payload, _ = (self.admin if route.startswith('manage') else employee).request(route)
             self.assertEqual(status, 404, route)
             self.assertIn(expected, payload['error'])
-        self.assertEqual(self.admin.request('manage/paths')[0], 200)
+
+    def test_skills_learning_paths_and_goals_are_removed(self):
+        employee = self.account(name='No Paths')
+        for route, body in (('manage/paths', None), ('manage/skills', None), ('manage/competencies', {}), ('manage/skill-evidence', {})):
+            self.assertEqual(self.admin.request(route, body)[0], 404, route)
+        for route in ('me/paths', 'me/skills'):
+            self.assertEqual(employee.request(route)[0], 404, route)
+        self.assertEqual(employee.request('me/goals', {'title': 'Lead a team retro'})[0], 404)
+        dashboard = employee.request('me/dashboard')[1]
+        self.assertFalse({'paths', 'skills', 'goals'} & set(dashboard), 'The dashboard no longer sends skills, paths or goals.')
+        self.assertNotIn('skillGaps', dashboard['stats'])
+        self.assertNotIn('employeesWithPlans', self.admin.request('manage/dashboard')[1]['kpis'])
+        self.assertEqual(self.admin.request('manage/reports?type=skills')[0], 400)
+        self.assertNotIn('skill', {a['kind'] for a in self.admin.request('manage/assessments')[1]['assessments']})
+        rejected = self.admin.request('manage/assessments', {'title': 'Old skill check', 'kind': 'skill', 'passPercent': 60, 'maxAttempts': 2, 'questionCount': 1,
+                                                             'timeLimitMinutes': 10, 'status': 'draft', 'questions': [['Q?', ['A', 'B'], 0, '']]})
+        self.assertEqual(rejected[0], 400)
 
     def test_only_the_employee_and_manager_roles_can_be_assigned(self):
         for role in ('admin', 'hr', 'trainer'):
@@ -216,49 +232,6 @@ class DevelopmentTests(PortalFixture):
         csv_rows = self.admin.request('manage/reports?type=certificates&export=1')[1]['rows']
         self.assertEqual(len(csv_rows), certificates)
 
-    def test_learning_path_progress_and_sequence(self):
-        second = self.course('Path Course Two')
-        draft = self.admin.request('manage/paths', {'title': 'Generative AI Path', 'status': 'draft', 'sequential': True, 'courseIds': ['python-programming', second]})
-        self.assertEqual(draft[0], 200, draft[1])
-        path = next(p for p in draft[1]['paths'] if p['title'] == 'Generative AI Path')
-        learner = self.account(name='Path Learner')
-        self.assertEqual(self.admin.request(f'manage/paths/{path["id"]}/assign', {'targetType': 'employee', 'targetId': learner.id})[0], 409)
-        self.admin.request('manage/paths', {'id': path['id'], 'title': 'Generative AI Path', 'status': 'published', 'sequential': True, 'courseIds': ['python-programming', second]})
-        self.assertEqual(self.admin.request(f'manage/paths/{path["id"]}/assign', {'targetType': 'employee', 'targetId': learner.id})[0], 200)
-        mine = learner.request('me/paths')[1]['paths'][0]
-        self.assertEqual([c['status'] for c in mine['courses']], ['not_started', 'locked'])
-        self.assertEqual(mine['nextCourseId'], 'python-programming')
-        self.complete(learner, 'python-programming')
-        mine = learner.request('me/paths')[1]['paths'][0]
-        self.assertEqual((mine['completed'], mine['progress'], mine['nextCourseId']), (1, 50, second))
-        self.assertEqual(mine['milestones'][0]['title'], 'PYTHON PROGRAMMING')
-        progress = self.admin.request(f'manage/paths/{path["id"]}/progress')[1]['employees']
-        self.assertEqual(progress[0]['progress'], 50)
-        recs = learner.request('me/dashboard')[1]['recommendations']
-        self.assertTrue(any(r['id'] == second and any('learning path' in reason for reason in r['reasons']) for r in recs))
-
-    def test_skills_gap_evidence_and_recommendations(self):
-        role = self.admin.request('manage/job-roles', {'name': f'Analyst {uuid.uuid4().hex[:6]}'})[1]['jobRoles'][-1]
-        name = f'SQL {uuid.uuid4().hex[:6]}'
-        skill_id = next(s['id'] for s in self.admin.request('manage/skills', {'name': name, 'category': 'Data'})[1]['skills'] if s['name'] == name)
-        self.assertEqual(self.admin.request('manage/competencies', {'jobRoleId': role['id'], 'skillId': skill_id, 'targetLevel': 2})[0], 200)
-        course = self.course('SQL Foundations', skills=[{'skillId': skill_id, 'level': 2}])
-        learner = self.account(name='Skill Learner', jobRoleId=role['id'])
-        skills = learner.request('me/skills')[1]
-        row = next(s for s in skills['skills'] if s['id'] == skill_id)
-        self.assertEqual((row['current'], row['target'], row['gap']), (0, 2, 2))
-        self.assertTrue(any(r['id'] == course and 'gap' in ' '.join(r['reasons']) for r in skills['recommendations']))
-        self.complete(learner, course)
-        row = next(s for s in learner.request('me/skills')[1]['skills'] if s['id'] == skill_id)
-        self.assertEqual(row['current'], 0, 'Course completion alone must not raise a skill level.')
-        check = self.assessment(title='SQL level 2', kind='skill', skillId=skill_id, skillLevel=2)
-        self.assertEqual(self.take(learner, check, correct=False)[1]['result']['status'], 'failed')
-        self.assertEqual(self.take(learner, check)[1]['result']['status'], 'passed')
-        row = next(s for s in learner.request('me/skills')[1]['skills'] if s['id'] == skill_id)
-        self.assertEqual((row['current'], row['gap'], row['evidence'][0]['source']), (2, 0, 'assessment'))
-        gaps = self.admin.request('manage/reports?type=skills&export=1')[1]['rows']
-        self.assertTrue(any(r['employee'] == 'Skill Learner' and r['status'] == 'Meets target' for r in gaps))
-
     def test_question_bank_randomisation_and_retake_policy(self):
         identity = self.assessment(title='Policy check')
         learner = self.account(name='Assessment Learner')
@@ -349,14 +322,8 @@ class DevelopmentTests(PortalFixture):
         self.assertTrue(any(r['url'] == url for r in extras['resources']))
         self.assertEqual(self.admin.request('manage/courses/python-programming/resources', {'title': 'Bad', 'kind': 'link', 'url': 'javascript:alert(1)'})[0], 400)
 
-    def test_goals_history_records_and_assistant_without_credentials(self):
-        learner = self.account(name='Goal Setter')
-        saved = learner.request('me/goals', {'title': 'Lead a team retro', 'targetDate': '2099-01-01'})
-        self.assertEqual(saved[0], 200, saved[1])
-        goal = saved[1]['goals'][0]
-        self.assertEqual(learner.request('me/goals', {'id': goal['id'], 'title': 'x'})[0], 400)
-        other = self.account(name='Goal Intruder')
-        self.assertEqual(other.request('me/goals', {'id': goal['id'], 'title': 'Taken over'})[0], 404)
+    def test_history_records_and_assistant_without_credentials(self):
+        learner = self.account(name='Record Keeper')
         self.assertEqual(learner.request('me/records', {'title': 'External workshop', 'completedOn': '2099-01-01'})[0], 400)
         history = learner.request('me/records', {'title': 'External workshop', 'provider': 'Conference', 'completedOn': '2026-01-15', 'hours': 3})[1]
         self.assertEqual(history['records'][0]['title'], 'External workshop')

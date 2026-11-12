@@ -30,6 +30,13 @@ def lesson_unlocked(db, run_id, course_id, lesson_id):
                       (course_id, row['position'], run_id)).fetchone() is None
 
 
+def unlock_threshold(db, run_id, course_id):
+    """Position of the earliest assignment this run has not passed (None when every one is passed).
+    A lesson is unlocked exactly when no such assignment sits at or before it, so one query answers it for every lesson."""
+    return db.execute('''SELECT MIN(c.after_lesson) FROM course_checkpoints c WHERE c.course_id=?
+        AND NOT EXISTS(SELECT 1 FROM checkpoint_attempts a WHERE a.run_id=? AND a.checkpoint_id=c.id AND a.status='passed')''', (course_id, run_id)).fetchone()[0]
+
+
 def ready(db, run_id, checkpoint):
     lesson_ids = json.loads(checkpoint['lesson_ids_json'])
     completed = {r[0] for r in db.execute('SELECT lesson_id FROM lesson_progress WHERE run_id=?', (run_id,))}
@@ -48,14 +55,29 @@ def attempt_view(row):
 
 
 def views(db, run_id, course_id):
-    result = []
-    for c in db.execute('SELECT * FROM course_checkpoints WHERE course_id=? ORDER BY after_lesson', (course_id,)):
-        attempts = [attempt_view(a) for a in db.execute('SELECT * FROM checkpoint_attempts WHERE run_id=? AND checkpoint_id=? ORDER BY attempt_number', (run_id, c['id']))] if run_id else []
+    """Every assignment of the course with this run's attempts. Attempts and completed lessons are read once, and readiness
+    follows the same rule as ready(): earlier assignments passed and this assignment's lessons completed."""
+    checkpoints = db.execute('SELECT * FROM course_checkpoints WHERE course_id=? ORDER BY after_lesson', (course_id,)).fetchall()
+    by_checkpoint, completed = {}, set()
+    if run_id and checkpoints:
+        for a in db.execute('SELECT * FROM checkpoint_attempts WHERE run_id=? ORDER BY checkpoint_id,attempt_number', (run_id,)):
+            by_checkpoint.setdefault(a['checkpoint_id'], []).append(attempt_view(a))
+        completed = {r[0] for r in db.execute('SELECT lesson_id FROM lesson_progress WHERE run_id=?', (run_id,))}
+    passed = {c['id'] for c in checkpoints if any(a['status'] == 'passed' for a in by_checkpoint.get(c['id'], ()))}
+    # One pass in position order: an assignment at an earlier position (ties excluded) that is not passed blocks this one.
+    result, earlier_open, open_here, position = [], False, False, None
+    for c in checkpoints:
+        if c['after_lesson'] != position:
+            earlier_open, open_here, position = earlier_open or open_here, False, c['after_lesson']
+        open_here = open_here or c['id'] not in passed
+        attempts = by_checkpoint.get(c['id'], [])
+        lesson_ids = json.loads(c['lesson_ids_json'])
+        is_ready = bool(run_id) and not earlier_open and bool(lesson_ids) and all(identity in completed for identity in lesson_ids)
         result.append({'id': c['id'], 'title': c['title'], 'instructions': c['instructions'], 'afterLesson': c['after_lesson'],
-                       'firstLesson': c['after_lesson'] - max(len(json.loads(c['lesson_ids_json'])), 1) + 1,
+                       'firstLesson': c['after_lesson'] - max(len(lesson_ids), 1) + 1,
                        'passPercent': c['pass_percent'], 'maxAttempts': c['max_attempts'], 'timeLimitSeconds': c['time_limit_seconds'],
                        'questionCount': len(json.loads(c['questions_json'])), 'passed': any(a['status'] == 'passed' for a in attempts),
-                       'ready': ready(db, run_id, c) if run_id else False, 'attempts': attempts})
+                       'ready': is_ready, 'attempts': attempts})
     return result
 
 

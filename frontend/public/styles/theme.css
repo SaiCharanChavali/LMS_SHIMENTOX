@@ -62,14 +62,14 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline-color:#b17c00}
 @media(prefers-reduced-motion:no-preference){
   .btn,.icon-btn,.table-actions button,.segmented button,.auth-link,.profile-signout{transition:background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease}
   .sidebar .nav a{transition:background-color .18s ease,color .18s ease,box-shadow .18s ease}
-  .course,.catalog-card,.path-card,.session-card,.stat,.mini-stat{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+  .course,.catalog-card,.session-card,.stat,.mini-stat{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
   input,select,textarea,.answer,.lesson-item,.set-heading{transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
   .progress span,.meter span{transition:width .35s ease}
   .content,.login-form .form-inner{animation:portal-enter .3s ease-out both}
   @keyframes portal-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
   @media(hover:hover) and (pointer:fine){
     .btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 4px 12px #26323818}
-    .course:hover,.catalog-card:hover,.path-card:hover,.session-card:hover{transform:translateY(-3px);border-color:#e5c867;box-shadow:0 8px 22px #2632380d}
+    .course:hover,.catalog-card:hover,.session-card:hover{transform:translateY(-3px);border-color:#e5c867;box-shadow:0 8px 22px #2632380d}
     .stat:hover,.mini-stat:hover{transform:translateY(-2px);box-shadow:0 5px 16px #2632380b}
     .icon-btn:not(:disabled):hover{transform:translateY(-1px);color:#795600}
   }
@@ -87,7 +87,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{border-color:#b1
 }
 @media print{
   .content,.login-form .form-inner{animation:none;transform:none;opacity:1}
-  .course,.catalog-card,.path-card,.session-card,.stat,.mini-stat{transform:none;box-shadow:none;transition:none}
+  .course,.catalog-card,.session-card,.stat,.mini-stat{transform:none;box-shadow:none;transition:none}
 }
 
 /* Keep catalog actions aligned while allowing every description to remain readable. */

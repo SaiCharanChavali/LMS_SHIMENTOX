@@ -104,10 +104,6 @@ def candidate_list(db):
     return users
 
 
-def course_skills(db, course_id):
-    return [{'id':r['id'],'name':r['name'],'level':r['level']} for r in db.execute('SELECT s.id,s.name,k.level FROM course_skills k JOIN skills s ON s.id=k.skill_id WHERE k.course_id=? ORDER BY s.name',(course_id,))]
-
-
 def course_view(row, private=False, db=None):
     result={key:row[key] for key in ('id','title','description','category','status','version')}
     keys=row.keys()
@@ -123,7 +119,6 @@ def course_view(row, private=False, db=None):
         if private or row['import_status']:result['source']={'url':row['source_url'],'platform':row['source_platform'],'importStatus':row['import_status']}
         if private and row['import_report_json']:result['importReport']=json.loads(row['import_report_json'])
     if db is not None:
-        result['skills']=course_skills(db,row['id'])
         department=db.execute('SELECT name FROM departments WHERE id=?',(result.get('departmentId'),)).fetchone()
         result['department']=department[0] if department else None
     if private:
@@ -141,11 +136,9 @@ def owns_course(actor, row):
 
 
 def course_list(db, actor):
-    """Enrich a role-scoped catalog with four queries, independent of its size."""
+    """Enrich a role-scoped catalog with three queries, independent of its size."""
     where,params=('1=1',()) if actor['role'] in ('admin','hr') else ('(k.trainer_id=? OR k.created_by=?)',(actor['id'],actor['id']))
-    skills,resources,assignments={},{},{}
-    for row in db.execute(f'SELECT q.course_id,s.id,s.name,q.level FROM course_skills q JOIN courses k ON k.id=q.course_id JOIN skills s ON s.id=q.skill_id WHERE {where} ORDER BY s.name',params):
-        skills.setdefault(row['course_id'],[]).append({'id':row['id'],'name':row['name'],'level':row['level']})
+    resources,assignments={},{}
     for row in db.execute(f'SELECT q.course_id,q.id,q.module_index,q.title,q.kind,q.url FROM course_resources q JOIN courses k ON k.id=q.course_id WHERE {where} ORDER BY q.created_at,q.rowid',params):
         resources.setdefault(row['course_id'],[]).append({key:row[key] for key in ('id','module_index','title','kind','url')})
     for row in db.execute(f'SELECT q.course_id,COUNT(*) FROM course_assignments q JOIN courses k ON k.id=q.course_id WHERE {where} GROUP BY q.course_id',params):
@@ -153,7 +146,7 @@ def course_list(db, actor):
     result=[]
     for row in db.execute(f'SELECT k.*,d.name AS department_name,(SELECT COUNT(DISTINCT r.candidate_id) FROM course_runs r WHERE r.course_id=k.id) AS learners FROM courses k LEFT JOIN departments d ON d.id=k.department_id WHERE {where} ORDER BY k.title',params):
         item=course_view(row,True)
-        item.update({'skills':skills.pop(row['id'],[]),'department':row['department_name'],'hasLearners':bool(row['learners']),'learners':row['learners'],'resources':resources.pop(row['id'],[]),'assignments':assignments.pop(row['id'],0)})
+        item.update({'department':row['department_name'],'hasLearners':bool(row['learners']),'learners':row['learners'],'resources':resources.pop(row['id'],[]),'assignments':assignments.pop(row['id'],0)})
         result.append(item)
     return result
 
@@ -215,17 +208,6 @@ def course_metadata(db, data, old):
     trainer=optional_id(db,{'t':value('trainerId','trainer_id',None)},'t','candidates','trainer',"AND role IN ('admin','hr','trainer') AND is_active=1")
     post=optional_id(db,{'p':value('postAssessmentId','post_assessment_id',None)},'p','assessments','post-training assessment',"AND kind='post'")
     return difficulty,duration,pass_percent,attempts,department,trainer,post
-
-
-def save_skills(db, course_id, skills):
-    check(isinstance(skills,list) and len(skills)<=20,'Select up to 20 skills.')
-    seen=set()
-    for item in skills:
-        check(isinstance(item,dict) and isinstance(item.get('skillId'),str) and type(item.get('level')) is int and 1<=item['level']<=4,'Each skill tag needs a skill and a level from 1 to 4.')
-        check(item['skillId'] not in seen and db.execute('SELECT 1 FROM skills WHERE id=?',(item['skillId'],)).fetchone() is not None,'Select valid, distinct skills.')
-        seen.add(item['skillId'])
-    db.execute('DELETE FROM course_skills WHERE course_id=?',(course_id,))
-    for item in skills:db.execute('INSERT INTO course_skills VALUES (?,?,?)',(course_id,item['skillId'],item['level']))
 
 
 VIDEO_FILE = re.compile(r'\.(mp4|webm|ogg|m4v)$', re.I)
@@ -350,7 +332,6 @@ def save_course(db, actor, data):
         db.execute('UPDATE courses SET title=?,category=?,description=?,status=?,sets_json=?,lessons_json=?,updated_at=?,difficulty=?,duration_minutes=?,pass_percent=?,max_attempts=?,department_id=?,trainer_id=?,post_assessment_id=?,visibility=? WHERE id=?',(title,category,description,status,json.dumps(sets),json.dumps(lessons),now(),difficulty,duration,pass_percent,attempts,department,trainer,post,visibility,identity))
     else:
         db.execute('INSERT INTO courses(id,title,version,category,description,status,sets_json,lessons_json,created_by,updated_at,difficulty,duration_minutes,pass_percent,max_attempts,department_id,trainer_id,post_assessment_id,format,visibility) VALUES (?,?,1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(identity,title,category,description,status,json.dumps(sets),json.dumps(lessons),actor['id'],now(),difficulty,duration,pass_percent,attempts,department,trainer,post,course_format,visibility))
-    if 'skills' in data: save_skills(db,identity,data['skills'])
     if course_format=='lessons':
         if 'lessons' in data: save_lessons(db,identity,data['lessons'])
         if 'assessment' in data:
@@ -404,7 +385,7 @@ def delete_course(db, actor, course_id):
     db.execute('UPDATE course_lessons SET assessment_id=NULL WHERE course_id=?',(course_id,))
     db.execute('UPDATE training_sessions SET course_id=NULL WHERE course_id=?',(course_id,))
     # Explicit deletes: databases upgraded from early versions lack some cascading foreign keys.
-    for table in ('course_lessons','course_checkpoints','course_content_updates','course_skills','course_assignments','learning_path_courses',
+    for table in ('course_lessons','course_checkpoints','course_content_updates','course_assignments',
                   'course_resources','assessment_questions','videos','course_sets'):
         db.execute(f'DELETE FROM {table} WHERE course_id=?',(course_id,))
     if assessments:

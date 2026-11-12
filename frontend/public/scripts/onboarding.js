@@ -18,7 +18,8 @@ function onbMilestones(v){
   return `<ol class="onb-milestones">${v.milestones.map(m=>`<li class="onb-milestone ${m.state}"><span class="onb-dot" aria-hidden="true">${m.state==='completed'?'✓':''}</span><div><strong>${esc(m.title)}</strong><small>${esc(fmtDate(m.date))}</small><small>${m.mandatoryTotal?`${m.mandatoryDone} of ${m.mandatoryTotal} mandatory`:'Optional only'}</small></div>${m.state==='overdue'?compliancePill('Overdue','danger'):m.state==='completed'?compliancePill('Done','success'):''}</li>`).join('')}</ol>`;
 }
 function onbCourseList(v,canOpen){
-  const groups=v.milestones.map(m=>[m,v.courses.filter(c=>c.day===m.day)]);
+  const byDay=new Map();for(const c of v.courses){if(!byDay.has(c.day))byDay.set(c.day,[]);byDay.get(c.day).push(c);}
+  const groups=v.milestones.map(m=>[m,byDay.get(m.day)||[]]);
   return groups.map(([m,list])=>`<div class="onb-group"><h4>${esc(m.title)} <small>by ${esc(m.deadlineDisplay)}</small></h4>${list.map(c=>`<div class="onb-course"><div class="onb-course-main"><strong>${esc(c.title)}</strong><small>${c.mandatory?compliancePill('Mandatory','warn'):compliancePill('Optional','gray')} ${c.deadlineDisplay?`Due ${esc(c.deadlineDisplay)}`:c.mandatory?'':'No deadline'}${c.link==='existing'?' · Already assigned to you':''}${c.note&&c.link==='skipped'?` · ${esc(c.note)}`:''}</small>${c.assessment?`<small>Assessment: ${esc(c.assessment.label)}${c.assessment.passed?' · Passed':''}</small>`:''}</div><div class="onb-course-state">${onbCourseStatus(c)}${meter(c.progress,'Progress')}</div>${canOpen&&!['skipped','removed'].includes(c.status)?`<button class="btn secondary onb-open" data-open-course="${esc(c.courseId)}">${c.completed?'Review':c.progress?'Continue':'Start'}</button>`:''}</div>`).join('')}</div>`).join('');
 }
 function onbPlanSummary(v){

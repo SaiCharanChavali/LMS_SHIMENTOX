@@ -48,11 +48,8 @@ The accounts table keeps its historical name, `candidates`, so existing referenc
 | Table | Stored records |
 | --- | --- |
 | `departments`, `job_roles`, `course_categories` | Configurable organisation data (defaults are seeded once into empty tables) |
-| `skills`, `course_skills`, `role_competencies` | Skill library, skills a course develops, target levels per job role |
-| `skill_evidence` | Assessment- or manager-recorded proficiency with notes; the current level is the highest evidence |
-| `learning_goals`, `development_records` | Personal goals and self-reported external learning |
-| `course_assignments`, `path_assignments` | Assignments to an employee, department or job role, with mandatory flag and due date |
-| `learning_paths`, `learning_path_courses` | Ordered course sequences |
+| `development_records` | Self-reported external learning |
+| `course_assignments` | Assignments to an employee, department or job role, with mandatory flag and due date |
 | `assessments`, `assessment_bank`, `assessment_attempts` | Question banks, rules, and every randomised attempt with score |
 | `training_sessions`, `session_registrations` | Instructor-led sessions, seats, registration and attendance |
 | `notifications` | In-app notifications, unique per employee and dedupe key |

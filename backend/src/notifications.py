@@ -1,12 +1,14 @@
 """Notification events and scoped reminders. No email or external delivery."""
 from datetime import datetime, timedelta
 
-from services import notify, now, ready, passed, unlocked, text, check, uid
+from services import notify, now, text, check, uid
 
 
 def observers(db, employee, course=None):
     """Only administrators, HR, and the employee's direct manager receive records."""
-    return [r[0] for r in db.execute("SELECT id FROM candidates WHERE is_active=1 AND (role IN ('admin','hr') OR (role='manager' AND id=(SELECT manager_id FROM candidates WHERE id=?))) AND id<>?", (employee, employee))]
+    # Two indexed lookups (by role, then the employee's manager) instead of scanning every account.
+    return [r[0] for r in db.execute("""SELECT id FROM candidates WHERE role IN ('admin','hr') AND is_active=1 AND id<>?
+        UNION SELECT m.id FROM candidates e JOIN candidates m ON m.id=e.manager_id WHERE e.id=? AND m.role='manager' AND m.is_active=1 AND m.id<>?""", (employee, employee, employee))]
 
 
 def staff_event(db, employee, title, body, key):
@@ -21,17 +23,35 @@ def refresh(db, user):
         if not left:
             name = db.execute('SELECT full_name FROM candidates WHERE id=?', (employee,)).fetchone()[0]
             staff_event(db, employee, f'Assessment attempts exhausted: {name}', a['title'], f'assessment-exhausted:{employee}:{a["id"]}:{a["used"]}')
-    for run in db.execute('SELECT r.*,c.title,c.max_attempts FROM course_runs r JOIN courses c ON c.id=r.course_id WHERE r.candidate_id=? AND r.archived_at IS NULL AND c.status=\'published\'', (employee,)).fetchall():
-        for s in range(3):
-            attempts = db.execute('SELECT * FROM exam_attempts WHERE run_id=? AND set_index=? ORDER BY attempt_number', (run['id'], s)).fetchall()
-            if ready(db, run['id'], s) and unlocked(db, run['id'], s) and not attempts:
-                notify(db, [employee], 'exam', f'Module {s+1} exam unlocked', f'{run["title"]}: your videos and exercises are complete. Your exam is ready.', 'courses', f'unlocked:{run["id"]}:{s}')
-            if attempts and not passed(db, run['id'], s) and attempts[-1]['status'] != 'in-progress':
-                left = max(0, run['max_attempts'] - len(attempts))
-                notify(db, [employee], 'exam', f'{left} exam attempts remaining', f'{run["title"]}, Module {s+1}: last attempt {attempts[-1]["status"]}.', 'courses', f'attempts:{attempts[-1]["id"]}')
-                if not left:
-                    name = db.execute('SELECT full_name FROM candidates WHERE id=?', (employee,)).fetchone()[0]
-                    staff_event(db, employee, f'Exam attempts exhausted: {name}', f'{run["title"]}, Module {s+1}.', f'exhausted:{run["id"]}:{s}')
+    # Module exams exist only in 3-module courses (lesson courses cannot record videos, exercises or exams), so only those
+    # runs are checked, with their exam, video and exercise records read in three queries instead of several per module.
+    runs = db.execute("SELECT r.*,c.title,c.max_attempts FROM course_runs r JOIN courses c ON c.id=r.course_id WHERE r.candidate_id=? AND r.archived_at IS NULL AND c.status='published' AND c.format='modules'", (employee,)).fetchall()
+    if runs:
+        ids = [run['id'] for run in runs]
+        marks = ','.join('?' * len(ids))
+        exams, videos, exercises = {}, {}, {}
+        for attempt in db.execute(f'SELECT * FROM exam_attempts WHERE run_id IN ({marks}) ORDER BY run_id,set_index,attempt_number', ids):
+            exams.setdefault((attempt['run_id'], attempt['set_index']), []).append(attempt)
+        for r in db.execute(f'SELECT run_id,video_index FROM video_progress WHERE run_id IN ({marks}) AND completed_at IS NOT NULL', ids):
+            videos[(r[0], r[1] // 2)] = videos.get((r[0], r[1] // 2), 0) + (r[1] < 6)
+        for r in db.execute(f'SELECT run_id,set_index,COUNT(DISTINCT exercise_index) FROM exercise_attempts WHERE run_id IN ({marks}) AND passed=1 GROUP BY run_id,set_index', ids):
+            exercises[(r[0], r[1])] = r[2]
+        # Same rules as services.ready, services.passed and services.unlocked.
+        is_ready = lambda run_id, s: videos.get((run_id, s), 0) == 2 and exercises.get((run_id, s), 0) == 2
+        is_passed = lambda run_id, s: any(x['status'] == 'passed' for x in exams.get((run_id, s), ()))
+        is_unlocked = lambda run_id, s: s == 0 or (is_ready(run_id, s - 1) and is_passed(run_id, s - 1))
+        name = None
+        for run in runs:
+            for s in range(3):
+                attempts = exams.get((run['id'], s), [])
+                if is_ready(run['id'], s) and is_unlocked(run['id'], s) and not attempts:
+                    notify(db, [employee], 'exam', f'Module {s+1} exam unlocked', f'{run["title"]}: your videos and exercises are complete. Your exam is ready.', 'courses', f'unlocked:{run["id"]}:{s}')
+                if attempts and not is_passed(run['id'], s) and attempts[-1]['status'] != 'in-progress':
+                    left = max(0, run['max_attempts'] - len(attempts))
+                    notify(db, [employee], 'exam', f'{left} exam attempts remaining', f'{run["title"]}, Module {s+1}: last attempt {attempts[-1]["status"]}.', 'courses', f'attempts:{attempts[-1]["id"]}')
+                    if not left:
+                        name = name or db.execute('SELECT full_name FROM candidates WHERE id=?', (employee,)).fetchone()[0]
+                        staff_event(db, employee, f'Exam attempts exhausted: {name}', f'{run["title"]}, Module {s+1}.', f'exhausted:{run["id"]}:{s}')
     # Short reminders complement the existing two-day session notice.
     start = datetime.now()
     for session in db.execute("SELECT s.* FROM training_sessions s WHERE s.status='scheduled' AND (s.trainer_id=? OR EXISTS(SELECT 1 FROM session_registrations g WHERE g.session_id=s.id AND g.employee_id=? AND g.status='registered')) AND s.starts_at BETWEEN ? AND ?", (employee, employee, start.strftime('%Y-%m-%dT%H:%M'), (start+timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M'))):

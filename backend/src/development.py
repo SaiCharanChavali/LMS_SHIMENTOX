@@ -1,5 +1,5 @@
-"""Employee learning & development: organisation setup, assignments, learning paths, skills, assessments,
-training sessions, notifications, goals, materials, and the employee-facing learning views.
+"""Employee learning & development: organisation setup, assignments, assessments,
+training sessions, notifications, materials, and the employee-facing learning views.
 
 Every route checks permissions on the server. Managers are limited to their direct reports and trainers to
 the courses, assessments, and sessions they own.
@@ -12,8 +12,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from admin import audit, course_view, media_reference, owns_course
-from analytics import (LEVELS, UNITS, assignment_index, dashboard, employee_paths, local_now, pair_status, pending_assessments,
-                       progress_index, recommendations, report, role_targets, skill_levels, today, training_progress)
+from analytics import (UNITS, assignment_index, dashboard, local_now, pair_status, pending_assessments,
+                       progress_index, recommendations, report, today, training_progress)
 from notifications import announce
 import compliance
 import onboarding
@@ -34,7 +34,7 @@ MATERIAL_TYPES = {'.pdf': 'application/pdf', '.ppt': 'application/vnd.ms-powerpo
                   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg'}
 MAX_MATERIAL_BYTES = 50 * 1024 * 1024
 TARGETS = {'employee': ('candidates', "AND is_active=1 AND role<>'admin'", 'id'), 'department': ('departments', '', 'department_id'), 'job_role': ('job_roles', '', 'job_role_id')}
-KINDS = ('pre', 'post', 'knowledge', 'skill')
+KINDS = ('pre', 'post', 'knowledge')
 
 
 # ---------------------------------------------------------------- validation helpers
@@ -183,11 +183,9 @@ def org(db, user):
     return {'departments': [dict(r) for r in db.execute("SELECT d.id,d.name,(SELECT COUNT(*) FROM candidates c WHERE c.department_id=d.id AND c.is_active=1) AS employees FROM departments d ORDER BY d.name")],
             'jobRoles': [dict(r) for r in db.execute('SELECT j.id,j.name,j.department_id AS departmentId,d.name AS department FROM job_roles j LEFT JOIN departments d ON d.id=j.department_id ORDER BY j.name')],
             'categories': [r[0] for r in db.execute('SELECT name FROM course_categories ORDER BY name')],
-            'skills': [dict(r) for r in db.execute('SELECT id,name,category FROM skills ORDER BY name')],
             'courses': [dict(r) for r in db.execute('SELECT id,title,status,category FROM courses ORDER BY title')],
             'trainers': [dict(r) for r in db.execute("SELECT id,full_name AS name,role FROM candidates WHERE is_active=1 AND role IN ('admin','hr','trainer') ORDER BY full_name")],
-            'managers': [dict(r) for r in db.execute("SELECT id,full_name AS name FROM candidates WHERE is_active=1 AND role IN ('manager','hr','admin') ORDER BY full_name")],
-            'levels': [{'value': k, 'label': v} for k, v in LEVELS.items() if k]}
+            'managers': [dict(r) for r in db.execute("SELECT id,full_name AS name FROM candidates WHERE is_active=1 AND role IN ('manager','hr','admin') ORDER BY full_name")]}
 
 
 def save_org_item(db, user, kind, data):
@@ -209,7 +207,6 @@ def save_org_item(db, user, kind, data):
         check(identity is not None, 'Record was not found.', 404)
         target_type = 'department' if kind == 'departments' else 'job_role'
         db.execute('DELETE FROM course_assignments WHERE target_type=? AND target_id=?', (target_type, identity))
-        db.execute('DELETE FROM path_assignments WHERE target_type=? AND target_id=?', (target_type, identity))
         db.execute(f'DELETE FROM {table} WHERE id=?', (identity,))
         audit(db, user['id'], f'{target_type}_deleted', identity)
         return org(db, user)
@@ -251,15 +248,29 @@ def assignment_rows(db, user, course_id=None):
         sql += ' WHERE a.course_id=?'
         params = (course_id,)
     reports = team(db, user['id']) if user['role'] == 'manager' else None
-    for r in db.execute(sql + ' ORDER BY a.assigned_at DESC LIMIT 300', params).fetchall():
-        if reports is not None and not (r['target_type'] == 'employee' and r['target_id'] in reports):
-            continue
-        employees = target_employees(db, r['target_type'], r['target_id'])
-        progress = progress_index(db, employees, [r['course_id']])
-        rows.append({'id': r['id'], 'courseId': r['course_id'], 'course': r['course'], 'targetType': r['target_type'], 'targetId': r['target_id'], 'target': target_name(db, r['target_type'], r['target_id']),
+    assignments = [r for r in db.execute(sql + ' ORDER BY a.assigned_at DESC LIMIT 300', params).fetchall()
+                   if reports is None or (r['target_type'] == 'employee' and r['target_id'] in reports)]
+    if not assignments:
+        return rows
+    # Members of every target, target names and completions are read once for all assignments (same rules as
+    # target_employees, target_name and progress_index's "completed": any run of the course has been completed).
+    members = {'employee': {}, 'department': {}, 'job_role': {}}
+    for c in db.execute("SELECT id,department_id,job_role_id FROM candidates WHERE is_active=1 AND role<>'admin'"):
+        members['employee'].setdefault(c['id'], []).append(c['id'])
+        members['department'].setdefault(c['department_id'], []).append(c['id'])
+        members['job_role'].setdefault(c['job_role_id'], []).append(c['id'])
+    names = {'employee': {r[0]: r[1] for r in db.execute('SELECT id,full_name FROM candidates')},
+             'department': {r[0]: r[1] for r in db.execute('SELECT id,name FROM departments')},
+             'job_role': {r[0]: r[1] for r in db.execute('SELECT id,name FROM job_roles')}}
+    course_ids = sorted({r['course_id'] for r in assignments})
+    done = {(r[0], r[1]) for r in db.execute(f"SELECT DISTINCT candidate_id,course_id FROM course_runs WHERE completed_at IS NOT NULL AND course_id IN ({','.join('?' * len(course_ids))})", course_ids)}
+    for r in assignments:
+        employees = members[r['target_type']].get(r['target_id'], [])
+        completed = sum((e, r['course_id']) in done for e in employees)
+        rows.append({'id': r['id'], 'courseId': r['course_id'], 'course': r['course'], 'targetType': r['target_type'], 'targetId': r['target_id'], 'target': names[r['target_type']].get(r['target_id'], 'Removed'),
                      'mandatory': bool(r['mandatory']), 'dueDate': r['due_date'], 'deadlineAt': r['deadline_at'], 'deadlineDisplay': format_deadline(r['deadline_at']) if r['deadline_at'] else None, 'deadlineInput': local_input(r['deadline_at']),
                      'originalDisplay': format_deadline(r['original_deadline_at']) if r['original_deadline_at'] and r['original_deadline_at'] != r['deadline_at'] else None, 'note': r['note'], 'assignedBy': r['assigned_by_name'], 'assignedAt': r['assigned_at'],
-                     'employees': len(employees), 'completed': sum(1 for p in progress.values() if p['completed']), 'canRemove': user['role'] != 'manager' or r['assigned_by'] == user['id']})
+                     'employees': len(employees), 'completed': completed, 'canRemove': user['role'] != 'manager' or r['assigned_by'] == user['id']})
     return rows
 
 
@@ -466,214 +477,54 @@ def material_file(db, user, identity):
     return path, row['content_type'], row['original_name']
 
 
-# ---------------------------------------------------------------- learning paths
-
-def path_courses(db, path_id):
-    return [dict(r) for r in db.execute('SELECT k.id,k.title,k.status FROM learning_path_courses l JOIN courses k ON k.id=l.course_id WHERE l.path_id=? ORDER BY l.position', (path_id,))]
-
-
-def path_list(db, user):
-    check(allowed(user, 'paths.manage') or allowed(user, 'courses.assign'), 'You do not have permission to manage learning paths.', 403)
-    reports = team(db, user['id']) if user['role'] == 'manager' else None
-    result = []
-    for p in db.execute('SELECT p.*,c.full_name AS author FROM learning_paths p LEFT JOIN candidates c ON c.id=p.created_by ORDER BY p.title').fetchall():
-        courses = path_courses(db, p['id'])
-        assignments, employees = [], set()
-        for a in db.execute('SELECT * FROM path_assignments WHERE path_id=? ORDER BY assigned_at', (p['id'],)):
-            members = set(target_employees(db, a['target_type'], a['target_id']))
-            if reports is not None:
-                members &= reports
-                if a['target_type'] != 'employee' or a['target_id'] not in reports:
-                    employees |= members
-                    continue
-            employees |= members
-            assignments.append({'id': a['id'], 'targetType': a['target_type'], 'target': target_name(db, a['target_type'], a['target_id']), 'dueDate': a['due_date'],
-                                'canRemove': user['role'] != 'manager' or a['assigned_by'] == user['id']})
-        progress = progress_index(db, list(employees), [c['id'] for c in courses]) if employees and courses else {}
-        finished = sum(1 for e in employees if courses and all(progress.get((e, c['id']), {}).get('completed') for c in courses))
-        result.append({'id': p['id'], 'title': p['title'], 'description': p['description'], 'status': p['status'], 'sequential': bool(p['sequential']), 'author': p['author'],
-                       'courses': courses, 'assignments': assignments, 'assignedEmployees': len(employees), 'completedEmployees': finished,
-                       'canEdit': allowed(user, 'paths.manage') and (user['role'] != 'trainer' or p['created_by'] == user['id'])})
-    return {'paths': result}
-
-
-def save_path(db, user, data):
-    require(user, 'paths.manage')
-    identity = data.get('id') or None
-    old = db.execute('SELECT * FROM learning_paths WHERE id=?', (identity,)).fetchone() if identity else None
-    check(identity is None or old is not None, 'Learning path was not found.', 404)
-    check(old is None or user['role'] != 'trainer' or old['created_by'] == user['id'], 'Trainers can edit only the learning paths they created.', 403)
-    title, description = text(data, 'title', 2, 150), opt_text(data, 'description', 2000, 'Description')
-    status = choice(data, 'status', ('draft', 'published', 'archived'), 'status', 'draft')
-    sequential = flag(data, 'sequential', True)
-    course_ids = data.get('courseIds')
-    check(isinstance(course_ids, list) and 1 <= len(course_ids) <= 30 and len(set(course_ids)) == len(course_ids), 'Add between 1 and 30 different courses to the path.')
-    statuses = []
-    for c in course_ids:
-        row = db.execute('SELECT status FROM courses WHERE id=?', (c,)).fetchone() if isinstance(c, str) else None
-        check(row is not None, 'Select valid courses for the path.')
-        statuses.append(row['status'])
-    check(status != 'published' or all(s == 'published' for s in statuses), 'Publish every course in the path before publishing the path.', 409)
-    if old:
-        db.execute('UPDATE learning_paths SET title=?,description=?,status=?,sequential=?,updated_at=? WHERE id=?', (title, description, status, int(sequential), now(), identity))
-    else:
-        identity = uid()
-        db.execute('INSERT INTO learning_paths VALUES (?,?,?,?,?,?,?,?)', (identity, title, description, status, int(sequential), user['id'], now(), now()))
-    db.execute('DELETE FROM learning_path_courses WHERE path_id=?', (identity,))
-    for position, c in enumerate(course_ids):
-        db.execute('INSERT INTO learning_path_courses VALUES (?,?,?)', (identity, position, c))
-    audit(db, user['id'], 'path_saved', identity, f'{status}: {title}')
-    return path_list(db, user)
-
-
-def assign_path(db, user, path_id, data):
-    require(user, 'courses.assign')
-    path = db.execute('SELECT * FROM learning_paths WHERE id=?', (path_id,)).fetchone()
-    check(path is not None, 'Learning path was not found.', 404)
-    check(path['status'] == 'published', 'Publish the learning path before assigning it.', 409)
-    kind, target = target_input(db, user, data)
-    due = opt_date(data, 'dueDate', 'Due date')
-    check(due is None or due >= today(), 'The target date cannot be in the past.')
-    existing = db.execute('SELECT id FROM path_assignments WHERE path_id=? AND target_type=? AND target_id=?', (path_id, kind, target)).fetchone()
-    identity = existing['id'] if existing else uid()
-    if existing:
-        db.execute('UPDATE path_assignments SET due_date=?,assigned_by=?,assigned_at=? WHERE id=?', (due, user['id'], now(), identity))
-    else:
-        db.execute('INSERT INTO path_assignments VALUES (?,?,?,?,?,?,?)', (identity, path_id, kind, target, due, user['id'], now()))
-    notify(db, target_employees(db, kind, target), 'assignment', f'Learning path assigned: {path["title"]}', f'Target date {due}.' if due else 'Open Learning Paths to begin.', 'paths', f'path:{identity}:{due or ""}')
-    audit(db, user['id'], 'path_assigned', identity, f'{path["title"]} -> {kind}:{target_name(db, kind, target)}')
-    return path_list(db, user)
-
-
-def delete_path_assignment(db, user, identity):
-    require(user, 'courses.assign')
-    row = db.execute('SELECT * FROM path_assignments WHERE id=?', (identity,)).fetchone()
-    check(row is not None, 'Assignment was not found.', 404)
-    check(user['role'] != 'manager' or row['assigned_by'] == user['id'], 'Managers can remove only the paths they assigned.', 403)
-    db.execute('DELETE FROM path_assignments WHERE id=?', (identity,))
-    audit(db, user['id'], 'path_assignment_removed', identity, row['path_id'])
-    return path_list(db, user)
-
-
-def path_progress(db, user, path_id):
-    check(allowed(user, 'paths.manage') or allowed(user, 'courses.assign'), 'You do not have permission to view path progress.', 403)
-    check(db.execute('SELECT 1 FROM learning_paths WHERE id=?', (path_id,)).fetchone() is not None, 'Learning path was not found.', 404)
-    employees = set()
-    for a in db.execute('SELECT * FROM path_assignments WHERE path_id=?', (path_id,)):
-        employees |= set(target_employees(db, a['target_type'], a['target_id']))
-    if user['role'] == 'manager':
-        employees &= team(db, user['id'])
-    rows = []
-    for e in sorted(employees):
-        person = me(db, {'id': e})
-        progress = progress_index(db, [e])
-        match = [p for p in employee_paths(db, person, progress) if p['id'] == path_id]
-        if match:
-            rows.append({'employee': person['name'], 'department': person['department'] or 'Unassigned', 'completed': match[0]['completed'], 'total': match[0]['total'], 'progress': match[0]['progress'],
-                         'next': next((c['title'] for c in match[0]['courses'] if c['id'] == match[0]['nextCourseId']), '')})
-    return {'employees': sorted(rows, key=lambda r: r['employee'])}
-
-
-# ---------------------------------------------------------------- skills and competencies
-
-def skills_overview(db, user):
-    check(user['role'] != 'employee', 'You do not have permission to manage skills.', 403)
-    return {'skills': [dict(r) for r in db.execute('''SELECT s.*,(SELECT COUNT(*) FROM course_skills k WHERE k.skill_id=s.id) AS courses,
-                (SELECT COUNT(DISTINCT employee_id) FROM skill_evidence e WHERE e.skill_id=s.id) AS assessed FROM skills s ORDER BY s.name''')],
-            'competencies': [{'jobRoleId': r[0], 'skillId': r[1], 'targetLevel': r[2]} for r in db.execute('SELECT job_role_id,skill_id,target_level FROM role_competencies')],
-            'editableRoles': editable_roles(db, user),
-            'canManageSkills': allowed(user, 'skills.manage'), 'canRecord': allowed(user, 'skills.record')}
-
-
-def editable_roles(db, user):
-    if not allowed(user, 'competencies.manage'):
-        return []
-    if user['role'] != 'manager':
-        return [r[0] for r in db.execute('SELECT id FROM job_roles')]
-    # Managers define competencies for job roles in their department or held by their direct reports.
-    return [r[0] for r in db.execute('SELECT id FROM job_roles WHERE department_id=(SELECT department_id FROM candidates WHERE id=?) OR id IN (SELECT job_role_id FROM candidates WHERE manager_id=?)', (user['id'], user['id']))]
-
-
-def save_skill(db, user, data):
-    require(user, 'skills.manage')
-    identity = data.get('id') or None
-    if identity is not None:
-        check(isinstance(identity, str) and db.execute('SELECT 1 FROM skills WHERE id=?', (identity,)).fetchone() is not None, 'Skill was not found.', 404)
-    if data.get('delete') is True:
-        check(identity is not None, 'Skill was not found.', 404)
-        check(db.execute('SELECT 1 FROM skill_evidence WHERE skill_id=?', (identity,)).fetchone() is None, 'This skill has employee assessment records and cannot be deleted.', 409)
-        db.execute('DELETE FROM skills WHERE id=?', (identity,))
-        audit(db, user['id'], 'skill_deleted', identity)
-        return skills_overview(db, user)
-    name, category, description = text(data, 'name', 2, 80), opt_text(data, 'category', 80, 'Category'), opt_text(data, 'description', 1000, 'Description')
-    if identity:
-        db.execute('UPDATE skills SET name=?,category=?,description=? WHERE id=?', (name, category, description, identity))
-    else:
-        identity = uid()
-        db.execute('INSERT INTO skills VALUES (?,?,?,?,?)', (identity, name, category, description, now()))
-    audit(db, user['id'], 'skill_saved', identity, name)
-    return skills_overview(db, user)
-
-
-def save_competency(db, user, data):
-    require(user, 'competencies.manage')
-    role = ref(db, data, 'jobRoleId', 'job_roles', 'job role', required=True)
-    skill = ref(db, data, 'skillId', 'skills', 'skill', required=True)
-    check(role in editable_roles(db, user), 'You can define competencies only for job roles in your team or department.', 403)
-    level = integer(data, 'targetLevel', 0, 4, 'Target level')
-    if level == 0:
-        db.execute('DELETE FROM role_competencies WHERE job_role_id=? AND skill_id=?', (role, skill))
-    else:
-        db.execute('INSERT INTO role_competencies VALUES (?,?,?,?,?) ON CONFLICT(job_role_id,skill_id) DO UPDATE SET target_level=excluded.target_level,updated_by=excluded.updated_by,updated_at=excluded.updated_at', (role, skill, level, user['id'], now()))
-    audit(db, user['id'], 'competency_saved', role, f'{skill}: {level}')
-    return skills_overview(db, user)
-
-
-def record_evidence(db, employee, skill, level, source, reference, note, recorded_by):
-    db.execute('INSERT INTO skill_evidence(employee_id,skill_id,level,source,reference_id,note,recorded_by,recorded_at) VALUES (?,?,?,?,?,?,?,?)', (employee, skill, level, source, reference, note, recorded_by, now()))
-    # Goals tied to a skill complete only when evidence reaches the target level.
-    db.execute("UPDATE learning_goals SET status='completed',updated_at=? WHERE employee_id=? AND skill_id=? AND status='active' AND target_level IS NOT NULL AND target_level<=?", (now(), employee, skill, level))
-
-
-def save_evidence(db, user, data):
-    require(user, 'skills.record')
-    employee = ref(db, data, 'employeeId', 'candidates', 'employee', "AND is_active=1", required=True)
-    check(employee != user['id'], 'Your own skill levels are recorded by assessments or your manager.', 403)
-    check(user['role'] != 'manager' or employee in team(db, user['id']), 'Managers can record skill evidence only for their direct reports.', 403)
-    skill = ref(db, data, 'skillId', 'skills', 'skill', required=True)
-    level = integer(data, 'level', 1, 4, 'Proficiency level')
-    note = text(data, 'note', 3, 500)
-    record_evidence(db, employee, skill, level, 'manager', None, note, user['id'])
-    notify(db, [employee], 'skill', 'Skill level recorded', f'{db.execute("SELECT name FROM skills WHERE id=?", (skill,)).fetchone()[0]}: {LEVELS[level]}.', 'skills', f'evidence:{employee}:{skill}:{now()}')
-    audit(db, user['id'], 'skill_evidence', employee, f'{skill}: {level}')
-    return {'ok': True}
-
-
 # ---------------------------------------------------------------- assessments (question banks)
 
-def owns_assessment(db, user, row):
+def owns_assessment(db, user, row, courses=None):
+    """`courses` (id -> row), when given, replaces the per-assessment course lookup."""
     if user['role'] in ('admin', 'hr'):
         return True
     if row['created_by'] == user['id']:
         return True
-    course = db.execute('SELECT * FROM courses WHERE id=?', (row['course_id'],)).fetchone() if row['course_id'] else None
+    if not row['course_id']:
+        return False
+    course = courses.get(row['course_id']) if courses is not None else db.execute('SELECT * FROM courses WHERE id=?', (row['course_id'],)).fetchone()
     return course is not None and owns_course(user, course)
 
 
+def assessment_views(db, rows, private=False):
+    """Views for many assessments with a fixed number of queries: attempt statistics, question banks and history read once."""
+    ids = [r['id'] for r in rows]
+    stats, banks, attempted = {}, {}, set()
+    for start in range(0, len(ids), 500):
+        part = ids[start:start + 500]
+        marks = ','.join('?' * len(part))
+        for r in db.execute(f"SELECT assessment_id,COUNT(*),SUM(status='passed'),AVG(percent) FROM assessment_attempts WHERE assessment_id IN ({marks}) AND status<>'in-progress' GROUP BY assessment_id", part):
+            stats[r[0]] = (r[1], r[2], r[3])
+        if private:
+            for q in db.execute(f'SELECT * FROM assessment_bank WHERE assessment_id IN ({marks}) ORDER BY assessment_id,position', part):
+                banks.setdefault(q['assessment_id'], []).append([q['prompt'], json.loads(q['options_json']), q['correct_option'], q['explanation']] + ([q['code']] if q['code'] else []))
+            attempted.update(r[0] for r in db.execute(f'SELECT DISTINCT assessment_id FROM assessment_attempts WHERE assessment_id IN ({marks})', part))
+    views = []
+    for row in rows:
+        count, passed, average = stats.get(row['id'], (0, None, None))
+        result = {'id': row['id'], 'title': row['title'], 'description': row['description'], 'kind': row['kind'], 'courseId': row['course_id'],
+                  'passPercent': row['pass_percent'], 'maxAttempts': row['max_attempts'], 'questionCount': row['question_count'], 'timeLimitMinutes': row['time_limit_minutes'], 'status': row['status'],
+                  'attempts': count, 'passRate': round((passed or 0) / count * 100) if count else None, 'averageScore': round(average) if average is not None else None}
+        if private:
+            result['questions'] = banks.get(row['id'], [])
+            result['locked'] = count > 0 or row['id'] in attempted
+        views.append(result)
+    return views
+
+
 def assessment_view(db, row, private=False):
-    stats = db.execute("SELECT COUNT(*),SUM(status='passed'),AVG(percent) FROM assessment_attempts WHERE assessment_id=? AND status<>'in-progress'", (row['id'],)).fetchone()
-    result = {'id': row['id'], 'title': row['title'], 'description': row['description'], 'kind': row['kind'], 'courseId': row['course_id'], 'skillId': row['skill_id'], 'skillLevel': row['skill_level'],
-              'passPercent': row['pass_percent'], 'maxAttempts': row['max_attempts'], 'questionCount': row['question_count'], 'timeLimitMinutes': row['time_limit_minutes'], 'status': row['status'],
-              'attempts': stats[0], 'passRate': round((stats[1] or 0) / stats[0] * 100) if stats[0] else None, 'averageScore': round(stats[2]) if stats[2] is not None else None}
-    if private:
-        result['questions'] = [[q['prompt'], json.loads(q['options_json']), q['correct_option'], q['explanation']] + ([q['code']] if q['code'] else []) for q in db.execute('SELECT * FROM assessment_bank WHERE assessment_id=? ORDER BY position', (row['id'],))]
-        result['locked'] = stats[0] > 0 or db.execute("SELECT 1 FROM assessment_attempts WHERE assessment_id=?", (row['id'],)).fetchone() is not None
-    return result
+    return assessment_views(db, [row], private)[0]
 
 
 def assessment_list(db, user):
     require(user, 'assessments.manage')
-    return {'assessments': [assessment_view(db, r, True) for r in db.execute('SELECT * FROM assessments ORDER BY title') if owns_assessment(db, user, r)]}
+    courses = None if user['role'] in ('admin', 'hr') else {c['id']: c for c in db.execute('SELECT * FROM courses')}
+    return {'assessments': assessment_views(db, [r for r in db.execute('SELECT * FROM assessments ORDER BY title') if owns_assessment(db, user, r, courses)], True)}
 
 
 def save_assessment(db, user, data):
@@ -713,8 +564,6 @@ def store_assessment(db, user, data):
     course = ref(db, data, 'courseId', 'courses', 'course', required=kind in ('pre', 'post'))
     if course and user['role'] == 'trainer':
         check(owns_course(user, course_or_404(db, course)), 'Trainers can link assessments only to their own courses.', 403)
-    skill = ref(db, data, 'skillId', 'skills', 'skill', required=kind == 'skill')
-    skill_level = integer(data, 'skillLevel', 1, 4, 'Validated skill level') if kind == 'skill' else None
     pass_percent = integer(data, 'passPercent', 1, 100, 'Passing score')
     attempts = integer(data, 'maxAttempts', 1, MAX_EXAM_ATTEMPTS, 'Attempts allowed')
     limit = integer(data, 'timeLimitMinutes', 1, 240, 'Time limit')
@@ -726,11 +575,12 @@ def store_assessment(db, user, data):
         stored = assessment_view(db, old, True)['questions']
         check(stored == questions and old['kind'] == kind, 'Employees have attempted this assessment. Create a new assessment to change its questions or type.', 409)
     if old:
-        db.execute('UPDATE assessments SET title=?,description=?,kind=?,course_id=?,skill_id=?,skill_level=?,pass_percent=?,max_attempts=?,question_count=?,time_limit_minutes=?,status=?,updated_at=? WHERE id=?',
-                   (title, description, kind, course, skill, skill_level, pass_percent, attempts, count, limit, status, now(), identity))
+        db.execute('UPDATE assessments SET title=?,description=?,kind=?,course_id=?,pass_percent=?,max_attempts=?,question_count=?,time_limit_minutes=?,status=?,updated_at=? WHERE id=?',
+                   (title, description, kind, course, pass_percent, attempts, count, limit, status, now(), identity))
     else:
         identity = uid()
-        db.execute('INSERT INTO assessments VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (identity, title, description, kind, course, skill, skill_level, pass_percent, attempts, count, limit, status, user['id'], now(), now()))
+        db.execute('INSERT INTO assessments(id,title,description,kind,course_id,pass_percent,max_attempts,question_count,time_limit_minutes,status,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                   (identity, title, description, kind, course, pass_percent, attempts, count, limit, status, user['id'], now(), now()))
     if not has_attempts:
         db.execute('DELETE FROM assessment_bank WHERE assessment_id=?', (identity,))
         for position, q in enumerate(questions):
@@ -755,7 +605,7 @@ def expire_assessments(db, employee):
 
 
 def visible_assessments(db):
-    return db.execute("SELECT a.*,c.title AS course_title,s.name AS skill_name FROM assessments a LEFT JOIN courses c ON c.id=a.course_id LEFT JOIN skills s ON s.id=a.skill_id WHERE a.status='published' AND (a.course_id IS NULL OR c.status='published') ORDER BY a.kind,a.title").fetchall()
+    return db.execute("SELECT a.*,c.title AS course_title FROM assessments a LEFT JOIN courses c ON c.id=a.course_id WHERE a.status='published' AND (a.course_id IS NULL OR c.status='published') ORDER BY a.kind,a.title").fetchall()
 
 
 def attempt_questions(db, attempt):
@@ -780,11 +630,17 @@ def active_attempt_view(db, attempt):
 def my_assessments(db, user):
     expire_assessments(db, user['id'])
     result = []
+    # The employee's attempts for every assessment are read in one query (indexed by employee), then grouped.
+    history, open_attempts = {}, {}
+    for r in db.execute('SELECT * FROM assessment_attempts WHERE employee_id=? ORDER BY assessment_id,attempt_number', (user['id'],)):
+        history.setdefault(r['assessment_id'], []).append({k: r[k] for k in ('id', 'attempt_number', 'status', 'percent', 'reason', 'started_at', 'finished_at')})
+        if r['status'] == 'in-progress':
+            open_attempts[r['assessment_id']] = r
     for a in visible_assessments(db):
-        attempts = [dict(r) for r in db.execute('SELECT id,attempt_number,status,percent,reason,started_at,finished_at FROM assessment_attempts WHERE assessment_id=? AND employee_id=? ORDER BY attempt_number', (a['id'], user['id']))]
-        active = db.execute("SELECT * FROM assessment_attempts WHERE assessment_id=? AND employee_id=? AND status='in-progress'", (a['id'], user['id'])).fetchone()
+        attempts = history.get(a['id'], [])
+        active = open_attempts.get(a['id'])
         result.append({'id': a['id'], 'title': a['title'], 'description': a['description'], 'kind': a['kind'], 'course': a['course_title'], 'courseId': a['course_id'],
-                       'skill': a['skill_name'], 'skillLevel': LEVELS.get(a['skill_level'] or 0), 'passPercent': a['pass_percent'], 'maxAttempts': a['max_attempts'],
+                       'passPercent': a['pass_percent'], 'maxAttempts': a['max_attempts'],
                        'questionCount': a['question_count'], 'timeLimitMinutes': a['time_limit_minutes'], 'attempts': attempts,
                        'passed': any(t['status'] == 'passed' for t in attempts), 'best': max([t['percent'] for t in attempts if t['percent'] is not None], default=None),
                        'attemptsLeft': max(0, a['max_attempts'] - len(attempts)), 'active': active_attempt_view(db, active) if active else None})
@@ -800,9 +656,6 @@ def start_assessment(db, user, identity):
                ('The attempt was interrupted before it was submitted.', now(), identity, user['id']))
     used =db.execute('SELECT COUNT(*) FROM assessment_attempts WHERE assessment_id=? AND employee_id=?', (identity, user['id'])).fetchone()[0]
     check(used < a['max_attempts'], f'All {a["max_attempts"]} attempts have been used for this assessment.', 409)
-    if a['kind'] == 'skill':
-        # A passed skill assessment is already recorded as evidence; post-training checks may be retaken for a new course run.
-        check(db.execute("SELECT 1 FROM assessment_attempts WHERE assessment_id=? AND employee_id=? AND status='passed'", (identity, user['id'])).fetchone() is None, 'You have already passed this assessment.', 409)
     bank = [r[0] for r in db.execute('SELECT id FROM assessment_bank WHERE assessment_id=?', (identity,))]
     check(len(bank) >= a['question_count'], 'This assessment does not have enough questions yet. Contact the course owner.', 409)
     # Randomised selection from the question bank for every attempt.
@@ -849,8 +702,6 @@ def submit_assessment(db, user, identity, data):
     percent = round(score / len(questions) * 100)
     status = 'passed' if percent >= a['pass_percent'] else 'failed'
     db.execute('UPDATE assessment_attempts SET status=?,score=?,percent=?,answers_json=?,finished_at=? WHERE id=?', (status, score, percent, json.dumps(answers), now(), attempt['id']))
-    if status == 'passed' and a['kind'] == 'skill' and a['skill_id'] and a['skill_level']:
-        record_evidence(db, user['id'], a['skill_id'], a['skill_level'], 'assessment', attempt['id'], f'Passed {a["title"]} ({percent}%)', None)
     if status == 'passed' and a['kind'] == 'post' and a['course_id']:
         run = db.execute('SELECT id FROM course_runs WHERE candidate_id=? AND course_id=? AND archived_at IS NULL', (user['id'], a['course_id'])).fetchone()
         if run:
@@ -960,9 +811,10 @@ def my_calendar(db, user):
 
 # ---------------------------------------------------------------- notifications and reminders
 
-def refresh_reminders(db, employee, progress, assigned):
-    """Create staff overdue, inactivity, and session reminders; dedupe keys stop repeats. Employee deadline reminders are in reminders.py."""
-    titles = {r[0]: r[1] for r in db.execute('SELECT id,title FROM courses')}
+def refresh_reminders(db, employee, progress, assigned, titles=None, sessions=None):
+    """Create staff overdue, inactivity, and session reminders; dedupe keys stop repeats. Employee deadline reminders are in reminders.py.
+    For many employees, pass `titles` (course id -> title) and `sessions` (employee id -> upcoming sessions) read once."""
+    titles = {r[0]: r[1] for r in db.execute('SELECT id,title FROM courses')} if titles is None else titles
     for pair, a in assigned.items():
         if a['dueDate'] and pair_status(progress.get(pair), a) == 'overdue':
             from notifications import staff_event
@@ -973,7 +825,8 @@ def refresh_reminders(db, employee, progress, assigned):
         if item['started'] and not item['completed'] and item['lastActivity'] and item['lastActivity'] < stale and course in titles:
             notify(db, [e], 'reminder', f'Continue {titles[course]}', f'You are {item["progress"]}% through this course.', 'courses', f'incomplete:{course}:{week[0]}-{week[1]}')
     limit = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%dT%H:%M')
-    for s in db.execute("SELECT s.id,s.title,s.starts_at FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.employee_id=? AND g.status='registered' AND s.status='scheduled' AND s.starts_at BETWEEN ? AND ?", (employee['id'], local_now(), limit)):
+    upcoming = db.execute("SELECT s.id,s.title,s.starts_at FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.employee_id=? AND g.status='registered' AND s.status='scheduled' AND s.starts_at BETWEEN ? AND ?", (employee['id'], local_now(), limit)) if sessions is None else sessions.get(employee['id'], ())
+    for s in upcoming:
         notify(db, [employee['id']], 'session', f'Upcoming: {s["title"]}', f'Starts {s["starts_at"].replace("T", " ")}.', 'calendar', f'session-soon:{s["id"]}:{s["starts_at"]}')
 
 
@@ -990,12 +843,21 @@ def my_notifications(db, user):
         by_progress, by_assignment = {}, {}
         for key, value in team_progress.items(): by_progress.setdefault(key[0], {})[key] = value
         for key, value in team_assignments.items(): by_assignment.setdefault(key[0], {})[key] = value
+        # Course titles and upcoming sessions are read once for the whole team, not once per person.
+        titles = {r[0]: r[1] for r in db.execute('SELECT id,title FROM courses')}
+        limit, sessions = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%dT%H:%M'), {}
+        for start in range(0, len(team_ids), 500):
+            part = team_ids[start:start + 500]
+            for s in db.execute(f"SELECT g.employee_id,s.id,s.title,s.starts_at FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.employee_id IN ({','.join('?' * len(part))}) AND g.status='registered' AND s.status='scheduled' AND s.starts_at BETWEEN ? AND ?",
+                                [*part, local_now(), limit]):
+                sessions.setdefault(s['employee_id'], []).append(s)
         for person in team:
-            refresh_reminders(db, person, by_progress.get(person['id'], {}), by_assignment.get(person['id'], {}))
-    refresh_reminders(db, employee, progress_index(db, [user['id']]), assignment_index(db, [user['id']]))
+            refresh_reminders(db, person, by_progress.get(person['id'], {}), by_assignment.get(person['id'], {}), titles, sessions)
+    own_progress, own_assigned = progress_index(db, [user['id']]), assignment_index(db, [user['id']])
+    refresh_reminders(db, employee, own_progress, own_assigned)
     if user['role'] != 'admin':
         # Fallback only: the scheduler sends these whether or not the employee ever opens the portal.
-        reminders.process_employee(db, user['id'])
+        reminders.process_employee(db, user['id'], assigned=own_assigned, progress=own_progress)
     items = [dict(r) for r in db.execute('SELECT id,kind,title,body,link,created_at AS createdAt,read_at AS readAt FROM notifications WHERE employee_id=? ORDER BY id DESC LIMIT 50', (user['id'],))]
     return {'notifications': items, 'unread': db.execute('SELECT COUNT(*) FROM notifications WHERE employee_id=? AND read_at IS NULL', (user['id'],)).fetchone()[0]}
 
@@ -1018,9 +880,11 @@ def read_notifications(db, user, data):
 
 # ---------------------------------------------------------------- employee views
 
-def catalog(db, user):
-    """Published catalog with the employee's own progress and assignment details."""
-    progress, assigned = progress_index(db, [user['id']]), assignment_index(db, [user['id']])
+def catalog(db, user, progress=None, assigned=None):
+    """Published catalog with the employee's own progress and assignment details.
+    Callers that already hold the employee's progress and assignments pass them in to avoid reading them twice."""
+    progress = progress_index(db, [user['id']]) if progress is None else progress
+    assigned = assignment_index(db, [user['id']]) if assigned is None else assigned
     lesson_counts = {r[0]: r[1] for r in db.execute('SELECT course_id,COUNT(*) FROM course_lessons GROUP BY course_id')}
     # Assessments an employee takes in a course: its published assessments (lesson knowledge checks and the final one),
     # its timed checkpoints, and the three module exams of a 3-module course.
@@ -1028,11 +892,13 @@ def catalog(db, user):
     checkpoint_counts = {r[0]: r[1] for r in db.execute('SELECT course_id,COUNT(*) FROM course_checkpoints GROUP BY course_id')}
     soon = reminders.due_soon_seconds(db)
     items = []
-    for row in db.execute("SELECT * FROM courses WHERE status='published' ORDER BY title"):
+    # Department names are joined here rather than looked up once per course.
+    for row in db.execute("SELECT k.*,d.name AS department_name FROM courses k LEFT JOIN departments d ON d.id=k.department_id WHERE k.status='published' ORDER BY k.title"):
         p, a = progress.get((user['id'], row['id'])), assigned.get((user['id'], row['id']))
         if not (a or can_view_course(db, user, row)):
             continue
-        item = course_view(row, False, db)
+        item = course_view(row, False)
+        item['department'] = row['department_name']
         item.update({'progress': p['progress'] if p else 0, 'enrolled': p is not None, 'started': bool(p and p['started']), 'completed': bool(p and p['completed']), 'lastActivity': p['lastActivity'] if p else '',
                      'assignment': a, 'status': pair_status(p, a), 'deadline': deadline_view(p, a, soon), 'lessonCount': lesson_counts.get(row['id'], 0),
                      'assessmentCount': assessment_counts.get(row['id'], 0) + checkpoint_counts.get(row['id'], 0) + (3 if row['format'] != 'lessons' else 0)})
@@ -1123,68 +989,17 @@ def my_dashboard(db, user):
     employee = me(db, user)
     progress, assigned = progress_index(db, [user['id']]), assignment_index(db, [user['id']])
     refresh_reminders(db, employee, progress, assigned)
-    courses = {c['id']: c for c in catalog(db, user)}
+    courses = {c['id']: c for c in catalog(db, user, progress, assigned)}
     assigned_items = sorted([courses[c] for (_, c) in assigned if c in courses], key=lambda c: ({'overdue': 0, 'in_progress': 1, 'not_started': 2, 'completed': 3}[c['status']], c['assignment']['dueDate'] or '9999'))
     continuing = sorted([c for c in courses.values() if progress.get((user['id'], c['id']), {}).get('started') and not c['completed']], key=lambda c: c['lastActivity'], reverse=True)[:4]
-    paths = employee_paths(db, employee, progress)
-    levels, targets = skill_levels(db, user['id']), role_targets(db, employee['job_role_id'])
-    names = {r[0]: r[1] for r in db.execute('SELECT id,name FROM skills')}
-    skills = [{'skill': names.get(s, ''), 'current': levels.get(s, 0), 'target': targets.get(s, 0)} for s in sorted(set(levels) | set(targets), key=lambda s: names.get(s, ''))]
     certificates = db.execute('SELECT COUNT(*) FROM certificates x JOIN course_runs r ON r.id=x.run_id WHERE r.candidate_id=?', (user['id'],)).fetchone()[0]
     return {'profile': {k: employee[k] for k in ('name', 'email', 'role', 'department', 'job_role', 'manager', 'job_title')},
             'training': training_progress(db, [user['id']])[user['id']],
             'stats': {'assigned': len(assigned_items), 'inProgress': sum(1 for c in courses.values() if c['status'] == 'in_progress'), 'completed': sum(1 for c in courses.values() if c['completed']),
-                      'overdue': sum(1 for c in assigned_items if c['status'] == 'overdue'), 'certificates': certificates,
-                      'skillGaps': sum(1 for s in skills if s['target'] and s['current'] < s['target'])},
-            'assigned': assigned_items, 'continue': continuing, 'recommendations': recommendations(db, employee, progress, assigned, paths), 'paths': paths, 'skills': skills,
+                      'overdue': sum(1 for c in assigned_items if c['status'] == 'overdue'), 'certificates': certificates},
+            'assigned': assigned_items, 'continue': continuing, 'recommendations': recommendations(db, employee, progress, assigned),
             'sessions': [s for s in session_rows(db, user, True)][:4], 'pendingAssessments': pending_assessments(db, employee, progress),
-            'goals': [dict(r) for r in db.execute("SELECT id,title,target_date AS targetDate,status FROM learning_goals WHERE employee_id=? AND status='active' ORDER BY target_date IS NULL,target_date LIMIT 5", (user['id'],))],
             'history': history_items(db, user['id'])[:6]}
-
-
-def my_paths(db, user):
-    employee = me(db, user)
-    return {'paths': employee_paths(db, employee, progress_index(db, [user['id']]))}
-
-
-def my_skills(db, user):
-    employee = me(db, user)
-    levels, targets = skill_levels(db, user['id']), role_targets(db, employee['job_role_id'])
-    goals = [dict(r) for r in db.execute('SELECT g.id,g.title,g.skill_id AS skillId,s.name AS skill,g.target_level AS targetLevel,g.target_date AS targetDate,g.status FROM learning_goals g LEFT JOIN skills s ON s.id=g.skill_id WHERE g.employee_id=? ORDER BY g.status,g.target_date IS NULL,g.target_date', (user['id'],))]
-    goal_skills = {g['skillId'] for g in goals if g['skillId'] and g['status'] == 'active'}
-    skills = {r['id']: dict(r) for r in db.execute('SELECT id,name,category,description FROM skills ORDER BY name')}
-    rows = []
-    for skill in sorted(set(levels) | set(targets) | goal_skills, key=lambda s: skills.get(s, {}).get('name', '')):
-        if skill not in skills:
-            continue
-        evidence = [dict(r) for r in db.execute('SELECT e.level,e.source,e.note,e.recorded_at AS recordedAt,c.full_name AS recordedBy FROM skill_evidence e LEFT JOIN candidates c ON c.id=e.recorded_by WHERE e.employee_id=? AND e.skill_id=? ORDER BY e.id DESC LIMIT 5', (user['id'], skill))]
-        current, target = levels.get(skill, 0), targets.get(skill, 0)
-        rows.append({**skills[skill], 'current': current, 'target': target, 'gap': max(0, target - current), 'evidence': evidence})
-    progress, assigned = progress_index(db, [user['id']]), assignment_index(db, [user['id']])
-    return {'profile': {'jobRole': employee['job_role'], 'department': employee['department']}, 'skills': rows, 'allSkills': list(skills.values()), 'goals': goals,
-            'recommendations': recommendations(db, employee, progress, assigned, employee_paths(db, employee, progress)),
-            'assessments': [a for a in my_assessments(db, user)['assessments'] if a['kind'] == 'skill'], 'levels': [{'value': k, 'label': v} for k, v in LEVELS.items() if k]}
-
-
-def save_goal(db, user, data):
-    identity = data.get('id') or None
-    if identity is not None:
-        check(db.execute('SELECT 1 FROM learning_goals WHERE id=? AND employee_id=?', (identity, user['id'])).fetchone() is not None, 'Goal was not found.', 404)
-    if data.get('delete') is True:
-        db.execute('DELETE FROM learning_goals WHERE id=? AND employee_id=?', (identity, user['id']))
-        return my_skills(db, user)
-    title = text(data, 'title', 2, 150)
-    skill = ref(db, data, 'skillId', 'skills', 'skill')
-    level = data.get('targetLevel') or None
-    check(level is None or (type(level) is int and 1 <= level <= 4 and skill is not None), 'A target level requires a skill and must be from 1 to 4.')
-    target_date = opt_date(data, 'targetDate', 'Target date')
-    status = choice(data, 'status', ('active', 'completed', 'cancelled'), 'goal status', 'active')
-    if identity:
-        db.execute('UPDATE learning_goals SET title=?,skill_id=?,target_level=?,target_date=?,status=?,updated_at=? WHERE id=?', (title, skill, level, target_date, status, now(), identity))
-    else:
-        check(db.execute("SELECT COUNT(*) FROM learning_goals WHERE employee_id=? AND status='active'", (user['id'],)).fetchone()[0] < 20, 'You can have up to 20 active goals.', 409)
-        db.execute('INSERT INTO learning_goals VALUES (?,?,?,?,?,?,?,?,?)', (uid(), user['id'], title, skill, level, target_date, status, now(), now()))
-    return my_skills(db, user)
 
 
 def history_items(db, employee):
@@ -1225,16 +1040,21 @@ def save_record(db, user, data):
 def course_extras(db, user, course_id):
     """Resources and linked pre/post assessments shown on the employee course page."""
     assessments = []
+    # The employee's attempt statistics for every assessment in the course, in one grouped query.
+    stats = {r[0]: (r[1], r[2], r[3]) for r in db.execute("""SELECT t.assessment_id,COUNT(*),MAX(t.percent),MAX(t.status='passed') FROM assessment_attempts t
+        JOIN assessments a ON a.id=t.assessment_id WHERE a.course_id=? AND t.employee_id=? GROUP BY t.assessment_id""", (course_id, user['id']))}
     for a in db.execute("SELECT id,title,kind,pass_percent,max_attempts FROM assessments WHERE course_id=? AND status='published' AND kind IN ('pre','post','knowledge') ORDER BY kind DESC", (course_id,)):
-        attempts = db.execute("SELECT COUNT(*),MAX(percent),MAX(status='passed') FROM assessment_attempts WHERE assessment_id=? AND employee_id=?", (a['id'], user['id'])).fetchone()
+        attempts = stats.get(a['id'], (0, None, None))
         assessments.append({'id': a['id'], 'title': a['title'], 'kind': a['kind'], 'passPercent': a['pass_percent'], 'attemptsLeft': max(0, a['max_attempts'] - attempts[0]),
                             'best': attempts[1], 'passed': bool(attempts[2])})
     required = db.execute('SELECT post_assessment_id,format FROM courses WHERE id=?', (course_id,)).fetchone()
-    lessons = [lesson_view(r) for r in db.execute('SELECT * FROM course_lessons WHERE course_id=? ORDER BY position', (course_id,))] if required and required['format'] == 'lessons' else []
-    from checkpoints import lesson_unlocked
+    rows = db.execute('SELECT * FROM course_lessons WHERE course_id=? ORDER BY position', (course_id,)).fetchall() if required and required['format'] == 'lessons' else []
+    lessons = [lesson_view(r) for r in rows]
+    from checkpoints import unlock_threshold
     run = db.execute('SELECT id FROM course_runs WHERE candidate_id=? AND course_id=? AND archived_at IS NULL', (user['id'], course_id)).fetchone()
-    for lesson in lessons:
-        lesson['locked'] = not lesson_unlocked(db, run['id'] if run else None, course_id, lesson['id'])
+    threshold = unlock_threshold(db, run['id'] if run else None, course_id) if lessons else None
+    for row, lesson in zip(rows, lessons):
+        lesson['locked'] = threshold is not None and threshold <= row['position']
         if lesson['locked']:
             for key in ('content', 'videoUrl', 'captionsUrl', 'posterUrl', 'documentUrl', 'exercise'):
                 lesson[key] = ''
@@ -1284,15 +1104,6 @@ def development_action(db, user, method, route, query, data):
         ('POST', 'course-generator'): lambda: course_generator.start(db, user, data),
         ('GET', 'course-generator/*'): lambda: course_generator.get_job(user, p[1]),
         ('POST', 'resources/*/delete'): lambda: delete_resource(db, user, p[1]),
-        ('GET', 'paths'): lambda: path_list(db, user),
-        ('POST', 'paths'): lambda: save_path(db, user, data),
-        ('POST', 'paths/*/assign'): lambda: assign_path(db, user, p[1], data),
-        ('GET', 'paths/*/progress'): lambda: path_progress(db, user, p[1]),
-        ('POST', 'path-assignments/*/delete'): lambda: delete_path_assignment(db, user, p[1]),
-        ('GET', 'skills'): lambda: skills_overview(db, user),
-        ('POST', 'skills'): lambda: save_skill(db, user, data),
-        ('POST', 'competencies'): lambda: save_competency(db, user, data),
-        ('POST', 'skill-evidence'): lambda: save_evidence(db, user, data),
         ('POST', 'training-targets'): lambda: save_training_targets(db, user, data),
         ('POST', 'keka/sync'): lambda: keka.sync_all(db, user),
         ('GET', 'assessments'): lambda: assessment_list(db, user),
@@ -1311,9 +1122,6 @@ def employee_action(db, user, method, p, query, data):
     key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read', 'unread') else '*' for i, x in enumerate(p)))
     handlers = {
         ('GET', 'dashboard'): lambda: my_dashboard(db, user),
-        ('GET', 'paths'): lambda: my_paths(db, user),
-        ('GET', 'skills'): lambda: my_skills(db, user),
-        ('POST', 'goals'): lambda: save_goal(db, user, data),
         ('GET', 'calendar'): lambda: my_calendar(db, user),
         ('POST', 'sessions/*/register'): lambda: register_session(db, user, p[1], True),
         ('POST', 'sessions/*/cancel'): lambda: register_session(db, user, p[1], False),

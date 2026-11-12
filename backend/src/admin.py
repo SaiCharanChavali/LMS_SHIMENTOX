@@ -271,6 +271,9 @@ def lesson_input(db, item, number):
         percent=item.get('completionPercent')
         check(type(percent) is int and 50<=percent<=100,f'Lesson {number}: the completion threshold must be a whole percentage from 50 to 100.')
         lesson['completion_percent']=percent
+    # Optional module name; consecutive lessons with the same name form one module (index set in save_lessons).
+    if 'moduleTitle' in item:
+        lesson['module_title']=lesson_text(item,'moduleTitle',150,'the module name',number)
     return lesson
 
 
@@ -279,8 +282,14 @@ def save_lessons(db, course_id, lessons):
     check(isinstance(lessons,list) and len(lessons)<=100,'A course can have up to 100 lessons.')
     existing={r['id']:r['title'] for r in db.execute('SELECT id,title FROM course_lessons WHERE course_id=?',(course_id,))}
     kept=set()
+    module,previous=-1,None
     for position,item in enumerate(lessons):
         lesson=lesson_input(db,item,position+1)
+        if 'module_title' in lesson:
+            name=lesson['module_title']
+            if name and name!=previous: module+=1
+            lesson['module_index']=module if name else None
+            previous=name or None
         identity=item.get('id') if item.get('id') in existing and item.get('id') not in kept else None
         columns=dict(lesson,position=position,updated_at=now())
         if identity:

@@ -69,7 +69,7 @@ Courses created from a website link, and courses imported from a URL by earlier 
 | `courses.source_platform` | Platform name, or the site's host name, shown as attribution |
 | `courses.import_status` | `complete`, `partial` (some lessons not retrieved) or `reference`; empty for courses created by hand |
 | `courses.import_report_json` | Per-lesson outcome (imported, not retrieved with reason, or reference), licence, strategy and date |
-| `course_lessons.module_index`, `module_title` | The source module a lesson belongs to; consecutive lessons with the same index form one module. `NULL` for top-level lessons |
+| `course_lessons.module_index`, `module_title` | The module a lesson belongs to, from the source or from the module name set in the course wizard; consecutive lessons with the same index form one module. `NULL` for top-level lessons |
 | `course_lessons.source_url` | The lesson's original page |
 
 Lesson order is `course_lessons.position`. Section headings, lists, tables and code stay in order inside `course_lessons.content`, as lesson Markdown.

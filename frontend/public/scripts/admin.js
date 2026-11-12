@@ -1,6 +1,9 @@
 // One portal shell; navigation and pages depend on the authenticated server role.
 let adminState={stats:{},candidates:[],courses:[],events:[]};
 let editingCourse=null,resetCandidate=null,adminMessage='',provisionedCredentials=null,recordPreview=null,kekaSyncResult=null;
+// Manage Courses: the open tab, catalogue and assignment filters, the unsent assignment form, and the course just published.
+let courseTab='catalog',catalogFilters={q:'',status:'all',category:''},assignDraft=null,assignFilters={type:'',requirement:'',status:'',department:'',mandatory:'',q:''},reminderFilters={course:'',status:''},publishedCourse=null,builderDirty=false;
+function resetCourseManagement(){courseTab='catalog';catalogFilters={q:'',status:'all',category:''};assignDraft=null;assignFilters={type:'',requirement:'',status:'',department:'',mandatory:'',q:''};reminderFilters={course:'',status:''};publishedCourse=null;builderDirty=false;}
 
 const LEARNER_NAV=[['dashboard','grid','My Dashboard'],['courses','play','My Learning'],['catalog','book','Courses'],['calendar','calendar','Training Calendar'],['certificates','award','My Certificates'],['account','user','My Profile']];
 const ROLE_NAV={
@@ -135,35 +138,105 @@ function workflowSteps(course){
   const steps=[['Create course',Boolean(course)],['Add lessons',Boolean(course)],['Add assessments',Boolean(course?.postAssessmentId)],['Preview',false],['Save draft',Boolean(course)],['Publish',course?.status==='published']];
   return `<ol class="workflow">${steps.map(([label,done],i)=>`<li class="${done?'done':''}"><span>${done?'✓':i+1}</span>${label}</li>`).join('')}</ol>`;
 }
-function reminderSettingsPanel(selected){
+// ---------------------------------------------------------------- Manage Courses → Reminders (settings, history)
+const REMINDER_STATUS_TONES={sent:'success',failed:'danger'};
+const reminderTypeLabel=type=>REMINDER_TYPES[type]||String(type).replace(/^before_(\d+)d$/,(_,n)=>`${n} day${n==='1'?'':'s'} before`);
+function reminderManagement(){
   if(!['admin','hr'].includes(currentUser.role))return '';
-  const entry=loadData('reminder-settings','manage/reminders/settings'),history=loadData('reminder-history:'+selected.id,'manage/reminders/history?courseId='+encodeURIComponent(selected.id));
+  const entry=loadData('reminder-settings','manage/reminders/settings');
   if(!entry.data)return stateBlock(entry,'reminder settings','reminder-settings');
-  const c=entry.data.settings,last=c.lastRun;
-  const rows=(history.data?.history||[]).map(h=>`<tr><td>${esc(h.employee)}</td><td>${esc(REMINDER_TYPES[h.type]||h.type.replace(/^before_(\d+)d$/,(_,n)=>`${n} day${n==='1'?'':'s'} before`))}</td><td>${esc(fmtDateTime(h.scheduledAt))}</td><td>${h.sentAt?esc(fmtDateTime(h.sentAt)):'—'}</td><td>${tagText(h.status,{sent:'success',failed:'danger'}[h.status]||'gray')}${h.failureReason?`<small>${esc(h.failureReason)}</small>`:''}</td></tr>`).join('');
-  return `<details class="deadline-section" ${reminderPanelOpen?'open':''}><summary data-act="reminder-panel">Reminder schedule and history</summary><form class="admin-form" data-form="reminder-settings"><div class="editor-fields"><div><label for="reminder-days">Send reminders this many days before the deadline</label><input id="reminder-days" name="intervalDays" value="${esc(c.intervalDays.join(', '))}" placeholder="7, 3, 1"></div><div><label for="reminder-soon">Show Due Soon within (days)</label><input id="reminder-soon" name="dueSoonDays" type="number" min="1" max="90" value="${c.dueSoonDays}" required></div></div><label class="check-label"><input type="checkbox" name="deadlineDay" ${c.deadlineDay?'checked':''}> On the deadline day</label><label class="check-label"><input type="checkbox" name="overdue" ${c.overdue?'checked':''}> When the course becomes overdue</label><div class="admin-actions"><button class="btn" type="submit">Save schedule</button><button class="btn secondary" type="button" data-act="reminders-run">Run reminders now</button></div><p class="form-status" role="status"></p></form><p class="muted">Employees are always told when a course is assigned or its deadline changes. Reminders already past when a short deadline is set are skipped. Reminders run automatically in the background${c.lastRunAt?`; last run ${esc(fmtDateTime(c.lastRunAt))}${last?`: ${last.sent} sent, ${last.failed} failed`:''}`:''}.</p><h3 class="sub-heading">Recent reminders for ${esc(selected.title)}</h3>${history.data?(rows?`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Employee</th><th>Reminder</th><th>Scheduled</th><th>Sent</th><th>Delivery</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">No reminders sent for this course yet.</p>'):stateBlock(history,'reminder history','reminder-history:'+selected.id)}</details>`;
+  const c=entry.data.settings,last=c.lastRun,f=reminderFilters,key='reminder-history:'+(f.course||'all'),history=loadData(key,'manage/reminders/history'+qs({courseId:f.course}));
+  const list=(history.data?.history||[]).filter(h=>!f.status||h.status===f.status);
+  const rows=list.map(h=>`<tr><td><strong>${esc(h.employee)}</strong></td><td>${esc(h.course||'Removed course')}</td><td>${esc(reminderTypeLabel(h.type))}</td><td>${esc(fmtDateTime(h.scheduledAt))}</td><td>${h.sentAt?esc(fmtDateTime(h.sentAt)):'—'}</td><td>${tagText(h.status,REMINDER_STATUS_TONES[h.status]||'gray')}${h.failureReason?`<small>${esc(h.failureReason)}</small>`:''}</td></tr>`).join('');
+  const settings=panel('Reminder settings',`<form class="admin-form" data-form="reminder-settings"><div class="editor-fields"><div><label for="reminder-days">Send reminders this many days before the deadline</label><input id="reminder-days" name="intervalDays" value="${esc(c.intervalDays.join(', '))}" placeholder="7, 3, 1"></div><div><label for="reminder-soon">Show Due Soon within (days)</label><input id="reminder-soon" name="dueSoonDays" type="number" min="1" max="90" value="${c.dueSoonDays}" required></div></div><label class="check-label"><input type="checkbox" name="deadlineDay" ${c.deadlineDay?'checked':''}> On the deadline day</label><label class="check-label"><input type="checkbox" name="overdue" ${c.overdue?'checked':''}> When the course becomes overdue</label><div class="admin-actions"><button class="btn" type="submit">Save schedule</button><button class="btn secondary" type="button" data-act="reminders-run">Run reminders now</button></div><p class="form-status" role="status"></p></form><p class="muted">Employees are always told when a course is assigned or its deadline changes. Reminders already past when a short deadline is set are skipped. Reminders run automatically in the background${c.lastRunAt?`; last run ${esc(fmtDateTime(c.lastRunAt))}${last?`: ${last.sent} sent, ${last.failed} failed`:''}`:''}.</p>`);
+  const filters=`<div class="table-filters"><label>Course<select data-change="reminder-course">${options(adminState.courses.map(k=>[k.id,k.title]),f.course,'All courses')}</select></label><label>Delivery<select data-change="reminder-status">${options([['sent','Sent'],['pending','Pending'],['failed','Failed'],['cancelled','Cancelled']],f.status,'All')}</select></label></div>`;
+  const table=history.data?(rows?`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Employee</th><th>Course</th><th>Reminder</th><th>Scheduled</th><th>Sent</th><th>Delivery</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<p class="muted">${f.course||f.status?'No reminders match these filters.':'No reminders have been sent yet.'}</p>`):stateBlock(history,'reminder history',key);
+  return settings+panel('Reminder history',`${filters}${table}<p class="muted">The latest 100 reminders${f.course?' for this course':''}. Each employee's last and next reminder also appear under Assignments &amp; progress.</p>`);
 }
 function deadlineTargetRow(a,courseId,zone){
   return `<form class="deadline-target" data-form="deadline-save" data-course="${esc(courseId)}" data-type="${esc(a.targetType)}" data-target="${esc(a.targetId)}"><input type="hidden" name="note" value="${esc(a.note||'')}"><div class="deadline-target-name"><strong>${esc(a.target)}</strong><small>${esc(capital(a.targetType.replace('_',' ')))} · ${a.employees} employee${a.employees===1?'':'s'} · ${a.completed} completed${a.originalDisplay?' · Originally '+esc(a.originalDisplay):''}</small></div><label>Deadline (${esc(zone)})<input type="datetime-local" name="deadline" value="${esc(a.deadlineInput||'')}"></label><label class="check-label"><input type="checkbox" name="mandatory" ${a.mandatory?'checked':''}> Mandatory</label><div class="table-actions"><button type="submit">Update</button>${a.canRemove?`<button type="button" data-act="assignment-delete" data-id="${a.id}">Remove</button>`:''}</div><p class="form-status" role="status"></p></form>`;
 }
 function deadlineEmployeeRow(e,courseId,zone){
-  const source=e.source==='employee'?'Individual':capital(e.source.replace('_',' '));
-  return `<tr><td><strong>${esc(e.name)}</strong><small>${esc(e.department||'No department')}</small></td><td>${e.deadlineDisplay?esc(e.deadlineDisplay):'No deadline'}<small>${esc(source)}${e.originalDisplay?' · Originally '+esc(e.originalDisplay):''}</small></td><td>${e.mandatory?tagText('Mandatory','warn'):tagText('Optional','gray')}</td><td>${tagText(e.statusLabel,DEADLINE_TONES[e.status])}${e.completedDisplay?`<small>Completed ${esc(e.completedDisplay)}</small>`:''}</td><td>${e.progress}%</td><td>${e.lastReminder?esc(fmtDateTime(e.lastReminder.at)):'—'}<small>${e.nextReminderAt?'Next '+esc(fmtDateTime(e.nextReminderAt)):''}</small></td><td><details class="deadline-override"><summary>Change</summary><form data-form="deadline-save" data-course="${esc(courseId)}" data-type="employee" data-target="${esc(e.employeeId)}"><label>Deadline for ${esc(e.name)} (${esc(zone)})<input type="datetime-local" name="deadline" value="${esc(e.deadlineInput)}" required></label><label class="check-label"><input type="checkbox" name="mandatory" ${e.mandatory?'checked':''}> Mandatory</label><button class="btn secondary" type="submit">Save</button><p class="form-status" role="status"></p></form></details></td></tr>`;
+  const source=e.source==='employee'?'Individual':capital(e.source.replace('_',' ')),search=[e.name,e.email,e.department].join(' ').toLowerCase();
+  return `<tr data-search-row="assign-people" data-search="${esc(search)}" ${rowHidden(search,assignFilters.q)?'hidden':''}><td><strong>${esc(e.name)}</strong><small>${esc(e.department||'No department')}</small></td><td>${e.deadlineDisplay?esc(e.deadlineDisplay):'No deadline'}<small>${esc(source)}${e.originalDisplay?' · Originally '+esc(e.originalDisplay):''}</small></td><td>${e.mandatory?tagText('Mandatory','warn'):tagText('Optional','gray')}</td><td>${tagText(e.statusLabel,DEADLINE_TONES[e.status])}${e.completedDisplay?`<small>Completed ${esc(e.completedDisplay)}</small>`:''}</td><td>${meter(e.progress,e.name+' progress')}</td><td>${e.lastReminder?esc(fmtDateTime(e.lastReminder.at)):'—'}<small>${e.nextReminderAt?'Next '+esc(fmtDateTime(e.nextReminderAt)):''}</small></td><td><details class="deadline-override"><summary>Change</summary><form data-form="deadline-save" data-course="${esc(courseId)}" data-type="employee" data-target="${esc(e.employeeId)}"><label>Deadline for ${esc(e.name)} (${esc(zone)})<input type="datetime-local" name="deadline" value="${esc(e.deadlineInput)}" required></label><label class="check-label"><input type="checkbox" name="mandatory" ${e.mandatory?'checked':''}> Mandatory</label><button class="btn secondary" type="submit">Save</button><p class="form-status" role="status"></p></form></details></td></tr>`;
+}
+// ---------------------------------------------------------------- Manage Courses → Assignments & progress
+// One form assigns a published course step by step; the same course's assignments and employee progress follow it.
+// Assigning a course to a target that already has it updates that assignment (the server keeps one per course and target).
+const ASSIGN_TYPES=[['employee','Individual employee'],['department','Department'],['job_role','Job role']];
+const TARGET_NOUNS={employee:'employee',department:'department',job_role:'job role'};
+const PROGRESS_STATUSES=[['not_started','Not started'],['in_progress','In progress'],['due_soon','Due soon'],['overdue','Overdue'],['completed','Completed']];
+const newAssignDraft=()=>({targetType:'employee',targetId:'',deadline:'',mandatory:false,note:''});
+const rowHidden=(text,q)=>Boolean(q&&q.trim())&&!text.includes(q.trim().toLowerCase());
+function assignChoices(type){
+  const org=orgData(),count=item=>item.employees!=null?` · ${item.employees} employee${item.employees===1?'':'s'}`:'';
+  if(type==='department')return org.departments.map(d=>[d.id,d.name+count(d)]);
+  if(type==='job_role')return org.jobRoles.map(j=>[j.id,j.name+count(j)]);
+  return targetChoices('employee');
+}
+function assignStep(n,id,label,control,hint=''){return `<div class="assign-step"><span class="assign-num" aria-hidden="true">${n}</span><div class="assign-field"><label for="${id}">${label}</label>${control}${hint?`<small class="muted">${hint}</small>`:''}</div></div>`;}
+function assignForm(courses,selected,zone){
+  const a=assignDraft||(assignDraft=newAssignDraft()),managerOnly=currentUser.role==='manager',types=managerOnly?ASSIGN_TYPES.slice(0,1):ASSIGN_TYPES,noun=TARGET_NOUNS[a.targetType];
+  const requirement=`<div class="requirement-choice" role="radiogroup" aria-label="Requirement"><label class="check-label"><input id="assign-mandatory" type="radio" name="requirement" value="mandatory" ${a.mandatory?'checked':''}> Mandatory</label><label class="check-label"><input type="radio" name="requirement" value="optional" ${a.mandatory?'':'checked'}> Optional</label></div>`;
+  return `<form class="admin-form assign-form" id="assign-form" data-form="course-assign" data-course="${esc(selected.id)}">
+  ${assignStep(1,'assign-course','Published course',`<select id="assign-course" data-change="deadline-course">${options(courses.map(c=>[c.id,c.title]),selected.id)}</select>`,'Only published courses can be assigned. The assignments and progress below follow this course.')}
+  ${assignStep(2,'assign-type','Assignment type',`<select id="assign-type" name="targetType" data-change="assign-type">${options(types,a.targetType)}</select>`,managerOnly?'Managers assign training to their direct reports.':'')}
+  ${assignStep(3,'assign-target',capital(noun),`<select id="assign-target" name="targetId" required>${options(assignChoices(a.targetType),a.targetId,`Select ${noun==='employee'?'an employee':'a '+noun}…`)}</select>`,a.targetType==='employee'?'':`Everyone in this ${noun} gets the course, including employees who join it later.`)}
+  ${assignStep(4,'assign-deadline',`Deadline date and time (${esc(zone)})`,`<input id="assign-deadline" type="datetime-local" name="deadline" value="${esc(a.deadline)}">`,'Required for mandatory training; optional otherwise.')}
+  ${managerOnly?'':assignStep(5,'assign-mandatory','Requirement',requirement)}
+  ${assignStep(managerOnly?5:6,'assign-note','Note (optional)',`<input id="assign-note" name="note" maxlength="500" value="${esc(a.note)}" placeholder="For example, why this course matters">`)}
+  <div class="assign-submit"><span class="assign-num" aria-hidden="true">${managerOnly?6:7}</span><div><button class="btn" type="submit">Assign course</button><p class="form-status" role="status"></p></div></div></form>`;
+}
+function assignmentTargets(data,selected,zone){
+  const f=assignFilters,list=data.targets.filter(a=>(!f.type||a.targetType===f.type)&&(!f.requirement||(f.requirement==='mandatory')===a.mandatory));
+  const filters=data.targets.length?`<div class="table-filters"><label>Assigned to<select data-change="assign-filter" data-field="type">${options(ASSIGN_TYPES,f.type,'All types')}</select></label><label>Requirement<select data-change="assign-filter" data-field="requirement">${options([['mandatory','Mandatory'],['optional','Optional']],f.requirement,'All')}</select></label></div>`:'';
+  const body=list.length?list.map(a=>deadlineTargetRow(a,selected.id,zone)).join(''):`<p class="muted">${data.targets.length?'No assignments match these filters.':'This course is not assigned yet. Use the form above to assign it.'}</p>`;
+  return panel(`Existing assignments · ${selected.title}`,filters+body,`<span class="tag">${data.targets.length} TOTAL</span>`);
+}
+function assignmentProgress(data,selected,zone){
+  const f=assignFilters,people=data.employees,departments=[...new Set(people.map(e=>e.department).filter(Boolean))].sort();
+  const status=(e,s)=>s==='completed'?e.status.startsWith('completed'):e.status===s,count=s=>people.filter(e=>status(e,s)).length;
+  const list=people.filter(e=>(!f.status||status(e,f.status))&&(!f.mandatory||(f.mandatory==='mandatory')===Boolean(e.mandatory))&&(!f.department||e.department===f.department));
+  const stats=`<div class="stats assign-stats">${kpi('users',people.length,'Assigned employees')}${kpi('check',count('completed'),'Completed')}${kpi('clock',count('due_soon'),'Due soon')}${kpi('calendar',count('overdue'),'Overdue')}</div>`;
+  const filters=people.length?`<div class="table-filters"><input type="search" class="search" data-row-search="assign-people" value="${esc(f.q)}" placeholder="Search employees" aria-label="Search employees"><label>Status<select data-change="assign-filter" data-field="status">${options(PROGRESS_STATUSES,f.status,'All statuses')}</select></label><label>Requirement<select data-change="assign-filter" data-field="mandatory">${options([['mandatory','Mandatory'],['optional','Optional']],f.mandatory,'All')}</select></label>${departments.length>1?`<label>Department<select data-change="assign-filter" data-field="department">${options(departments.map(d=>[d,d]),f.department,'All departments')}</select></label>`:''}</div>`:'';
+  const table=list.length?`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Employee</th><th>Deadline</th><th>Type</th><th>Status</th><th>Progress</th><th>Reminders</th><th>Actions</th></tr></thead><tbody>${list.map(e=>deadlineEmployeeRow(e,selected.id,zone)).join('')}</tbody></table></div>`:`<p class="muted">${people.length?'No employees match these filters.':'No employees have this course yet.'}</p>`;
+  const link=currentUser.role!=='trainer'?'<p class="muted"><a class="auth-link" href="#compliance">Open Training Compliance</a> to track every course and employee together.</p>':'';
+  return panel(`Employee progress · ${selected.title}`,`${people.length?stats:''}${filters}${table}${link}`);
 }
 function courseDeadlineSettings(){
   if(!can('courses.assign'))return '';
   const courses=adminState.courses.filter(c=>c.status==='published');
-  if(!courses.length)return panel('Course Deadline Settings','<p class="muted">Publish a course before assigning it or setting a deadline.</p>');
-  const selected=courses.find(c=>c.id===deadlineCourseId)||courses.find(c=>c.id===editingCourse)||courses[0],key='deadlines:'+selected.id,entry=loadData(key,'manage/deadlines?courseId='+encodeURIComponent(selected.id)),data=entry.data,zone=data?.timezone||'IST';
-  const picker=`<div class="admin-form"><label for="deadline-course">Course</label><select id="deadline-course" data-change="deadline-course">${options(courses.map(c=>[c.id,c.title]),selected.id)}</select></div>`;
-  const assign=`<form class="admin-form" data-form="deadline-save" data-course="${esc(selected.id)}"><h3 class="sub-heading">Assign this course</h3>${targetFields('assign',currentUser.role==='manager')}<label for="assign-deadline">Deadline date and time (${esc(zone)})</label><input id="assign-deadline" type="datetime-local" name="deadline"><label class="check-label"><input type="checkbox" name="mandatory"> Mandatory (requires a deadline; leave unticked for optional)</label><label for="assign-note">Note (optional)</label><input id="assign-note" name="note" maxlength="500"><button class="btn" type="submit">Assign course</button><p class="form-status" role="status"></p></form>`;
-  const body=!data?stateBlock(entry,'deadlines',key):`<h3 class="sub-heading">Assignments</h3>${data.targets.map(a=>deadlineTargetRow(a,selected.id,zone)).join('')||'<p class="muted">This course is not assigned yet.</p>'}<h3 class="sub-heading">Employee deadlines</h3>${data.employees.length?`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Employee</th><th>Deadline</th><th>Type</th><th>Status</th><th>Progress</th><th>Reminders</th><th>Actions</th></tr></thead><tbody>${data.employees.map(e=>deadlineEmployeeRow(e,selected.id,zone)).join('')}</tbody></table></div>`:'<p class="muted">No employees have this course yet.</p>'}`;
-  return panel('Course Deadline Settings',`${picker}${assign}${body}<p class="muted">An individual deadline replaces a department or job-role deadline for that employee, except that optional training never replaces mandatory training. Only staff can change deadlines. Overdue courses stay open, and late completion is recorded.</p>${reminderSettingsPanel(selected)}`);
+  if(!courses.length)return panel('Assign a course','<p class="muted">Only published courses can be assigned. Publish a course from the Courses tab, then assign it here.</p>');
+  const selected=courses.find(c=>c.id===deadlineCourseId)||courses[0],key='deadlines:'+selected.id,entry=loadData(key,'manage/deadlines?courseId='+encodeURIComponent(selected.id)),data=entry.data,zone=data?.timezone||'IST';
+  const form=panel('Assign a course',`${assignForm(courses,selected,zone)}<p class="muted">An individual deadline replaces a department or job-role deadline for that employee, except that optional training never replaces mandatory training. Assigning a course to someone who already has it updates that assignment instead of adding a second one. Overdue courses stay open, and late completion is recorded.</p>`);
+  return form+(data?assignmentTargets(data,selected,zone)+assignmentProgress(data,selected,zone):stateBlock(entry,'assignments',key));
 }
 function courseResources(course){
   return panel('Learning materials',`${(course.resources||[]).map(r=>`<div class="admin-list-row"><div><strong>${esc(r.title)}</strong><small>${esc(capital(r.kind))}${r.module_index!=null?' · Module '+(r.module_index+1):''}</small></div><div class="table-actions"><a class="tag" href="${esc(r.url)}" target="_blank" rel="noopener">OPEN</a><button data-act="resource-delete" data-id="${r.id}">Remove</button></div></div>`).join('')||'<p class="muted">Add documents, presentations, videos or links for employees.</p>'}<form class="admin-form" data-form="resource-save" data-id="${esc(course.id)}"><label for="resource-title">Title</label><input id="resource-title" name="title" minlength="2" maxlength="150" required><div class="editor-fields"><div><label for="resource-kind">Type</label><select id="resource-kind" name="kind">${options([['document','Document'],['presentation','Presentation'],['video','Video'],['link','Link']],'document')}</select></div><div><label for="resource-module">Module</label><select id="resource-module" name="moduleIndex">${options([[0,'Module 1'],[1,'Module 2'],[2,'Module 3']],'','Whole course')}</select></div></div><label for="resource-file">Upload file (PDF, Office, video, image; up to 50 MB)</label><input id="resource-file" type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt,.csv,.mp4,.webm,.vtt,.png,.jpg,.jpeg"><label for="resource-url">…or link (HTTPS)</label><input id="resource-url" name="url" type="url" maxlength="2000" placeholder="https://"><button class="btn" type="submit">Add material</button><p class="form-status" role="status"></p></form><p class="muted">Uploaded files are stored privately and are visible to employees only while the course is published.</p>`);
 }
-function courseCatalogTable(){return `<div class="admin-table-scroll panel"><div class="section-heading"><h2>Course catalog</h2><button class="btn" data-import="choose">Add a course</button></div><table class="admin-table"><thead><tr><th>Course</th><th>Category</th><th>Level & duration</th><th>Status</th><th>Actions</th></tr></thead><tbody>${adminState.courses.map(item=>`<tr><td><strong>${esc(item.title)}</strong><small>${esc(item.description)}</small>${item.source?`<small>Imported from ${esc(item.source.platform)}${item.source.importStatus==='reference'?' (reference)':''}</small>`:''}</td><td>${esc(item.category)}<small>${esc(item.department||'All departments')}</small></td><td>${esc(capital(item.difficulty))}<small>${esc(fmtDuration(item.durationMinutes))} · ${item.format==='lessons'?'Lesson-based':'3-module'}</small></td><td><span class="tag ${item.status==='published'?'success':'gray'}">${esc(item.status.toUpperCase())}</span><small>${item.assignments||0} assignments${item.learners?` · ${item.learners} learner${item.learners===1?'':'s'}`:''}</small></td><td><div class="table-actions"><button data-edit-course="${item.id}">Edit</button><button data-act="course-preview" data-id="${item.id}">Preview</button><button class="danger-link" data-act="course-delete" data-id="${esc(item.id)}">Delete</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="muted">No courses yet. Create your first course below.</td></tr>'}</tbody></table></div>`;}
+// ---------------------------------------------------------------- Manage Courses → Courses (catalogue)
+const COURSE_STATUS_TONES={published:'success',draft:'gray',archived:'warn'};
+const CATALOG_STATUSES=[['all','All'],['published','Published'],['draft','Draft'],['archived','Archived']];
+function courseMetrics(courses){
+  const count=s=>courses.filter(c=>c.status===s).length;
+  return `<div class="stats course-metrics">${kpi('file',courses.length,'Total courses')}${kpi('check',count('published'),'Published')}${kpi('clock',count('draft'),'Drafts')}${kpi('book',count('archived'),'Archived')}${kpi('users',courses.reduce((n,c)=>n+(c.assignments||0),0),'Assignments')}${kpi('chart',courses.reduce((n,c)=>n+(c.learners||0),0),'Enrolled learners')}</div>`;
+}
+function courseRow(item){
+  const published=item.status==='published',search=[item.title,item.category,item.department||'All departments',item.description,item.status].join(' ').toLowerCase();
+  const assign=can('courses.assign')?`<button data-act="course-assign" data-id="${esc(item.id)}" ${published?'':'disabled title="Publish the course before assigning it"'}>Assign</button>`:'';
+  const more=`<details class="row-menu"><summary aria-label="More actions for ${esc(item.title)}">More</summary><div class="row-menu-list">${item.status!=='archived'?`<button type="button" data-act="course-archive" data-id="${esc(item.id)}">Archive</button>`:''}<button type="button" class="danger-link" data-act="course-delete" data-id="${esc(item.id)}">Delete</button></div></details>`;
+  return `<tr data-search-row="courses" data-search="${esc(search)}" ${rowHidden(search,catalogFilters.q)?'hidden':''}><td><strong>${esc(item.title)}</strong><small class="clamp">${esc(item.description)}</small>${item.source?`<small>Imported from ${esc(item.source.platform)}${item.source.importStatus==='reference'?' (reference)':''}</small>`:''}</td><td>${esc(item.category)}<small>${esc(item.department||'All departments')}${item.visibility==='department'?' only':''}</small></td><td>${esc(capital(item.difficulty))}<small>${esc(fmtDuration(item.durationMinutes))} · ${item.format==='lessons'?'Lesson-based':'3-module'}</small></td><td>${tagText(item.status,COURSE_STATUS_TONES[item.status]||'gray')}<small>${item.assignments||0} assignment${item.assignments===1?'':'s'} · ${item.learners||0} learner${item.learners===1?'':'s'}</small></td><td><div class="table-actions course-actions"><button data-edit-course="${esc(item.id)}">Edit</button><button data-act="course-preview" data-id="${esc(item.id)}">Preview</button>${assign}${more}</div></td></tr>`;
+}
+function courseCatalogTable(){
+  const courses=adminState.courses,f=catalogFilters,categories=[...new Set(courses.map(c=>c.category))].sort();
+  const shown=courses.filter(c=>(f.status==='all'||c.status===f.status)&&(!f.category||c.category===f.category));
+  const chips=CATALOG_STATUSES.map(([value,label])=>`<button type="button" class="${f.status===value?'active':''}" data-act="catalog-status" data-value="${value}" aria-pressed="${f.status===value}">${label} <span>${value==='all'?courses.length:courses.filter(c=>c.status===value).length}</span></button>`).join('');
+  return `${courseMetrics(courses)}<section class="panel admin-table-scroll"><div class="section-heading"><h2>Course catalogue</h2><button class="btn" data-import="choose">+ Create course</button></div>
+  <div class="table-filters"><input class="search" id="catalog-search" type="search" data-row-search="courses" value="${esc(f.q)}" placeholder="Search by title, category or department" aria-label="Search courses"><label>Category<select id="catalog-category" data-change="catalog-category">${options(categories.map(c=>[c,c]),f.category,'All categories')}</select></label></div>
+  <div class="status-chips" role="group" aria-label="Filter by status">${chips}</div>
+  <table class="admin-table course-table"><thead><tr><th>Course</th><th>Category</th><th>Level &amp; duration</th><th>Status</th><th>Actions</th></tr></thead><tbody>${shown.map(courseRow).join('')||`<tr><td colspan="5" class="muted">${courses.length?'No courses match these filters.':'No courses yet. Choose Create course to add your first course.'}</td></tr>`}</tbody></table>
+  <p class="muted">Only published courses can be assigned. Archived courses are hidden from employees; their progress and certificates are kept.</p></section>`;
+}
 // Existing 3-module courses keep their original curriculum editor.
 function legacyCourseManager(){
   const course=editingCourse?adminState.courses.find(c=>c.id===editingCourse):null,org=orgData();
@@ -171,7 +244,7 @@ function legacyCourseManager(){
   const categories=[...new Set([...(org.categories.length?org.categories:['Technical Skills']),...(course?[course.category]:[])])];
   const posts=(pageCache['m-assess']?.data?.assessments||[]).filter(a=>a.kind==='post');
   if(can('assessments.manage'))loadData('m-assess','manage/assessments');
-  return `${adminNotice()}${courseCatalogTable()}
+  return `
   <section class="panel admin-form course-editor"><span class="tag">${course?'EDIT COURSE':'NEW COURSE'}</span><h2>${course?'Edit course':'Create a learning opportunity'}</h2>${workflowSteps(course)}<form id="course-editor-form"><div class="editor-fields"><div><label for="course-title">Course name</label><input id="course-title" value="${esc(course?.title||'')}" minlength="2" maxlength="150" required></div><div><label for="course-category">Category</label><select id="course-category" required>${options(categories.map(c=>[c,c]),course?.category||categories[0])}</select></div><div><label for="course-status">Visibility</label><select id="course-status">${['draft','published','archived'].map(status=>`<option value="${status}" ${status===(course?.status||'draft')?'selected':''}>${capital(status)}</option>`).join('')}</select></div></div><label for="course-description">Description</label><textarea id="course-description" rows="3" maxlength="2000" required>${esc(course?.description||'')}</textarea>
   <div class="editor-fields"><div><label for="course-difficulty">Difficulty</label><select id="course-difficulty">${options([['beginner','Beginner'],['intermediate','Intermediate'],['advanced','Advanced'],['expert','Expert']],course?.difficulty||'beginner')}</select></div><div><label for="course-duration">Estimated duration (minutes)</label><input id="course-duration" type="number" min="0" max="100000" value="${esc(course?.durationMinutes??60)}"></div><div><label for="course-department">Department</label><select id="course-department">${options(org.departments.map(d=>[d.id,d.name]),course?.departmentId,'All departments')}</select></div></div>
   <div class="editor-fields"><div><label for="course-pass">Module exam pass mark</label><select id="course-pass">${options([[25,'25% (1 of 4)'],[50,'50% (2 of 4)'],[75,'75% (3 of 4)'],[100,'100% (4 of 4)']],course?.passPercent||75)}</select></div><div><label for="course-attempts">Exam attempts per module</label><select id="course-attempts">${options([[1,'1 attempt'],[2,'2 attempts'],[3,'3 attempts']],course?.maxAttempts||3)}</select></div><div><label for="course-post">Post-training assessment</label><select id="course-post">${options(posts.map(a=>[a.id,a.title+(a.status!=='published'?' ('+a.status+')':'')]),course?.postAssessmentId,'Not required')}</select></div></div>${currentUser.role!=='trainer'?`<label for="course-trainer">Course owner / trainer</label><select id="course-trainer">${options(org.trainers.map(t=>[t.id,`${t.name} · ${ROLE_LABELS[t.role]}`]),course?.trainerId,'Not assigned')}</select>`:''}
@@ -180,9 +253,9 @@ function legacyCourseManager(){
 // ---------------------------------------------------------------- lesson-based course builder (Manage Courses)
 // Links to official learning sites only; administrators choose and can edit each link. Nothing is copied from these sites.
 const OFFICIAL_SOURCES=[['Microsoft — Generative AI for Beginners','https://github.com/microsoft/generative-ai-for-beginners'],['Hugging Face Learn','https://huggingface.co/learn'],['Google — Machine Learning Crash Course','https://developers.google.com/machine-learning/crash-course'],['Databricks documentation','https://docs.databricks.com/'],['Databricks training','https://www.databricks.com/learn/training'],['AWS Skill Builder — AI & ML training','https://skillbuilder.aws/']];
-const BUILDER_STEPS=['Create course','Learning materials','Assessment','Preview','Save draft','Publish'];
+const BUILDER_STEPS=['Course basics','Learning materials','Assessment','Review & publish'];
 let courseDraft=null,builderStep=1,builderBusy=false,builderStatus='',builderUploads={},draftKey=0;
-const newLesson=()=>({key:'l'+(++draftKey),id:null,title:'',description:'',videoUrl:'',documentUrl:'',documentName:'',resources:[],content:'',exercise:'',durationMinutes:15,captionsUrl:'',videoSeconds:0,completionPercent:90,hasProgress:false});
+const newLesson=()=>({key:'l'+(++draftKey),id:null,title:'',description:'',videoUrl:'',documentUrl:'',documentName:'',resources:[],content:'',exercise:'',durationMinutes:15,captionsUrl:'',videoSeconds:0,completionPercent:90,hasProgress:false,moduleTitle:''});
 const newQuestion=coding=>({prompt:'',code:'',coding:Boolean(coding),options:['',''],correct:0,explanation:''});
 const newAssessment=()=>({title:'',passPercent:70,maxAttempts:3,timeLimitMinutes:15,locked:false,questions:[newQuestion(false)]});
 function newCourseDraft(){const org=orgData(),first=newLesson();return {id:null,title:'',category:org.categories[0]||'Technical Skills',description:'',difficulty:'beginner',durationMinutes:60,departmentId:'',visibility:'everyone',status:'draft',savedStatus:null,trainerId:'',lessons:[first],assessment:null,openLesson:first.key};}
@@ -193,11 +266,15 @@ function draftFromBuilder(data,openIndex=0){
     assessment:a?{title:a.title,passPercent:a.passPercent,maxAttempts:a.maxAttempts,timeLimitMinutes:a.timeLimitMinutes,bankDraw:a.questionCount<a.questions.length?a.questionCount:null,locked:a.locked,questions:a.questions.map(q=>({prompt:q[0],options:[...q[1]],correct:q[2],explanation:q[3]||'',code:q[4]||'',coding:Boolean(q[4])}))}:null};
 }
 async function openCourseBuilder(id,step=1){
-  editingCourse=id;courseDraft=null;courseAddMode=null;builderStep=step;builderStatus='';adminMessage='';render();
+  editingCourse=id;courseDraft=null;courseAddMode=null;publishedCourse=null;builderDirty=false;builderStep=step;builderStatus='';adminMessage='';render();
   try{courseDraft=draftFromBuilder(await api(`manage/courses/${encodeURIComponent(id)}/builder`));}catch(error){builderStatus=error.message;}
   render();
 }
-function startNewCourse(){courseAddMode=null;editingCourse=null;courseDraft=newCourseDraft();builderStep=1;builderStatus='';adminMessage='';builderUploads={};render();}
+function startNewCourse(){courseAddMode=null;editingCourse=null;publishedCourse=null;builderDirty=false;courseDraft=newCourseDraft();builderStep=1;builderStatus='';adminMessage='';builderUploads={};render();}
+// Leave the editor (or the publish confirmation) and return to the Course Management tabs.
+function closeCourseEditor(){editingCourse=null;courseDraft=null;courseAddMode=null;generateState=null;publishedCourse=null;builderStatus='';builderDirty=false;builderStep=1;}
+// A lesson the author added but never filled in is left out of a saved draft rather than failing validation.
+const blankLesson=l=>!l.id&&!l.title.trim()&&!l.description.trim()&&!l.exercise.trim()&&!lessonHasMaterial(l);
 function lessonHasMaterial(l){return Boolean(l.videoUrl||l.documentUrl||l.content.trim()||l.resources.some(r=>r.url));}
 function publishProblems(){
   const d=courseDraft,problems=[];
@@ -214,15 +291,15 @@ function builderPayload(status){
   const d=courseDraft,a=d.assessment;
   return {...(d.id?{id:d.id}:{}),format:'lessons',title:d.title,category:d.category,description:d.description,status,difficulty:d.difficulty,durationMinutes:Number(d.durationMinutes)||0,departmentId:d.departmentId||null,visibility:d.visibility,
     ...(currentUser.role!=='trainer'?{trainerId:d.trainerId||null}:{}),
-    lessons:d.lessons.map(l=>({...(l.id?{id:l.id}:{}),title:l.title,description:l.description,videoUrl:l.videoUrl,documentUrl:l.documentUrl,documentName:l.documentName,resources:l.resources.filter(r=>r.title.trim()||r.url.trim()),content:l.content,exercise:l.exercise,durationMinutes:Number(l.durationMinutes)||0,captionsUrl:l.captionsUrl||'',videoSeconds:Number(l.videoSeconds)||0,completionPercent:Number(l.completionPercent)||90})),
+    lessons:d.lessons.filter(l=>!blankLesson(l)).map(l=>({...(l.id?{id:l.id}:{}),moduleTitle:(l.moduleTitle||'').trim(),title:l.title,description:l.description,videoUrl:l.videoUrl,documentUrl:l.documentUrl,documentName:l.documentName,resources:l.resources.filter(r=>r.title.trim()||r.url.trim()),content:l.content,exercise:l.exercise,durationMinutes:Number(l.durationMinutes)||0,captionsUrl:l.captionsUrl||'',videoSeconds:Number(l.videoSeconds)||0,completionPercent:Number(l.completionPercent)||90})),
     assessment:a?{title:a.title,passPercent:Number(a.passPercent),maxAttempts:Number(a.maxAttempts),timeLimitMinutes:Number(a.timeLimitMinutes),...(a.bankDraw?{questionCount:Math.min(a.bankDraw,a.questions.length)}:{}),questions:a.questions.map(q=>({prompt:q.prompt,options:q.options,correct:Number(q.correct),explanation:q.explanation,...(q.coding&&q.code.trim()?{code:q.code}:{})}))}:null};
 }
 async function saveCourseBuilder(targetStatus){
-  const d=courseDraft,status=targetStatus||d.status;
+  const d=courseDraft,status=targetStatus||d.savedStatus||'draft',wasPublished=d.savedStatus==='published';
   if(builderBusy)return;
   if(status==='published'){
-    if(publishProblems().length){builderStep=6;builderStatus='Resolve the items below before publishing.';render();return;}
-    if(d.savedStatus!=='published'&&!confirm(`Publish “${d.title}”? It becomes available to ${d.visibility==='department'?'employees in the selected department (and anyone assigned it)':'all employees'}.`))return;
+    if(publishProblems().length){builderStep=4;builderStatus='Resolve the items below before publishing.';render();return;}
+    if(!wasPublished&&!confirm(`Publish “${d.title}”? It becomes available to ${d.visibility==='department'?'employees in the selected department':'all employees'} in the course catalog.`))return;
   }
   builderBusy=true;builderStatus='';render();
   try{
@@ -230,26 +307,33 @@ async function saveCourseBuilder(targetStatus){
     const result=await api('admin/courses',builderPayload(status));
     editingCourse=result.course.id;
     courseDraft=draftFromBuilder(await api(`manage/courses/${encodeURIComponent(result.course.id)}/builder`),openIndex);
+    builderDirty=false;
     await loadAdminState();courseCatalog=(await api('courses')).courses;refreshData('org','dash','me-dash','m-assess');
-    adminMessage=status==='published'?`“${result.course.title}” is published and available to ${courseDraft.visibility==='department'?'its department':'employees'}.`:status==='draft'?`Draft saved. Reopen it any time from the course catalog.`:'Course saved.';
+    if(status==='published'&&!wasPublished){publishedCourse={id:result.course.id,title:result.course.title,visibility:courseDraft.visibility};adminMessage='';}
+    else adminMessage=status==='published'?`Changes to “${result.course.title}” are saved and visible to employees.`:status==='archived'?`“${result.course.title}” is saved. It stays archived.`:`“${result.course.title}” is saved as a draft. Only course managers can see it.`;
   }catch(error){builderStatus=error.message;}
   finally{builderBusy=false;render();}
 }
-function builderSteps(){return `<ol class="builder-steps">${BUILDER_STEPS.map((label,i)=>`<li><button type="button" class="${builderStep===i+1?'active':''}" data-builder="step" data-step="${i+1}" ${builderStep===i+1?'aria-current="step"':''}><span>${i+1}</span>${label}</button></li>`).join('')}</ol>`;}
+// A step is ticked once nothing on it blocks publishing; the assessment is optional, so Step 3 is ticked only when one is added.
+function stepDone(n){
+  if(n===4)return courseDraft.savedStatus==='published';
+  if(n===3&&!courseDraft.assessment)return false;
+  return !publishProblems().some(p=>p.includes(`(Step ${n})`));
+}
+function builderSteps(){return `<ol class="builder-steps">${BUILDER_STEPS.map((label,i)=>{const n=i+1,done=stepDone(n),active=builderStep===n;return `<li><button type="button" class="${active?'active':''} ${done?'done':''}" data-builder="step" data-step="${n}" ${active?'aria-current="step"':''}><span>${done&&!active?'✓':n}</span>${esc(label)}</button></li>`;}).join('')}</ol>`;}
 function builderField(label,id,control){return `<div><label for="${id}">${label}</label>${control}</div>`;}
 function builderStepCourse(){
-  const d=courseDraft,org=orgData(),a=d.assessment,categories=[...new Set([...(org.categories.length?org.categories:['Technical Skills']),d.category])];
-  return `<div class="editor-fields">${builderField('Course name','b-title',`<input id="b-title" data-d="title" value="${esc(d.title)}" maxlength="150" required>`)}${builderField('Category','b-category',`<select id="b-category" data-d="category">${options(categories.map(c=>[c,c]),d.category)}</select>`)}${builderField('Difficulty','b-difficulty',`<select id="b-difficulty" data-d="difficulty">${options([['beginner','Beginner'],['intermediate','Intermediate'],['advanced','Advanced'],['expert','Expert']],d.difficulty)}</select>`)}</div>
+  const d=courseDraft,org=orgData(),categories=[...new Set([...(org.categories.length?org.categories:['Technical Skills']),d.category])];
+  return `<h3 class="sub-heading">Course basics</h3><div class="editor-fields">${builderField('Course name','b-title',`<input id="b-title" data-d="title" value="${esc(d.title)}" maxlength="150" required>`)}${builderField('Category','b-category',`<select id="b-category" data-d="category">${options(categories.map(c=>[c,c]),d.category)}</select>`)}${builderField('Difficulty','b-difficulty',`<select id="b-difficulty" data-d="difficulty">${options([['beginner','Beginner'],['intermediate','Intermediate'],['advanced','Advanced'],['expert','Expert']],d.difficulty)}</select>`)}</div>
   <label for="b-description">Description</label><textarea id="b-description" data-d="description" rows="3" maxlength="2000">${esc(d.description)}</textarea>
   <div class="editor-fields">${builderField('Estimated duration (minutes)','b-duration',`<input id="b-duration" type="number" min="0" max="100000" data-d="durationMinutes" value="${esc(d.durationMinutes)}">`)}${builderField('Department','b-department',`<select id="b-department" data-d="departmentId">${options(org.departments.map(x=>[x.id,x.name]),d.departmentId,'All departments')}</select>`)}${builderField('Visibility','b-visibility',`<select id="b-visibility" data-d="visibility">${options([['everyone','All employees'],['department','Selected department only']],d.visibility)}</select>`)}</div>
-  <div class="editor-fields">${builderField('Publication status','b-status',`<select id="b-status" data-d="status">${options([['draft','Draft'],['published','Published'],['archived','Archived']],d.status)}</select>`)}${builderField('Assessment pass mark (%)','b-pass',`<input id="b-pass" type="number" min="1" max="100" data-a="passPercent" value="${esc(a?a.passPercent:'')}" ${a?'':'disabled placeholder="Add the assessment in Step 3"'}>`)}${builderField('Assessment attempts','b-attempts',`<input id="b-attempts" type="number" min="1" max="3" data-a="maxAttempts" value="${esc(a?a.maxAttempts:'')}" ${a?'':'disabled placeholder="Step 3"'}>`)}</div>
-  <p class="muted">Post-training assessment: ${a?`<b>required for the certificate</b> · ${a.questions.length} question${a.questions.length===1?'':'s'} built in Step 3.`:'not added. Add one in Step 3 to require it for the certificate.'} Lesson-based courses have one course assessment instead of module exams. Department-only courses are also visible to employees you assign them to.</p>
-  ${currentUser.role!=='trainer'?`<label for="b-trainer">Course owner / trainer</label><select id="b-trainer" data-d="trainerId">${options(org.trainers.map(t=>[t.id,`${t.name} · ${ROLE_LABELS[t.role]}`]),d.trainerId,'Not assigned')}</select>`:''}`;
+  ${currentUser.role!=='trainer'?`<label for="b-trainer">Course owner / trainer</label><select id="b-trainer" data-d="trainerId">${options(org.trainers.map(t=>[t.id,`${t.name} · ${ROLE_LABELS[t.role]}`]),d.trainerId,'Not assigned')}</select>`:''}
+  <p class="muted">Department-only courses are also visible to employees you assign them to. Lessons and materials come next; the assessment, its passing score and attempts are set in Step 3.</p>`;
 }
 function lessonSummary(l){const parts=[fmtDuration(Number(l.durationMinutes)||0)];if(l.videoUrl)parts.push('Video');if(l.documentUrl)parts.push('Document');if(l.resources.length)parts.push(`${l.resources.length} link${l.resources.length===1?'':'s'}`);if(l.content.trim())parts.push('Text');if(l.exercise.trim())parts.push('Exercise');return parts.join(' · ');}
 function lessonEditor(l,i){
   const upload=builderUploads[l.key]||{};
-  return `<div class="lesson-editor" id="lesson-editor-${l.key}"><div class="editor-fields">${builderField('Lesson title',`l-title-${l.key}`,`<input id="l-title-${l.key}" data-l="${l.key}" data-f="title" value="${esc(l.title)}" maxlength="150">`)}${builderField('Lesson duration (minutes)',`l-dur-${l.key}`,`<input id="l-dur-${l.key}" type="number" min="0" max="1000" data-l="${l.key}" data-f="durationMinutes" value="${esc(l.durationMinutes)}">`)}</div>
+  return `<div class="lesson-editor" id="lesson-editor-${l.key}"><div class="editor-fields">${builderField('Lesson title',`l-title-${l.key}`,`<input id="l-title-${l.key}" data-l="${l.key}" data-f="title" value="${esc(l.title)}" maxlength="150">`)}${builderField('Lesson duration (minutes)',`l-dur-${l.key}`,`<input id="l-dur-${l.key}" type="number" min="0" max="1000" data-l="${l.key}" data-f="durationMinutes" value="${esc(l.durationMinutes)}">`)}${builderField('Module (optional)',`l-mod-${l.key}`,`<input id="l-mod-${l.key}" list="module-names" data-l="${l.key}" data-f="moduleTitle" value="${esc(l.moduleTitle||'')}" maxlength="150" placeholder="e.g. Module 1: Foundations">`)}</div>
   <label for="l-desc-${l.key}">Lesson description</label><textarea id="l-desc-${l.key}" rows="2" maxlength="2000" data-l="${l.key}" data-f="description">${esc(l.description)}</textarea>
   <div class="material-grid"><div><label for="l-video-${l.key}">Video URL</label><input id="l-video-${l.key}" type="url" data-l="${l.key}" data-f="videoUrl" value="${esc(l.videoUrl)}" placeholder="YouTube or Vimeo link, or a direct .mp4 link"><label class="file-label" for="l-vfile-${l.key}">…or upload a video file (MP4/WebM, up to 50 MB)</label><input id="l-vfile-${l.key}" type="file" accept=".mp4,.webm" data-upload="video" data-l="${l.key}">${upload.video?`<p class="upload-state ${upload.video.error?'error':''}" role="status">${esc(upload.video.text)}</p>`:''}<div class="editor-fields video-settings">${builderField('Video length (seconds)',`l-vsec-${l.key}`,`<input id="l-vsec-${l.key}" type="number" min="0" max="36000" step="0.1" data-l="${l.key}" data-f="videoSeconds" value="${esc(l.videoSeconds||0)}">`)}${builderField('Complete at (% watched)',`l-vpct-${l.key}`,`<input id="l-vpct-${l.key}" type="number" min="50" max="100" data-l="${l.key}" data-f="completionPercent" value="${esc(l.completionPercent||90)}">`)}</div><label class="file-label" for="l-cap-${l.key}">Captions (.vtt) link, optional</label><input id="l-cap-${l.key}" data-l="${l.key}" data-f="captionsUrl" value="${esc(l.captionsUrl||'')}" placeholder="https://...vtt"><p class="muted">Watch tracking applies to uploaded video files with a length set. YouTube and Vimeo lessons are marked complete by the employee.</p>${l.hasActivity?'<p class="notice">This lesson includes a scored practical exercise. It is kept when you save.</p>':''}</div>
   <div><span class="field-label">PDF or document</span>${l.documentUrl?`<p class="attached"><a href="${esc(l.documentUrl)}" target="_blank" rel="noopener">${icon('file')} ${esc(l.documentName||'Attached document')}</a> <button type="button" class="auth-link" data-builder="document-remove" data-l="${l.key}">Remove</button></p>`:'<p class="muted">No document attached.</p>'}<label class="file-label" for="l-dfile-${l.key}">${l.documentUrl?'Replace':'Upload'} a PDF, Word, PowerPoint or Excel file (up to 50 MB)</label><input id="l-dfile-${l.key}" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv" data-upload="document" data-l="${l.key}">${upload.document?`<p class="upload-state ${upload.document.error?'error':''}" role="status">${esc(upload.document.text)}</p>`:''}</div></div>
@@ -259,9 +343,15 @@ function lessonEditor(l,i){
   <label for="l-content-${l.key}">Text-based learning content</label><p class="muted">Formatting: ## heading, ### subheading, - bullet (indent two spaces to nest), 1. numbered step, | table | rows |, &#96;&#96;&#96; code block &#96;&#96;&#96;, **bold**, &#96;code&#96;. Headings named "Learning objectives" and "Key takeaways" are highlighted.</p><textarea id="l-content-${l.key}" rows="6" maxlength="100000" data-l="${l.key}" data-f="content">${esc(l.content)}</textarea>
   <label for="l-ex-${l.key}">Practical exercise (optional)</label><textarea id="l-ex-${l.key}" rows="3" maxlength="5000" data-l="${l.key}" data-f="exercise" placeholder="Describe a task. Employees submit a written response to complete the lesson.">${esc(l.exercise)}</textarea></div>`;
 }
+function lessonRow(l,i){
+  const d=courseDraft,open=d.openLesson===l.key;
+  return `<li class="lesson-row ${open?'open':''}"><div class="lesson-row-head"><span class="lesson-num">${i+1}</span><div class="lesson-row-title"><strong>${esc(l.title||'Untitled lesson')}</strong><small>${esc(lessonSummary(l))}${l.hasProgress?' · Employees have completed this lesson':''}</small></div><div class="table-actions"><button type="button" data-builder="lesson-move" data-l="${l.key}" data-dir="-1" ${i===0?'disabled':''} aria-label="Move lesson ${i+1} up">↑</button><button type="button" data-builder="lesson-move" data-l="${l.key}" data-dir="1" ${i===d.lessons.length-1?'disabled':''} aria-label="Move lesson ${i+1} down">↓</button><button type="button" data-builder="lesson-open" data-l="${l.key}" aria-expanded="${open}">${open?'Close':'Edit'}</button><button type="button" data-builder="lesson-delete" data-l="${l.key}" ${l.hasProgress?'disabled title="Employees have completed this lesson"':''}>Delete</button></div></div>${open?lessonEditor(l,i):''}</li>`;
+}
+// Consecutive lessons with the same module name are shown, saved and played as one module.
 function builderStepLessons(){
-  const d=courseDraft;
-  return `<p class="muted">Add lessons in the order employees should take them. Each lesson can combine a video, a document, external links, written content and a practical exercise.</p><ol class="lesson-list">${d.lessons.map((l,i)=>`<li class="lesson-row ${d.openLesson===l.key?'open':''}"><div class="lesson-row-head"><span class="lesson-num">${i+1}</span><div class="lesson-row-title"><strong>${esc(l.title||'Untitled lesson')}</strong><small>${l.moduleTitle?esc(l.moduleTitle)+' · ':''}${esc(lessonSummary(l))}${l.hasProgress?' · Employees have completed this lesson':''}</small></div><div class="table-actions"><button type="button" data-builder="lesson-move" data-l="${l.key}" data-dir="-1" ${i===0?'disabled':''} aria-label="Move lesson ${i+1} up">↑</button><button type="button" data-builder="lesson-move" data-l="${l.key}" data-dir="1" ${i===d.lessons.length-1?'disabled':''} aria-label="Move lesson ${i+1} down">↓</button><button type="button" data-builder="lesson-open" data-l="${l.key}" aria-expanded="${d.openLesson===l.key}">${d.openLesson===l.key?'Close':'Edit'}</button><button type="button" data-builder="lesson-delete" data-l="${l.key}" ${l.hasProgress?'disabled title="Employees have completed this lesson"':''}>Delete</button></div></div>${d.openLesson===l.key?lessonEditor(l,i):''}</li>`).join('')||'<li class="muted">No lessons yet.</li>'}</ol><button type="button" class="btn" data-builder="lesson-add">+ Add lesson</button>`;
+  const d=courseDraft,modules=[...new Set(d.lessons.map(l=>(l.moduleTitle||'').trim()).filter(Boolean))];let previous=null;
+  const rows=d.lessons.map((l,i)=>{const name=(l.moduleTitle||'').trim(),head=name&&name!==previous?`<li class="module-heading">${icon('book')}<span>${esc(name)}</span></li>`:'';previous=name||null;return head+lessonRow(l,i);}).join('');
+  return `<h3 class="sub-heading">Learning materials</h3><p class="muted">Organise lessons into modules, in the order employees should take them. Each lesson can combine written content, a PDF or document, external links and a practical exercise.</p><datalist id="module-names">${modules.map(m=>`<option value="${esc(m)}">`).join('')}</datalist><ol class="lesson-list">${rows||'<li class="muted">No lessons yet.</li>'}</ol><div class="admin-actions"><button type="button" class="btn" data-builder="lesson-add">+ Add lesson</button><button type="button" class="btn secondary" data-builder="module-add">+ Add module</button></div>`;
 }
 function builderStepAssessment(){
   const a=courseDraft.assessment;
@@ -275,31 +365,58 @@ function builderStepPreview(){
   const d=courseDraft,a=d.assessment;
   return `<div class="notice">This is how employees will see the course${d.id&&d.savedStatus?'':' once saved'}. Unsaved changes are included in this preview.</div><div class="preview-head"><span class="tag">${esc(d.category)}</span><h2>${esc(d.title||'Untitled course')}</h2><p class="muted">${esc(d.description)}</p><p class="muted">${esc(capital(d.difficulty))} · ${esc(fmtDuration(Number(d.durationMinutes)||0))} · ${d.lessons.length} lesson${d.lessons.length===1?'':'s'}${a?` · Assessment pass mark ${a.passPercent}%`:''}</p></div><div class="course-player builder-preview">${d.lessons.map((l,i)=>`<article class="panel lesson-content module-view preview-lesson">${lessonHeader(l,{unit:'Lesson',index:i,total:d.lessons.length})}${lessonBody(l)}</article>`).join('')||'<p class="muted">No lessons yet.</p>'}${a?`<section class="panel lesson-content"><span class="tag">ASSESSMENT</span><h2>${esc(a.title||(d.title||'Course')+' assessment')}</h2><p class="muted">${a.questions.length} questions · ${a.timeLimitMinutes} minutes · pass mark ${a.passPercent}% · ${a.maxAttempts} attempt${Number(a.maxAttempts)===1?'':'s'}</p>${a.questions.map((q,i)=>`<fieldset class="question"><legend><span>${i+1}.</span> ${esc(q.prompt)}</legend>${q.coding&&q.code?`<pre><code>${esc(q.code)}</code></pre>`:''}${q.options.map((o,j)=>`<label class="answer"><input type="radio" disabled><span class="answer-letter" aria-hidden="true">${String.fromCharCode(65+j)}</span><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}</section>`:''}</div>`;
 }
-function builderStepSave(){
-  const d=courseDraft,files=d.lessons.filter(l=>l.documentUrl).length,links=d.lessons.reduce((n,l)=>n+l.resources.length,0);
-  return `<div class="save-summary"><div><strong>${d.lessons.length}</strong><span>Lessons</span></div><div><strong>${files}</strong><span>Documents</span></div><div><strong>${links}</strong><span>Resource links</span></div><div><strong>${d.assessment?d.assessment.questions.length:0}</strong><span>Assessment questions</span></div></div><p class="muted">Saving a draft stores the course, every lesson, its materials and the assessment. Drafts are visible only to course managers; reopen this draft any time from the course catalog.${d.savedStatus==='published'?' Saving as a draft removes this course from employees until you publish it again.':''}</p><button type="button" class="btn" data-builder="save-draft" ${builderBusy?'disabled':''}>${builderBusy?'Saving…':'Save as draft'}</button>`;
-}
-function builderStepPublish(){
-  const d=courseDraft,problems=publishProblems(),dept=orgData().departments.find(x=>x.id===d.departmentId);
-  return `<h3 class="sub-heading">Publishing checklist</h3><ul class="checklist">${problems.length?problems.map(p=>`<li class="todo">${esc(p)}</li>`).join(''):'<li class="done">Course details, lessons and assessment are complete.</li>'}</ul><p class="muted">Available to: <b>${d.visibility==='department'?esc(dept?.name||'the selected department')+' only, plus employees assigned this course':'all employees'}</b>. Published courses appear in My Learning and can be assigned from this page.</p>${d.savedStatus==='published'?`<div class="notice success">This course is published. Save changes to update what employees see.</div><div class="admin-actions"><button type="button" class="btn" data-builder="save" ${builderBusy?'disabled':''}>Save changes</button><button type="button" class="btn secondary" data-builder="save-draft">Unpublish (move to draft)</button></div>`:`<button type="button" class="btn" data-builder="publish" ${problems.length||builderBusy?'disabled':''}>${builderBusy?'Publishing…':'Publish course'}</button>`}`;
+function builderStepReview(){
+  const d=courseDraft,a=d.assessment,problems=publishProblems(),dept=orgData().departments.find(x=>x.id===d.departmentId);
+  const lessons=d.lessons.filter(l=>!blankLesson(l)),modules=new Set(lessons.map(l=>(l.moduleTitle||'').trim()).filter(Boolean)).size;
+  const checklist=[[1,'Course basics'],[2,'Learning materials'],[3,'Assessment']].map(([n,label])=>{const list=problems.filter(p=>p.includes(`(Step ${n})`));
+    return list.length?list.map(p=>`<li class="todo">${esc(p.replace(` (Step ${n})`,''))} <button type="button" class="auth-link" data-builder="step" data-step="${n}">Go to step ${n}</button></li>`).join(''):`<li class="done">${label}${n===3&&!a?': no assessment added (optional)':' complete'}</li>`;}).join('');
+  const summary=[[modules,'Modules'],[lessons.length,'Lessons'],[lessons.filter(l=>l.documentUrl).length,'Documents'],[lessons.reduce((n,l)=>n+l.resources.length,0),'Resource links'],[a?a.questions.length:0,'Assessment questions']].map(([n,label])=>`<div><strong>${n}</strong><span>${label}</span></div>`).join('');
+  const state=d.savedStatus==='published'?`<div class="notice success">This course is published. Use Save changes to update what employees see.</div><button type="button" class="btn secondary" data-builder="save-draft" ${builderBusy?'disabled':''}>Unpublish (move to draft)</button>`
+    :d.savedStatus==='archived'?'<div class="notice">This course is archived and hidden from employees. Publish it to make it available again.</div>'
+    :`<p class="muted">Save a draft to continue later: drafts are visible only to course managers and reopen from the catalogue. Publish when the checklist is complete.</p>`;
+  return `<h3 class="sub-heading">Publishing checklist</h3><ul class="checklist">${checklist}</ul><div class="save-summary review-summary">${summary}</div><p class="muted">Available to: <b>${d.visibility==='department'?esc(dept?.name||'the selected department')+' only, plus employees assigned this course':'all employees'}</b>. Published courses appear on the Courses page, and in My Learning for the employees they are assigned to.</p>${state}<h3 class="sub-heading">Course preview</h3>${builderStepPreview()}`;
 }
 function courseBuilder(){
   if(!courseDraft)return builderStatus?`<div class="notice" role="alert">${esc(builderStatus)} <button class="auth-link" data-builder="reload">Try again</button></div>`:stateBlock({loading:true},'course','builder');
-  const d=courseDraft,views=[builderStepCourse,builderStepLessons,builderStepAssessment,builderStepPreview,builderStepSave,builderStepPublish];
-  const saveLabel=builderBusy?'Saving…':d.status==='published'&&d.savedStatus==='published'?'Save changes':d.status==='published'?'Save and publish':d.status==='archived'?'Save':'Save draft';
-  return `<section class="panel admin-form course-editor" id="course-builder"><div class="section-heading"><div><span class="tag">${d.id?'EDIT COURSE':'NEW COURSE'} · ${esc((d.savedStatus||'not saved').toUpperCase())}</span><h2>${d.id?esc(d.title||'Edit course'):'Create a learning opportunity'}</h2></div>${d.id?'<button type="button" class="btn secondary" data-builder="close">Close editor</button>':''}</div>${builderSteps()}${importReportPanel(d)}${builderStatus?`<div class="notice" role="alert">${esc(builderStatus)}</div>`:''}<div class="builder-body">${views[builderStep-1]()}</div><div class="builder-footer"><button type="button" class="btn secondary" data-builder="step" data-step="${builderStep-1}" ${builderStep===1?'disabled':''}>Back</button><button type="button" class="btn secondary" data-builder="save" ${builderBusy?'disabled':''}>${saveLabel}</button><button type="button" class="btn" data-builder="step" data-step="${builderStep+1}" ${builderStep===6?'disabled':''}>Next ${icon('arrow')}</button></div></section>`;
+  const d=courseDraft,views=[builderStepCourse,builderStepLessons,builderStepAssessment,builderStepReview],saved=d.savedStatus||'draft',last=builderStep===BUILDER_STEPS.length;
+  const saveLabel=builderBusy?'Saving…':saved==='published'?'Save changes':saved==='archived'?'Save':'Save draft';
+  const forward=!last?`<button type="button" class="btn" data-builder="step" data-step="${builderStep+1}">Next: ${esc(BUILDER_STEPS[builderStep])} ${icon('arrow')}</button>`
+    :saved==='published'?'':`<button type="button" class="btn" data-builder="publish" ${publishProblems().length||builderBusy?'disabled':''}>${builderBusy?'Publishing…':'Publish course'}</button>`;
+  return `<section class="panel admin-form course-editor" id="course-builder"><div class="section-heading"><div><span class="tag">${d.id?'EDIT COURSE':'NEW COURSE'} · ${esc((d.savedStatus||'not saved').toUpperCase())}</span><h2>${d.id?esc(d.title||'Edit course'):'Create a learning opportunity'}</h2></div><span class="muted step-count">Step ${builderStep} of ${BUILDER_STEPS.length}</span></div>${builderSteps()}${importReportPanel(d)}${builderStatus?`<div class="notice" role="alert">${esc(builderStatus)}</div>`:''}<div class="builder-body">${views[builderStep-1]()}</div><div class="builder-footer"><button type="button" class="btn secondary" data-builder="step" data-step="${builderStep-1}" ${builderStep===1?'disabled':''}>Back</button><button type="button" class="btn secondary" data-builder="save" ${builderBusy?'disabled':''}>${saveLabel}</button>${forward}</div></section>`;
 }
+// Shown once a course is first published: assign it now, or return to the catalogue and assign it later.
+function publishedPanel(){
+  const p=publishedCourse,assign=can('courses.assign');
+  return `<section class="panel publish-done" role="status"><span class="tag success">PUBLISHED</span><h2>“${esc(p.title)}” is published</h2><p class="muted">Employees ${p.visibility==='department'?'in its department':''} can now find it on the Courses page. Assigned courses also appear in each employee's My Learning with the deadline you set.</p><div class="admin-actions">${assign?'<button type="button" class="btn" data-act="published-assign">Assign this course now</button>':''}<button type="button" class="btn secondary" data-act="course-close">Back to Course Management</button><button type="button" class="auth-link" data-act="published-edit">Keep editing</button></div>${assign?'<p class="muted">To assign it later, use Assign next to the course in the catalogue.</p>':''}</section>`;
+}
+const COURSE_FLOW=['Course Management','Create Course','Learning Materials','Assessment','Review & Publish','Course Assignment','Progress Tracking'];
+function courseFlow(){
+  const editing=Boolean(courseDraft)&&!publishedCourse,steps=can('courses.assign')?COURSE_FLOW:COURSE_FLOW.slice(0,5);
+  const current=publishedCourse?[4]:editing?[builderStep]:courseTab==='assignments'?[5,6]:courseTab==='reminders'?[]:[0];
+  return `<ol class="workflow course-flow" aria-label="Course workflow">${steps.map((label,i)=>`<li class="${current.includes(i)?'current':''}" ${current.includes(i)?'aria-current="step"':''}><span>${i+1}</span>${label}</li>`).join('')}</ol>`;
+}
+function courseManagerTabs(){
+  const tabs=[['catalog','Courses'],...(can('courses.assign')?[['assignments','Assignments & progress']]:[]),...(['admin','hr'].includes(currentUser.role)?[['reminders','Reminders']]:[])];
+  if(tabs.length<2)return '';
+  return `<div class="compliance-tabs course-tabs" role="tablist" aria-label="Course management">${tabs.map(([id,label])=>`<button type="button" role="tab" aria-selected="${courseTab===id}" class="${courseTab===id?'active':''}" data-act="course-tab" data-tab="${id}">${esc(label)}</button>`).join('')}</div>`;
+}
+// Course Management → Create Course (4-step wizard) → Review & Publish → Assign → Track progress.
+// The wizard, the AI generator and the 3-module editor each replace the tabs while open.
 function courseManager(){
-  const course=editingCourse?adminState.courses.find(c=>c.id===editingCourse):null;
-  if(course&&course.format!=='lessons')return legacyCourseManager()+courseDeadlineSettings();
-  if(courseAddMode==='generate'&&generateState)return `${adminNotice()}${courseCatalogTable()}${courseDeadlineSettings()}${courseGenerator()}`;
-  if(!courseDraft&&!editingCourse)courseDraft=newCourseDraft();
-  return `${adminNotice()}${courseCatalogTable()}${courseDeadlineSettings()}${courseAddMode==='choose'?addCourseChooser():''}${courseBuilder()}${course&&courseDraft?courseResources(course):''}`;
+  const course=editingCourse?adminState.courses.find(c=>c.id===editingCourse):null,back='<button type="button" class="auth-link back-link" data-act="course-close">← Back to Course Management</button>';
+  if(courseTab==='assignments'&&!can('courses.assign')||courseTab==='reminders'&&!['admin','hr'].includes(currentUser.role))courseTab='catalog';
+  if(publishedCourse)return `${courseFlow()}${adminNotice()}${publishedPanel()}`;
+  if(course&&course.format!=='lessons')return `${back}${adminNotice()}${legacyCourseManager()}`;
+  if(courseAddMode==='generate'&&generateState)return `${back}${adminNotice()}${courseGenerator()}`;
+  if(courseDraft||editingCourse)return `${courseFlow()}${back}${adminNotice()}${courseBuilder()}${course&&courseDraft?courseResources(course):''}`;
+  const view=courseTab==='assignments'?courseDeadlineSettings():courseTab==='reminders'?reminderManagement():`${courseAddMode==='choose'?addCourseChooser():''}${courseCatalogTable()}`;
+  return `${courseFlow()}${courseManagerTabs()}${adminNotice()}${view}`;
 }
 const findLesson=key=>courseDraft?.lessons.find(l=>l.key===key);
 const BUILDER_ACTIONS={
-  step:el=>{const n=Number(el.dataset.step);if(n>=1&&n<=6){builderStep=n;builderStatus='';}},
-  'lesson-add':()=>{const l=newLesson();courseDraft.lessons.push(l);courseDraft.openLesson=l.key;},
+  step:el=>{const n=Number(el.dataset.step);if(n>=1&&n<=BUILDER_STEPS.length){builderStep=n;builderStatus='';}},
+  'lesson-add':()=>{const l=newLesson();l.moduleTitle=courseDraft.lessons.at(-1)?.moduleTitle||'';courseDraft.lessons.push(l);courseDraft.openLesson=l.key;},
+  'module-add':()=>{const count=new Set(courseDraft.lessons.map(l=>(l.moduleTitle||'').trim()).filter(Boolean)).size,l=newLesson();l.moduleTitle=`Module ${count+1}`;courseDraft.lessons.push(l);courseDraft.openLesson=l.key;},
   'lesson-open':el=>{courseDraft.openLesson=courseDraft.openLesson===el.dataset.l?null:el.dataset.l;},
   'lesson-move':el=>{const list=courseDraft.lessons,i=list.findIndex(l=>l.key===el.dataset.l),j=i+Number(el.dataset.dir);if(j>=0&&j<list.length)[list[i],list[j]]=[list[j],list[i]];},
   'lesson-delete':el=>{const l=findLesson(el.dataset.l);if(l&&!l.hasProgress&&confirm(`Delete lesson “${l.title||'Untitled lesson'}”? This takes effect when you save.`))courseDraft.lessons=courseDraft.lessons.filter(x=>x!==l);},
@@ -315,18 +432,20 @@ const BUILDER_ACTIONS={
   save:()=>saveCourseBuilder(),
   'save-draft':()=>saveCourseBuilder('draft'),
   publish:()=>saveCourseBuilder('published'),
-  close:()=>{editingCourse=null;courseDraft=null;},
+  close:()=>{closeCourseEditor();},
   reload:()=>openCourseBuilder(editingCourse,builderStep),
 };
 document.addEventListener('click',event=>{
   const el=event.target.closest?.('[data-builder]');if(!el||!courseDraft&&!['reload'].includes(el.dataset.builder)||el.disabled)return;
   const action=BUILDER_ACTIONS[el.dataset.builder];if(!action)return;
   event.preventDefault();
+  if(!['step','lesson-open','close','reload','save','save-draft','publish'].includes(el.dataset.builder))builderDirty=true;
   const result=action(el);
   if(!(result instanceof Promise))render();
 });
 function builderInput(el){
   if(!courseDraft||!el.closest?.('#course-builder'))return;
+  builderDirty=true;
   const d=courseDraft,value=el.type==='checkbox'?el.checked:el.value;
   if(el.dataset.d){d[el.dataset.d]=value;if(el.dataset.d==='status'||el.dataset.d==='visibility')render();}
   else if(el.dataset.a){d.assessment[el.dataset.a]=value;}
@@ -352,7 +471,7 @@ document.addEventListener('change',event=>{
   builderInput(el);
 });
 function adminPage(page){
-  const names={'admin-users':['Users & teams','Add employees, organise departments and job roles, and manage access.'],'admin-courses':['Course management','Author, preview, publish and assign internal training.'],'admin-audit':['Activity log','A history of administrative actions.']};
+  const names={'admin-users':['Users & teams','Add employees, organise departments and job roles, and manage access.'],'admin-courses':['Course management','Create courses, publish them, assign them and track employee progress.'],'admin-audit':['Activity log','A history of administrative actions.']};
   if(!names[page])return '';
   return `<div class="intro"><div><h1>${names[page][0]}</h1><p>${names[page][1]}</p></div><span class="tag">${page==='admin-audit'?'ADMIN ONLY':'AUTHORISED STAFF'}</span></div>${page==='admin-users'?userManager():page==='admin-courses'?courseManager():`<section class="panel admin-table-scroll"><table class="admin-table"><thead><tr><th>Administrator</th><th>Action</th><th>Details</th><th>When</th></tr></thead><tbody>${adminState.events.map(event=>`<tr><td>${esc(event.admin_name)}</td><td>${esc(event.action.replaceAll('_',' ').replace('candidate','employee'))}</td><td>${esc(event.detail||event.target_id)}</td><td>${esc(new Date(event.created_at).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}))}</td></tr>`).join('')||'<tr><td colspan="4">No administrator actions yet.</td></tr>'}</tbody></table></section>`}`;
 }
@@ -379,3 +498,25 @@ function bindAdmin(){
     Object.keys(metadata).forEach(key=>metadata[key]===undefined&&delete metadata[key]);
     const result=await api('admin/courses',{...(editingCourse?{id:editingCourse}:{}),title:document.getElementById('course-title').value,category:document.getElementById('course-category').value,description:document.getElementById('course-description').value,status:document.getElementById('course-status').value,content,...metadata});editingCourse=result.course.id;await loadAdminState();courseCatalog=(await api('courses')).courses;refreshData('org','dash','me-dash');adminMessage='Course saved. '+(result.course.status==='published'?'Employees can now access it.':'Only course managers can see this course.');render();}catch(error){document.getElementById('course-form-status').textContent=error.message;button.disabled=false;}};
 }
+
+// ---------------------------------------------------------------- Manage Courses: assignment form and row search
+function openAssignment(courseId){
+  closeCourseEditor();deadlineCourseId=courseId;courseTab='assignments';assignDraft=newAssignDraft();adminMessage='';
+  if(location.hash!=='#admin-courses')location.hash='admin-courses';
+  render();window.scrollTo?.(0,0);
+}
+// The assignment form keeps what has been entered when the page re-renders (for example, after choosing another course).
+function assignInput(el){
+  if(!assignDraft||!el.closest?.('#assign-form'))return;
+  if(el.name==='requirement')assignDraft.mandatory=el.value==='mandatory';
+  else if(['targetId','deadline','note'].includes(el.name))assignDraft[el.name]=el.value;
+}
+document.addEventListener('input',event=>assignInput(event.target));
+document.addEventListener('change',event=>assignInput(event.target));
+// Search boxes filter table rows in place, so typing never re-renders the page; the text is kept for the next render.
+const ROW_SEARCH={courses:value=>{catalogFilters.q=value;},'assign-people':value=>{assignFilters.q=value;}};
+document.addEventListener('input',event=>{
+  const el=event.target,kind=el.dataset?.rowSearch;if(!ROW_SEARCH[kind])return;
+  ROW_SEARCH[kind](el.value);
+  document.querySelectorAll(`[data-search-row="${kind}"]`).forEach(row=>{row.hidden=rowHidden(row.dataset.search||'',el.value);});
+});

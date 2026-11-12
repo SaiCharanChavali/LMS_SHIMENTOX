@@ -2,7 +2,7 @@
 
 ## For administrators
 
-**Manage Courses → Course Deadline Settings** lists each published course's assignments and every employee's effective deadline, status, progress and reminders. From there, administrators and HR can:
+**Manage Courses → Assignments & progress** lists each published course's assignments and every employee's effective deadline, status, progress and reminders (see [course management](course-management.md)). From there, administrators and HR can:
 
 - Assign a course to an employee, department or job role, with a deadline date and time.
 - Mark it mandatory (a deadline is then required) or optional.
@@ -11,7 +11,7 @@
 
 When several assignments reach one employee, one applies, chosen in this order: mandatory before optional, a deadline before none, individual before department or job role, then the earliest deadline. A manager's optional recommendation therefore cannot weaken mandatory training, and an individual mandatory deadline can extend a department's.
 
-**Reminder schedule and history**, in the same section, sets the reminder intervals and the Due Soon window, and shows recent deliveries. **Run reminders now** runs a pass immediately.
+**Manage Courses → Reminders** sets the reminder intervals and the Due Soon window, and shows recent deliveries, filtered by course and delivery status. **Run reminders now** runs a pass immediately.
 
 ## Training Compliance & Deadline Monitoring
 

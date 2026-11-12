@@ -14,7 +14,7 @@ const isLearner=()=>Boolean(currentUser);
 let pageCache={},devMessage='',devFilters={dashboard:{},report:{type:'enrollments',page:1}},notificationState={items:[],unread:0,open:false};
 let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,courseFilter='all',courseArea='all',courseDifficulty='all',courseSearch='',assistantAnswer=null;
 
-function resetDevelopment(){if(typeof resetActivity==='function')resetActivity();selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;courseFilter='all';courseArea='all';courseDifficulty='all';courseSearch='';}
+function resetDevelopment(){if(typeof resetActivity==='function')resetActivity();if(typeof resetCourseManagement==='function')resetCourseManagement();selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;courseFilter='all';courseArea='all';courseDifficulty='all';courseSearch='';}
 function loadData(key,path){
   if(pageCache[key])return pageCache[key];
   pageCache[key]={loading:true};
@@ -821,7 +821,7 @@ const ACTIONS={
   'compliance-sort':el=>{const k=el.dataset.key,s=compliance.sort;compliance.sort={key:k,dir:s.key===k&&s.dir==='asc'?'desc':'asc'};complianceFirstPage();},
   'compliance-details':el=>{compliance.open=compliance.open===el.dataset.id?null:el.dataset.id;render();},
   'compliance-employee':el=>{compliance.filters={employee:el.dataset.id};compliance.tab='employees';complianceFirstPage();},
-  'compliance-manage':el=>{deadlineCourseId=el.dataset.id;},
+  'compliance-manage':el=>{deadlineCourseId=el.dataset.id;courseTab='assignments';closeCourseEditor();},
   'compliance-refresh':()=>{refreshData('compliance');render();},
   'report-preset':el=>{devFilters.report={type:el.dataset.type,page:1};},
   'report-reset':()=>{devFilters.report={type:devFilters.report.type,page:1};render();},
@@ -869,7 +869,21 @@ const ACTIONS={
     try{if(!await enterExamFullscreen())return toast(FULLSCREEN_REQUIRED);const data=await api(`me/assessments/${el.dataset.id}/start`,{});inlineAttempt={assessmentId:el.dataset.id,attempt:data.attempt};inlineResult=null;render();window.scrollTo?.(0,0);updateAssessmentTimer();}
     catch(error){exitExamFullscreen();throw error;}finally{assessmentStarting=false;}},
   'resource-delete':async el=>{await api(`manage/resources/${el.dataset.id}/delete`,{});await loadAdminState();render();},
-  'assignment-delete':async el=>{await api(`manage/assignments/${el.dataset.id}/delete`,{});refreshData('deadlines');courseCatalog=(await api('courses')).courses;render();},
+  // Manage Courses: tabs, catalogue filters, archive, and the hand-off from publishing to assignment.
+  'course-tab':el=>{courseTab=el.dataset.tab;courseAddMode=null;render();},
+  'catalog-status':el=>{catalogFilters.status=el.dataset.value;render();},
+  'course-assign':el=>{const course=adminState.courses.find(c=>c.id===el.dataset.id);if(!course||course.status!=='published')return toast('Publish the course before assigning it.');openAssignment(course.id);},
+  'published-assign':()=>openAssignment(publishedCourse.id),
+  'published-edit':()=>{publishedCourse=null;render();},
+  'course-close':()=>{if(builderDirty&&!confirm('Leave the course editor? Changes you have not saved will be lost.'))return;closeCourseEditor();courseTab='catalog';render();},
+  'course-archive':async el=>{
+    const course=adminState.courses.find(c=>c.id===el.dataset.id);if(!course)return;
+    if(!confirm(`Archive “${course.title}”?
+
+It disappears from the catalogue and cannot be assigned. Employees keep their progress and certificates, and you can publish it again later.`))return;
+    await api(`admin/courses/${encodeURIComponent(course.id)}/archive`,{});await loadAdminState();courseCatalog=(await api('courses')).courses;refreshData('deadlines');render();toast(`“${course.title}” archived.`);
+  },
+  'assignment-delete':async el=>{if(!confirm('Remove this assignment? Employees keep any progress they have made, but the course is no longer assigned to them.'))return;await api(`manage/assignments/${el.dataset.id}/delete`,{});refreshData('deadlines','compliance');await loadAdminState();courseCatalog=(await api('courses')).courses;render();toast('Assignment removed.');},
 };
 const SUBMITS={
   'announcement-send':form=>submitForm(form,async()=>{await api('manage/announcements',formValues(form));await refreshNotifications();toast('Announcement published.');}),
@@ -889,6 +903,17 @@ const SUBMITS={
   'org-save':form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('manage/'+form.dataset.kind,{name:v.name,departmentId:v.departmentId||null});pageCache.org={data};render();}),
   'resource-save':form=>submitForm(form,async()=>{const v=formValues(form);let url=v.url;const file=form.querySelector('input[type="file"]')?.files?.[0];if(file){url=(await uploadMaterial(file)).url;}if(!url)throw new Error('Choose a file to upload or enter a link.');await api(`manage/courses/${form.dataset.id}/resources`,{title:v.title,kind:v.kind,url,moduleIndex:intOrNull(v.moduleIndex)});await loadAdminState();adminMessage='Learning material added.';render();}),
   'deadline-save':form=>submitForm(form,async()=>{const v=formValues(form),target=form.dataset.target;await api('manage/assignments',{courseId:form.dataset.course,targetType:target?form.dataset.type:v.targetType,targetId:target||v.targetId,mandatory:v.mandatory==='on',deadline:v.deadline||null,note:v.note||''});refreshData('deadlines','reminder-history','me-dash');courseCatalog=(await api('courses')).courses;adminMessage='Deadline saved. Employees have been notified.';render();}),
+  // Assign a course: the server keeps one assignment per course and target, so assigning again updates it.
+  'course-assign':form=>submitForm(form,async()=>{
+    const a=assignDraft,courseId=form.dataset.course,course=adminState.courses.find(c=>c.id===courseId),noun=TARGET_NOUNS[a.targetType];
+    if(!a.targetId)throw new Error(`Select ${noun==='employee'?'an employee':'a '+noun} to assign the course to.`);
+    if(a.mandatory&&!a.deadline)throw new Error('Mandatory training needs a deadline. Set the deadline date and time (step 4).');
+    const existing=(pageCache['deadlines:'+courseId]?.data?.targets||[]).find(t=>t.targetType===a.targetType&&t.targetId===a.targetId);
+    if(existing&&!confirm(`${existing.target} already has “${course?.title||'this course'}”. Update that assignment with these settings?`)){render();return;}
+    const target=assignChoices(a.targetType).find(([id])=>id===a.targetId)?.[1]?.split(' · ')[0]||'the selected '+noun;
+    await api('manage/assignments',{courseId,targetType:a.targetType,targetId:a.targetId,mandatory:a.mandatory,deadline:a.deadline||null,note:a.note||''});
+    assignDraft=newAssignDraft();refreshData('deadlines','reminder-history','me-dash','compliance');await loadAdminState();courseCatalog=(await api('courses')).courses;
+    adminMessage=`“${course?.title||'Course'}” ${existing?'assignment updated for':'assigned to'} ${target}. Employees have been notified and see it in My Learning.`;render();}),
   'reminder-settings':form=>submitForm(form,async()=>{const v=formValues(form),intervalDays=String(v.intervalDays||'').split(',').map(x=>x.trim()).filter(Boolean).map(Number);const data=await api('manage/reminders/settings',{intervalDays,dueSoonDays:Number(v.dueSoonDays),deadlineDay:v.deadlineDay==='on',overdue:v.overdue==='on'});pageCache['reminder-settings']={data};refreshData('deadlines');courseCatalog=(await api('courses')).courses;toast('Reminder schedule saved.');render();}),
   'lesson-activity':form=>submitForm(form,async()=>{const lesson=currentCourseExtras.courseLessons.find(l=>l.id===form.dataset.lesson),answers=lesson.activity.tasks.map((_,i)=>(form.querySelector(`#answer-${i}`)?.value||'').trim());if(answers.some(a=>!a))throw new Error('Write a prompt for every task before submitting.');const result=await learningRequest('lesson-activity',{lessonId:lesson.id,answers});const r=result.activityResult;refreshData('me-dash');toast(r.passed?`Passed with ${r.score}%. Review the feedback and model answers.`:`You scored ${r.score}%. You need ${r.passPercent}% — use the tips and try again.`);render();document.getElementById('activity-title')?.scrollIntoView?.({behavior:'smooth',block:'start'});}),
   'inline-assessment':form=>submitForm(form,async()=>{const id=form.dataset.id,questions=inlineAttempt.attempt.questions,values=new FormData(form),answers=questions.map((_,i)=>values.get('q'+i)===null?null:Number(values.get('q'+i)));if(answers.includes(null))throw new Error('Answer every question before submitting.');const data=await api(`me/assessments/${id}/submit`,{attemptId:inlineAttempt.attempt.id,answers});inlineResult={assessmentId:id,result:data.result};inlineAttempt=null;exitExamFullscreen();await refreshCourseExtras();refreshData('me-assess','me-dash');refreshNotifications();toast(data.result.status==='passed'?`Passed with ${data.result.percent}%.`:data.result.status==='expired'?'Time expired.':`You scored ${data.result.percent}%. Review the explanations and try again.`);render();}),
@@ -896,7 +921,12 @@ const SUBMITS={
   assistant:form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('me/assistant',{courseId:currentCourseInfo.id,mode:v.mode,lessonIndex:intOrNull(v.lessonIndex),question:v.question});assistantAnswer={courseId:currentCourseInfo.id,text:data.answer+(data.truncated?'\n\n(The answer was cut short.)':'')};render();}),
 };
 const CHANGES={
-  'deadline-course':el=>{deadlineCourseId=el.value;render();},
+  'deadline-course':el=>{deadlineCourseId=el.value;assignFilters={...assignFilters,type:'',requirement:'',status:'',department:'',mandatory:'',q:''};render();},
+  'assign-type':el=>{assignDraft={...(assignDraft||newAssignDraft()),targetType:el.value,targetId:''};render();},
+  'assign-filter':el=>{assignFilters[el.dataset.field]=el.value;render();},
+  'catalog-category':el=>{catalogFilters.category=el.value;render();},
+  'reminder-course':el=>{reminderFilters.course=el.value;render();},
+  'reminder-status':el=>{reminderFilters.status=el.value;render();},
   'course-difficulty':el=>{courseDifficulty=el.value;render();},
   'compliance-size':el=>{compliance.size=Number(el.value);complianceFirstPage();},
   'target-type':el=>{const target=document.getElementById(el.dataset.target);if(target)target.innerHTML=options(targetChoices(el.value),'','Select…');},

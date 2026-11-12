@@ -51,7 +51,7 @@ Every deletion and archive is recorded in the audit log.
 
 ### Course page layout and lesson text
 
-Every lesson-based course uses the same course page: a progress header, a lesson view with a title block, and a "Course content" sidebar. This includes courses built in Manage Courses and packaged courses such as Java Full Stack and Generative AI. The builder's Preview step shows lessons in the same layout. Courses with knowledge checks or module assessments call their units "modules"; others call them "lessons".
+Every lesson-based course uses the same course page: a progress header, a lesson view with a title block, and a "Course content" sidebar. This includes courses built in Manage Courses and packaged courses such as Java Full Stack and Generative AI. The wizard's Review & publish step shows lessons in the same layout. Courses with knowledge checks or module assessments call their units "modules"; others call them "lessons".
 
 Lesson text supports a small, safe Markdown subset; anything else shows as plain text:
 
@@ -66,7 +66,7 @@ To group lessons into sections in the sidebar, start each lesson description wit
 
 ## Creating a course from a website link
 
-In **Manage Courses**, select **Add a course**, then **Create from a link with AI** (**Create manually** opens the usual builder). Paste the address of a public page, optionally enter a title and category, and select **Create course**. This needs the Claude API; see [AI assistant](ai-assistant.md).
+In **Manage Courses**, select **+ Create course**, then **Create from a link with AI** (**Create manually** opens the step-by-step wizard; see [course management](course-management.md)). Paste the address of a public page, optionally enter a title and category, and select **Create course**. This needs the Claude API; see [AI assistant](ai-assistant.md).
 
 The page is used only as a reference. AI writes new lessons, examples and questions in the portal's format, with a knowledge check after each lesson and a final assessment. The course is saved as a **draft** and opens in the course builder, so review it, correct anything needed, and publish it. Employees do not see the source website.
 

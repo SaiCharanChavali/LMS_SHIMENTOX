@@ -75,7 +75,15 @@ async function main() {
     else if(path==='admin/candidates')result=options.body?{candidate:{id:'new-account'}}:{candidates:[server.user,{...server.user,id:'existing-one',name:'Existing Employee',email:'existing@shimentox.com',role:'employee',active:true,certificates:0,courseRuns:1,training:{year:2026,targetHours:null,completedHours:3,percent:null}}]};
     else if(path==='manage/course-generator')result={enabled:true};
     else if(path==='manage/training-targets')result={training:Object.fromEntries(data.employeeIds.map(id=>[id,{year:2026,targetHours:data.hours,completedHours:0,percent:0}]))};
-    else if(path==='admin/courses')result={courses:[{...courseInfo,content:{sets:curriculum,lessons:fixtureLessons}}]};
+    else if(path==='admin/courses'&&options.body){server.savedCourse={id:data.id||'new-course',title:data.title,status:data.status};result={course:{...server.savedCourse}};}
+    else if(/^manage\/courses\/[^/]+\/builder$/.test(path)){const c=server.savedCourse;result={course:{id:c.id,title:c.title,category:'Technical Skills',description:'Stay safe',difficulty:'beginner',durationMinutes:60,visibility:'everyone',status:c.status},lessons:[{id:'l1',title:'Passwords',description:'',videoUrl:'',documentUrl:'',documentName:'',resources:[],content:'Use a manager.',exercise:'',durationMinutes:10,moduleTitle:'Module 1: Basics',moduleIndex:0,hasProgress:false}],assessment:null};}
+    else if(/^admin\/courses\/[^/]+\/archive$/.test(path))result={ok:true};
+    else if(path.startsWith('manage/deadlines'))result={courseId:'new-course',timezone:'IST',targets:[{id:'a1',courseId:'new-course',targetType:'department',targetId:'d1',target:'Engineering',mandatory:true,deadlineInput:'2099-01-31T18:00',deadlineDisplay:'31 January 2099, 6:00 PM',employees:5,completed:1,canRemove:true,note:''},{id:'a2',courseId:'new-course',targetType:'employee',targetId:'e2',target:'Ravi',mandatory:false,deadlineInput:'',deadlineDisplay:null,employees:1,completed:1,canRemove:true,note:''}],
+      employees:[{employeeId:'e1',name:'Asha',email:'asha@shimentox.com',department:'Engineering',assignmentId:'a1',source:'department',mandatory:true,deadlineInput:'2099-01-31T18:00',deadlineDisplay:'31 January 2099, 6:00 PM',status:'overdue',statusLabel:'Overdue',progress:40,lastReminder:null,nextReminderAt:null},{employeeId:'e2',name:'Ravi',email:'ravi@shimentox.com',department:'Sales',assignmentId:'a2',source:'employee',mandatory:false,deadlineInput:'',deadlineDisplay:null,status:'completed_on_time',statusLabel:'Completed on time',progress:100,lastReminder:null,nextReminderAt:null}]};
+    else if(path==='manage/reminders/settings')result={settings:{intervalDays:[7,3,1],dueSoonDays:7,deadlineDay:true,overdue:true,lastRunAt:null,lastRun:null}};
+    else if(path.startsWith('manage/reminders/history'))result={history:[{id:1,employee:'Asha',course:'Security Basics',type:'before_3d',scheduledAt:'2026-11-01T00:00:00Z',sentAt:'2026-11-01T00:00:01Z',status:'sent'},{id:2,employee:'Ravi',course:'Security Basics',type:'overdue',scheduledAt:'2026-11-02T00:00:00Z',sentAt:null,status:'failed',failureReason:'Mailbox <full>'}]};
+    else if(path==='manage/assignments')result={assignments:[]};
+    else if(path==='admin/courses')result={courses:[{...courseInfo,content:{sets:curriculum,lessons:fixtureLessons}},...(server.savedCourse?[{...courseInfo,...server.savedCourse,format:'lessons',assignments:2,learners:0}]:[])]};
     else if(path==='admin/audit')result={events:[]};
     else if (path === 'learning/resume') result = { learning: server.learning };
     else if(path==='learning/checkpoint-start'){
@@ -310,25 +318,84 @@ async function main() {
   assert.equal(run(builderDraft(10,15)),10);
   assert.equal(run(builderDraft(15,15)),undefined);
   run('courseDraft=null');
-  context.location.hash='#admin-courses';run('render()');
-  // New courses open the step-by-step builder; existing 3-module courses keep the curriculum editor.
-  assert.ok(app.innerHTML.includes('id="course-builder"')&&app.innerHTML.includes('Learning materials')&&app.innerHTML.includes('Publication status'));
-  run('builderStep=2;render()');assert.ok(app.innerHTML.includes('+ Add lesson')&&app.innerHTML.includes('Add an official learning source'));
-  run(`courseDraft.title='GenAI Foundations';courseDraft.description='Intro';courseDraft.lessons[0].title='What is GenAI?'`);
-  assert.ok(run('publishProblems().some(p=>p.includes("needs a video, document"))'),'Publishing requires lesson material');
-  run(`courseDraft.lessons[0].videoUrl='https://youtu.be/dQw4w9WgXcQ';courseDraft.lessons.push(newLesson());courseDraft.lessons[1].title='Prompting';courseDraft.lessons[1].content='Be specific.';courseDraft.assessment=newAssessment();Object.assign(courseDraft.assessment.questions[0],{prompt:'Pick one',options:['A','B'],correct:1});`);
-  assert.equal(run('publishProblems().length'),0);
-  const payload=JSON.parse(run(`JSON.stringify(builderPayload('draft'))`));
-  assert.equal(payload.format,'lessons');assert.equal(payload.status,'draft');
-  assert.deepEqual(payload.lessons.map(l=>l.title),['What is GenAI?','Prompting']);
-  assert.deepEqual(payload.assessment.questions[0],{prompt:'Pick one',options:['A','B'],correct:1,explanation:''});
-  run('builderStep=4;render()');assert.ok(app.innerHTML.includes('LESSON 1 OF 2')&&app.innerHTML.includes('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'));
-  run(`editingCourse='python-programming';courseDraft=null;render()`);assert.ok(app.innerHTML.includes('id="course-editor-form"'));
-  run('editingCourse=null;courseDraft=null');
+  context.confirm=()=>true;const settleUi=()=>new Promise(resolve=>setImmediate(resolve)),occurrences=text=>app.innerHTML.split(text).length-1;
+  context.location.hash='#admin-courses';run('render()');await settleUi();run('render()');
+  // Course Management opens on the catalogue: metrics, search, status filters, and Edit / Preview / Assign / More for each course.
+  for(const text of ['Course catalogue','Total courses','Enrolled learners','data-row-search="courses"','data-act="catalog-status"','data-act="course-assign"','data-act="course-archive"','data-act="course-delete"','Assignments &amp; progress','>Reminders<','Course Management'])assert.ok(app.innerHTML.includes(text),text);
+  assert.ok(!app.innerHTML.includes('id="course-builder"'),'The wizard opens only when a course is created or edited.');
+  run(`catalogFilters.status='draft';render()`);assert.ok(app.innerHTML.includes('No courses match these filters.'));run(`catalogFilters.status='all'`);
+  run(`adminState.courses.push({...adminState.courses[0],id:'draft-1',title:'Draft Course',status:'draft',format:'lessons'});render()`);
+  assert.ok(app.innerHTML.includes('data-act="course-assign" data-id="draft-1" disabled'),'Only published courses can be assigned.');
+  run(`ACTIONS['course-assign']({dataset:{id:'draft-1'}})`);assert.equal(run('courseTab'),'catalog');run('adminState.courses.pop()');
+  // Create Course is a 4-step wizard that shows only the current step and keeps entered data between steps.
+  run('startNewCourse()');
+  assert.ok(app.innerHTML.includes('id="course-builder"')&&app.innerHTML.includes('Step 1 of 4')&&app.innerHTML.includes('id="b-title"')&&!app.innerHTML.includes('+ Add lesson')&&!app.innerHTML.includes('Publication status')&&!app.innerHTML.includes('Course catalogue'));
+  for(const label of ['Course basics','Learning materials','Assessment','Review &amp; publish','b-trainer','b-visibility','b-department','b-duration','b-difficulty','b-category'])assert.ok(app.innerHTML.includes(label),label);
+  run(`courseDraft.title='Security Basics';courseDraft.description='Stay safe';BUILDER_ACTIONS.step({dataset:{step:'2'}});render()`);
+  assert.ok(app.innerHTML.includes('+ Add lesson')&&app.innerHTML.includes('+ Add module')&&app.innerHTML.includes('Add an official learning source')&&!app.innerHTML.includes('id="b-title"'));
+  run(`courseDraft.lessons[0].title='Passwords';courseDraft.lessons[0].content='Use a manager.';courseDraft.lessons[0].moduleTitle='Module 1: Basics';BUILDER_ACTIONS['lesson-add']();BUILDER_ACTIONS['module-add']();render()`);
+  assert.equal(run('courseDraft.lessons[1].moduleTitle'),'Module 1: Basics');assert.equal(run('courseDraft.lessons[2].moduleTitle'),'Module 2');
+  assert.equal(occurrences('class="module-heading"'),2);
+  run(`BUILDER_ACTIONS.step({dataset:{step:'1'}});render()`);assert.ok(app.innerHTML.includes('value="Security Basics"'),'Step 1 keeps what was entered.');
+  // Lessons left empty are not sent with a draft; each lesson carries its module name.
+  assert.deepEqual(JSON.parse(run(`JSON.stringify(builderPayload('draft'))`)).lessons.map(l=>[l.title,l.moduleTitle]),[['Passwords','Module 1: Basics']]);
+  // Save draft works on any step and stays on it.
+  run('builderStep=2');await run(`BUILDER_ACTIONS.save()`);
+  assert.ok(requests.some(r=>r.path==='admin/courses'&&r.data.status==='draft'&&r.data.title==='Security Basics'));
+  assert.equal(run('builderStep'),2);assert.ok(app.innerHTML.includes('is saved as a draft'));assert.equal(run('builderDirty'),false);
+  // Review & publish: checklist, preview and Publish. Publishing then offers Assign now or a return to Course Management.
+  run(`BUILDER_ACTIONS.step({dataset:{step:'4'}});render()`);
+  assert.ok(app.innerHTML.includes('Publishing checklist')&&app.innerHTML.includes('Course preview')&&app.innerHTML.includes('data-builder="publish"')&&app.innerHTML.includes('LESSON 1 OF 1'));
+  await run(`BUILDER_ACTIONS.publish()`);
+  assert.ok(requests.some(r=>r.path==='admin/courses'&&r.data.status==='published'&&r.data.id==='new-course'));
+  assert.ok(app.innerHTML.includes('is published')&&app.innerHTML.includes('data-act="published-assign"')&&app.innerHTML.includes('Back to Course Management'));
+  // Assign now opens Assignments with the course selected; the target selector follows the assignment type.
+  run(`ACTIONS['published-assign']()`);await settleUi();run('render()');
+  assert.equal(run('courseTab'),'assignments');assert.equal(run('courseDraft'),null);
+  assert.ok(app.innerHTML.includes('id="assign-form"')&&app.innerHTML.includes('<option value="new-course" selected>')&&app.innerHTML.includes('Select an employee…')&&app.innerHTML.includes('Deadline date and time (IST)'));
+  run(`CHANGES['assign-type']({value:'department'})`);
+  assert.ok(app.innerHTML.includes('Select a department…')&&app.innerHTML.includes('Engineering · 5 employees')&&app.innerHTML.includes('including employees who join it later'));
+  // Mandatory training needs a deadline; assigning a target that already has the course updates it after confirmation.
+  context.testForm={dataset:{course:'new-course'},querySelector:()=>null};
+  run(`assignDraft.targetId='d1';assignDraft.mandatory=true;assignDraft.note='Annual refresher'`);
+  await run(`SUBMITS['course-assign'](testForm)`);assert.ok(toast.textContent.includes('needs a deadline'));
+  const assignCalls=requests.filter(r=>r.path==='manage/assignments').length;
+  run(`assignDraft.deadline='2099-02-01T17:30'`);context.confirm=()=>false;await run(`SUBMITS['course-assign'](testForm)`);
+  assert.equal(requests.filter(r=>r.path==='manage/assignments').length,assignCalls,'Cancelled: no request.');
+  context.confirm=()=>true;await run(`SUBMITS['course-assign'](testForm)`);
+  assert.deepEqual(requests.filter(r=>r.path==='manage/assignments').at(-1).data,{courseId:'new-course',targetType:'department',targetId:'d1',mandatory:true,deadline:'2099-02-01T17:30',note:'Annual refresher'});
+  assert.ok(app.innerHTML.includes('assignment updated for Engineering'));assert.equal(run('assignDraft.targetId'),'');
+  // Existing assignments and employee progress keep update, removal, mandatory, progress and reminder columns, with filters.
+  await settleUi();run('render()');
+  assert.equal(occurrences('class="deadline-target"'),2);assert.ok(app.innerHTML.includes('data-act="assignment-delete"')&&app.innerHTML.includes('<th>Reminders</th>')&&app.innerHTML.includes('Assigned employees'));
+  run(`assignFilters.type='employee';render()`);assert.equal(occurrences('class="deadline-target"'),1);run(`assignFilters.type=''`);
+  run(`assignFilters.status='overdue';render()`);assert.equal(occurrences('data-search-row="assign-people"'),1);run(`assignFilters.status='';assignFilters.q='ravi';render()`);
+  assert.ok(app.innerHTML.includes('data-search="asha asha@shimentox.com engineering" hidden')&&!app.innerHTML.includes('data-search="ravi ravi@shimentox.com sales" hidden'));run(`assignFilters.q=''`);
+  // Reminders: settings and history in their own tab, filtered by course and delivery status.
+  run(`ACTIONS['course-tab']({dataset:{tab:'reminders'}})`);await settleUi();run('render()');
+  assert.ok(app.innerHTML.includes('Reminder settings')&&app.innerHTML.includes('Reminder history')&&app.innerHTML.includes('3 days before')&&app.innerHTML.includes('Mailbox &lt;full&gt;')&&!app.innerHTML.includes('id="assign-form"'));
+  run(`reminderFilters.status='failed';render()`);assert.ok(!app.innerHTML.includes('3 days before')&&app.innerHTML.includes('Mailbox'));
+  run(`CHANGES['reminder-course']({value:'python-programming'})`);await settleUi();assert.ok(requests.some(r=>r.path==='manage/reminders/history?courseId=python-programming'));run(`reminderFilters={course:'',status:''}`);
+  // More → Archive keeps records; the 3-module editor opens with a way back.
+  run(`ACTIONS['course-tab']({dataset:{tab:'catalog'}})`);await run(`ACTIONS['course-archive']({dataset:{id:'new-course'}})`);assert.ok(requests.some(r=>r.path==='admin/courses/new-course/archive'));
+  run(`editingCourse='python-programming';courseDraft=null;render()`);assert.ok(app.innerHTML.includes('id="course-editor-form"')&&app.innerHTML.includes('Back to Course Management'));
+  run(`ACTIONS['course-close']()`);assert.ok(app.innerHTML.includes('Course catalogue')&&!app.innerHTML.includes('id="course-editor-form"'));
   // Add a course offers manual creation and Create from a link with AI; the old Import from URL option is gone.
   run(`IMPORT_ACTIONS.choose();render()`);assert.ok(app.innerHTML.includes('Create manually')&&app.innerHTML.includes('Create from a link with AI')&&!app.innerHTML.includes('Import from URL'));
   assert.equal(run("typeof courseImporter+typeof runCourseImport"),'undefinedundefined');
-  run(`IMPORT_ACTIONS.close();render()`);assert.ok(app.innerHTML.includes('id="course-builder"'));
+  run(`IMPORT_ACTIONS.close();render()`);assert.ok(!app.innerHTML.includes('id="course-builder"')&&app.innerHTML.includes('Course catalogue'));
+  // Earlier builder rules still hold: publishing needs lesson material, and the preview embeds the lesson video.
+  run(`startNewCourse();courseDraft.title='GenAI Foundations';courseDraft.description='Intro';courseDraft.lessons[0].title='What is GenAI?'`);
+  assert.ok(run('publishProblems().some(p=>p.includes("needs a video, document"))'),'Publishing requires lesson material');
+  run(`courseDraft.lessons[0].videoUrl='https://youtu.be/dQw4w9WgXcQ';courseDraft.lessons.push(newLesson());courseDraft.lessons[1].title='Prompting';courseDraft.lessons[1].content='Be specific.';courseDraft.assessment=newAssessment();Object.assign(courseDraft.assessment.questions[0],{prompt:'Pick one',options:['A','B'],correct:1});`);
+  assert.equal(run('publishProblems().length'),0);
+  const builderBody=JSON.parse(run(`JSON.stringify(builderPayload('draft'))`));
+  assert.equal(builderBody.format,'lessons');assert.equal(builderBody.status,'draft');
+  assert.deepEqual(builderBody.lessons.map(l=>l.title),['What is GenAI?','Prompting']);
+  assert.deepEqual(builderBody.assessment.questions[0],{prompt:'Pick one',options:['A','B'],correct:1,explanation:''});
+  run('builderStep=4;render()');assert.ok(app.innerHTML.includes('LESSON 1 OF 2')&&app.innerHTML.includes('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'));
+  run('closeCourseEditor();resetCourseManagement()');server.savedCourse=null;
+  console.log('PASS Manage Courses workflow: catalogue, 4-step wizard, draft and publish, assignment, progress filters, reminders');
   // The extended lesson formatting keeps nested lists and code.
   assert.ok(run("renderMarkdown('- one\\n  - nested\\n\\n```python\\nx=1\\n```')").includes('<ul><li>one<ul><li>nested</li></ul></li></ul>'));
   context.location.hash='#admin-audit';run('render()');assert.ok(app.innerHTML.includes('Activity log'));

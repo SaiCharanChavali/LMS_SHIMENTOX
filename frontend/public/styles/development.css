@@ -631,3 +631,49 @@ th[aria-sort=ascending] .sort-head span,th[aria-sort=descending] .sort-head span
 @media(max-width:1300px){.activity-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1000px){.activity-analytics{grid-template-columns:1fr}}
 @media(max-width:600px){.activity-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.activity-person .btn{width:100%}}
+
+/* ---------------------------------------------------------------- Manage Courses workflow */
+.course-flow{margin:0 0 14px}
+.course-flow li.current{background:var(--primary);color:var(--brand-charcoal);font-weight:700}
+.course-flow li.current span{border-color:var(--brand-charcoal)}
+.course-tabs{margin-bottom:16px}
+.course-metrics{margin-bottom:16px;grid-template-columns:repeat(6,minmax(0,1fr))}
+.back-link{display:inline-block;margin:0 0 12px;font-weight:600}
+.table-filters{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end;margin:4px 0 12px}
+.table-filters .search{flex:1 1 240px;max-width:420px;margin:0}
+.table-filters label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;margin:0}
+.table-filters select{min-width:150px;margin:0}
+.status-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.status-chips button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--ink)}
+.status-chips button span{color:#7b8783;margin-left:2px}
+.status-chips button:hover{background:#fff8e1}
+.status-chips button.active{background:var(--primary);border-color:var(--primary);color:var(--brand-charcoal);font-weight:700}
+.status-chips button.active span{color:inherit}
+.course-table td{vertical-align:top}
+.course-table small.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:440px}
+.course-actions{flex-wrap:nowrap;align-items:center}
+.row-menu{position:relative}
+.row-menu>summary{list-style:none;cursor:pointer;border:1px solid #ecdfb7;background:#fffaf0;color:#795600;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600}
+.row-menu>summary::-webkit-details-marker{display:none}
+.row-menu>summary:after{content:' ▾'}
+.row-menu-list{position:absolute;right:0;top:calc(100% + 4px);z-index:5;display:grid;gap:4px;min-width:130px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1);padding:6px}
+.row-menu-list button{text-align:left;width:100%}
+.builder-steps button.done span{background:#e9f5f1;border-color:var(--teal);color:var(--teal)}
+.step-count{font-size:12px;white-space:nowrap}
+.module-heading{list-style:none;display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin:16px 0 6px;padding:6px 10px;background:#fff8e1;border-radius:7px;color:var(--brand-charcoal)}
+.module-heading svg{width:16px;height:16px}
+.review-summary{grid-template-columns:repeat(5,1fr)}
+.publish-done{text-align:center;padding:34px 24px}
+.publish-done .admin-actions{justify-content:center;flex-wrap:wrap;align-items:center}
+.assign-form{display:grid;gap:14px;max-width:none}
+.assign-step,.assign-submit{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start}
+.assign-field label{margin-top:0}
+.assign-field select,.assign-field input:not([type=radio]){max-width:520px;width:100%}
+.assign-field small{display:block;margin-top:4px}
+.assign-num{width:26px;height:26px;border-radius:50%;background:var(--primary);color:var(--brand-charcoal);display:grid;place-items:center;font-weight:700;font-size:12px;margin-top:2px}
+.assign-submit .form-status:empty{display:none}
+.requirement-choice{display:flex;gap:20px;flex-wrap:wrap}
+.assign-stats{margin-bottom:14px}
+@media(max-width:1150px){.course-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.review-summary{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.course-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.course-actions{flex-wrap:wrap}.review-summary{grid-template-columns:1fr 1fr}.table-filters label,.table-filters select{width:100%}}

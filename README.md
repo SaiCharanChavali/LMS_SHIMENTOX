@@ -24,7 +24,7 @@ roles, events and artifacts, user stories and estimation, and Kanban, each with 
 check, plus a 10-question final assessment and a certificate. It is based on
 [Atlassian's Agile Coach](https://www.atlassian.com/agile).
 
-ShimentoX's internal employee learning & development portal. It brings together course and training management, assignments and mandatory deadlines, assessments with question banks, instructor-led sessions, notifications, certificates, and learning analytics. Accounts and progress are stored in SQLite. See [learning & development](docs/learning-and-development.md) for roles, metric definitions, and the API, and [course deadlines](docs/course-deadlines.md) for deadlines and automated reminders.
+ShimentoX's internal employee learning & development portal. It brings together course and training management, assignments and mandatory deadlines, assessments with question banks, instructor-led sessions, notifications, certificates, and learning analytics. Accounts and progress are stored in SQLite. See [learning & development](docs/learning-and-development.md) for roles, metric definitions, and the API, [course management](docs/course-management.md) for the create → publish → assign → track workflow, and [course deadlines](docs/course-deadlines.md) for deadlines and automated reminders.
 
 ## Run locally
 

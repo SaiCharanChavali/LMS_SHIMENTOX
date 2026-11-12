@@ -11,7 +11,7 @@ from deadlines import end_of_day
 
 BACKEND = Path(__file__).resolve().parents[1]
 COURSE_ID = 'python-programming'
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 # Columns added after a table first shipped (versions 4-6); added only where missing.
 ADDED_COLUMNS = [
     ('courses', 'format', "TEXT NOT NULL DEFAULT 'modules' CHECK(format IN ('modules','lessons'))"),
@@ -117,6 +117,18 @@ def initialize(path):
             exact = end_of_day(row['due_date'])
             db.execute('UPDATE course_assignments SET deadline_at=?,original_deadline_at=? WHERE id=?', (exact, exact, row['id']))
         db.execute('INSERT OR IGNORE INTO reminder_settings(id) VALUES (1)')
+        if 0 < version < 11:
+            # Version 11 adds learning_activity_logs; learning recorded before it is copied in once, marked as backfilled.
+            from activity import backfill
+            db.execute('SAVEPOINT activity_backfill')
+            try:
+                backfill(db)
+                db.execute('RELEASE SAVEPOINT activity_backfill')
+            except sqlite3.Error as error:
+                # History is optional: an unexpected legacy layout must not stop the portal from starting.
+                db.execute('ROLLBACK TO SAVEPOINT activity_backfill')
+                db.execute('RELEASE SAVEPOINT activity_backfill')
+                print(f'Learning activity backfill skipped: {error}')
         db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
         # Indexes on columns added by migration 003 are created here so the base schema stays valid for older tables.
         db.executescript('CREATE INDEX IF NOT EXISTS candidates_department ON candidates(department_id);CREATE INDEX IF NOT EXISTS candidates_manager ON candidates(manager_id);CREATE INDEX IF NOT EXISTS course_runs_course ON course_runs(course_id);CREATE INDEX IF NOT EXISTS courses_source ON courses(source_url) WHERE length(source_url)>0;CREATE UNIQUE INDEX IF NOT EXISTS candidates_keka_employee ON candidates(keka_employee_id) WHERE length(keka_employee_id)>0;')

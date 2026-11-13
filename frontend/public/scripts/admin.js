@@ -2,8 +2,8 @@
 let adminState={stats:{},candidates:[],courses:[],events:[]};
 let editingCourse=null,resetCandidate=null,adminMessage='',provisionedCredentials=null,recordPreview=null,kekaSyncResult=null;
 // Manage Courses: the open tab, catalogue and assignment filters, the unsent assignment form, and the course just published.
-let courseTab='catalog',catalogFilters={q:'',status:'all',category:''},assignDraft=null,assignFilters={type:'',requirement:'',status:'',department:'',mandatory:'',q:''},reminderFilters={course:'',status:''},publishedCourse=null,builderDirty=false;
-function resetCourseManagement(){courseTab='catalog';catalogFilters={q:'',status:'all',category:''};assignDraft=null;assignFilters={type:'',requirement:'',status:'',department:'',mandatory:'',q:''};reminderFilters={course:'',status:''};publishedCourse=null;builderDirty=false;}
+let courseTab='catalog',catalogFilters={q:'',status:'all',category:''},assignDraft=null,reminderFilters={course:'',status:''},publishedCourse=null,builderDirty=false;
+function resetCourseManagement(){courseTab='catalog';catalogFilters={q:'',status:'all',category:''};assignDraft=null;assignRecords={tab:'assignments',q:'',course:'',status:'',requirement:'',page:1};reminderFilters={course:'',status:''};publishedCourse=null;builderDirty=false;}
 
 const LEARNER_NAV=[['dashboard','grid','My Dashboard'],['courses','play','My Learning'],['catalog','book','Courses'],['calendar','calendar','Training Calendar'],['certificates','award','My Certificates'],['account','user','My Profile']];
 const ROLE_NAV={
@@ -151,65 +151,129 @@ function reminderManagement(){
   const settings=panel('Reminder settings',`<form class="admin-form" data-form="reminder-settings"><div class="editor-fields"><div><label for="reminder-days">Send reminders this many days before the deadline</label><input id="reminder-days" name="intervalDays" value="${esc(c.intervalDays.join(', '))}" placeholder="7, 3, 1"></div><div><label for="reminder-soon">Show Due Soon within (days)</label><input id="reminder-soon" name="dueSoonDays" type="number" min="1" max="90" value="${c.dueSoonDays}" required></div></div><label class="check-label"><input type="checkbox" name="deadlineDay" ${c.deadlineDay?'checked':''}> On the deadline day</label><label class="check-label"><input type="checkbox" name="overdue" ${c.overdue?'checked':''}> When the course becomes overdue</label><div class="admin-actions"><button class="btn" type="submit">Save schedule</button><button class="btn secondary" type="button" data-act="reminders-run">Run reminders now</button></div><p class="form-status" role="status"></p></form><p class="muted">Employees are always told when a course is assigned or its deadline changes. Reminders already past when a short deadline is set are skipped. Reminders run automatically in the background${c.lastRunAt?`; last run ${esc(fmtDateTime(c.lastRunAt))}${last?`: ${last.sent} sent, ${last.failed} failed`:''}`:''}.</p>`);
   const filters=`<div class="table-filters"><label>Course<select data-change="reminder-course">${options(adminState.courses.map(k=>[k.id,k.title]),f.course,'All courses')}</select></label><label>Delivery<select data-change="reminder-status">${options([['sent','Sent'],['pending','Pending'],['failed','Failed'],['cancelled','Cancelled']],f.status,'All')}</select></label></div>`;
   const table=history.data?(rows?`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Employee</th><th>Course</th><th>Reminder</th><th>Scheduled</th><th>Sent</th><th>Delivery</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<p class="muted">${f.course||f.status?'No reminders match these filters.':'No reminders have been sent yet.'}</p>`):stateBlock(history,'reminder history',key);
-  return settings+panel('Reminder history',`${filters}${table}<p class="muted">The latest 100 reminders${f.course?' for this course':''}. Each employee's last and next reminder also appear under Assignments &amp; progress.</p>`);
+  return settings+panel('Reminder history',`${filters}${table}<p class="muted">The latest 100 reminders${f.course?' for this course':''}. Reminders also appear under Assign a Course → Reminder History.</p>`);
 }
-function deadlineTargetRow(a,courseId,zone){
-  return `<form class="deadline-target" data-form="deadline-save" data-course="${esc(courseId)}" data-type="${esc(a.targetType)}" data-target="${esc(a.targetId)}"><input type="hidden" name="note" value="${esc(a.note||'')}"><div class="deadline-target-name"><strong>${esc(a.target)}</strong><small>${esc(capital(a.targetType.replace('_',' ')))} · ${a.employees} employee${a.employees===1?'':'s'} · ${a.completed} completed${a.originalDisplay?' · Originally '+esc(a.originalDisplay):''}</small></div><label>Deadline (${esc(zone)})<input type="datetime-local" name="deadline" value="${esc(a.deadlineInput||'')}"></label><label class="check-label"><input type="checkbox" name="mandatory" ${a.mandatory?'checked':''}> Mandatory</label><div class="table-actions"><button type="submit">Update</button>${a.canRemove?`<button type="button" data-act="assignment-delete" data-id="${a.id}">Remove</button>`:''}</div><p class="form-status" role="status"></p></form>`;
-}
-function deadlineEmployeeRow(e,courseId,zone){
-  const source=e.source==='employee'?'Individual':capital(e.source.replace('_',' ')),search=[e.name,e.email,e.department].join(' ').toLowerCase();
-  return `<tr data-search-row="assign-people" data-search="${esc(search)}" ${rowHidden(search,assignFilters.q)?'hidden':''}><td><strong>${esc(e.name)}</strong><small>${esc(e.department||'No department')}</small></td><td>${e.deadlineDisplay?esc(e.deadlineDisplay):'No deadline'}<small>${esc(source)}${e.originalDisplay?' · Originally '+esc(e.originalDisplay):''}</small></td><td>${e.mandatory?tagText('Mandatory','warn'):tagText('Optional','gray')}</td><td>${tagText(e.statusLabel,DEADLINE_TONES[e.status])}${e.completedDisplay?`<small>Completed ${esc(e.completedDisplay)}</small>`:''}</td><td>${meter(e.progress,e.name+' progress')}</td><td>${e.lastReminder?esc(fmtDateTime(e.lastReminder.at)):'—'}<small>${e.nextReminderAt?'Next '+esc(fmtDateTime(e.nextReminderAt)):''}</small></td><td><details class="deadline-override"><summary>Change</summary><form data-form="deadline-save" data-course="${esc(courseId)}" data-type="employee" data-target="${esc(e.employeeId)}"><label>Deadline for ${esc(e.name)} (${esc(zone)})<input type="datetime-local" name="deadline" value="${esc(e.deadlineInput)}" required></label><label class="check-label"><input type="checkbox" name="mandatory" ${e.mandatory?'checked':''}> Mandatory</label><button class="btn secondary" type="submit">Save</button><p class="form-status" role="status"></p></form></details></td></tr>`;
-}
-// ---------------------------------------------------------------- Manage Courses → Assignments & progress
-// One form assigns a published course step by step; the same course's assignments and employee progress follow it.
-// Assigning a course to a target that already has it updates that assignment (the server keeps one per course and target).
+// ---------------------------------------------------------------- Manage Courses → Assign a Course
+// The form assigns one published course; the summary beside it follows every change. Assigning a course to a target that
+// already has it updates that assignment (the server keeps one per course and target). Assignment types are the ones the
+// server supports: employee, department and job role.
 const ASSIGN_TYPES=[['employee','Individual employee'],['department','Department'],['job_role','Job role']];
 const TARGET_NOUNS={employee:'employee',department:'department',job_role:'job role'};
-const PROGRESS_STATUSES=[['not_started','Not started'],['in_progress','In progress'],['due_soon','Due soon'],['overdue','Overdue'],['completed','Completed']];
-const newAssignDraft=()=>({targetType:'employee',targetId:'',deadline:'',mandatory:false,note:''});
+const SOURCE_LABELS={employee:'Individual',department:'Department',job_role:'Job role'};
+const newAssignDraft=()=>({targetType:'employee',targetId:'',targetText:'',deadline:'',mandatory:false,note:''});
 const rowHidden=(text,q)=>Boolean(q&&q.trim())&&!text.includes(q.trim().toLowerCase());
+const RECORDS_PAGE_SIZE=10;
+const RECORD_STATUSES={
+  assignments:[['active','Active'],['overdue','Overdue'],['completed','Completed']],
+  deadlines:[['not_started','Not started'],['in_progress','In progress'],['overdue','Overdue'],['completed','Completed']],
+  reminders:[['sent','Sent'],['pending','Pending'],['failed','Failed'],['cancelled','Cancelled']]};
+const employeeLabel=p=>`${p.name} (${p.email})`;
+const assignCourses=()=>adminState.courses.filter(c=>c.status==='published');
+const assignCourse=()=>{const list=assignCourses();return list.find(c=>c.id===deadlineCourseId)||list[0]||null;};
 function assignChoices(type){
   const org=orgData(),count=item=>item.employees!=null?` · ${item.employees} employee${item.employees===1?'':'s'}`:'';
   if(type==='department')return org.departments.map(d=>[d.id,d.name+count(d)]);
   if(type==='job_role')return org.jobRoles.map(j=>[j.id,j.name+count(j)]);
-  return targetChoices('employee');
+  return peopleData().map(p=>[p.id,employeeLabel(p)]);
 }
-function assignStep(n,id,label,control,hint=''){return `<div class="assign-step"><span class="assign-num" aria-hidden="true">${n}</span><div class="assign-field"><label for="${id}">${label}</label>${control}${hint?`<small class="muted">${hint}</small>`:''}</div></div>`;}
-function assignForm(courses,selected,zone){
+// The chosen target's display name, or '' while nothing valid is chosen.
+function assignTargetName(a){
+  if(!a.targetId)return '';
+  if(a.targetType==='employee'){const p=peopleData().find(x=>x.id===a.targetId);return p?employeeLabel(p):'';}
+  return (a.targetType==='department'?orgData().departments:orgData().jobRoles).find(x=>x.id===a.targetId)?.name||'';
+}
+// "2026-11-20T17:30" (the form's IST value) shown as 20-11-2026 17:30.
+const formDeadline=value=>{const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/.exec(value||'');return m?`${m[3]}-${m[2]}-${m[1]} ${m[4]}`:'';};
+function assignSummaryRows(){
+  const a=assignDraft||newAssignDraft(),course=assignCourse(),none='<span class="muted">Not selected</span>';
+  const rows=[['book','Course',course?esc(course.title):none],['users','Assignment type',esc(ASSIGN_TYPES.find(([t])=>t===a.targetType)?.[1]||'')],
+    ['user',capital(TARGET_NOUNS[a.targetType]),assignTargetName(a)?esc(assignTargetName(a)):none],['calendar','Deadline (IST)',a.deadline?esc(formDeadline(a.deadline)):(a.mandatory?'<span class="warn-text">Required for mandatory training</span>':'<span class="muted">No deadline</span>')],
+    ['target','Requirement',a.mandatory?'<span class="tag warn">MANDATORY</span>':'<span class="tag requirement-optional">OPTIONAL</span>']];
+  return rows.map(([name,label,value])=>`<div class="summary-row">${icon(name)}<dt>${label}</dt><dd>${value}</dd></div>`).join('');
+}
+function updateAssignSummary(){const box=document.getElementById('assign-summary');if(box)box.innerHTML=assignSummaryRows();}
+function assignField(id,label,control,{required=false,hint='',wide=false,extra=''}={}){return `<div class="assign-field ${wide?'wide':''}"><label for="${id}">${label}${required?' <span class="req" aria-hidden="true">*</span>':''}${extra}</label>${control}${hint?`<small class="muted">${hint}</small>`:''}</div>`;}
+function assignForm(courses,selected){
   const a=assignDraft||(assignDraft=newAssignDraft()),managerOnly=currentUser.role==='manager',types=managerOnly?ASSIGN_TYPES.slice(0,1):ASSIGN_TYPES,noun=TARGET_NOUNS[a.targetType];
-  const requirement=`<div class="requirement-choice" role="radiogroup" aria-label="Requirement"><label class="check-label"><input id="assign-mandatory" type="radio" name="requirement" value="mandatory" ${a.mandatory?'checked':''}> Mandatory</label><label class="check-label"><input type="radio" name="requirement" value="optional" ${a.mandatory?'':'checked'}> Optional</label></div>`;
-  return `<form class="admin-form assign-form" id="assign-form" data-form="course-assign" data-course="${esc(selected.id)}">
-  ${assignStep(1,'assign-course','Published course',`<select id="assign-course" data-change="deadline-course">${options(courses.map(c=>[c.id,c.title]),selected.id)}</select>`,'Only published courses can be assigned. The assignments and progress below follow this course.')}
-  ${assignStep(2,'assign-type','Assignment type',`<select id="assign-type" name="targetType" data-change="assign-type">${options(types,a.targetType)}</select>`,managerOnly?'Managers assign training to their direct reports.':'')}
-  ${assignStep(3,'assign-target',capital(noun),`<select id="assign-target" name="targetId" required>${options(assignChoices(a.targetType),a.targetId,`Select ${noun==='employee'?'an employee':'a '+noun}…`)}</select>`,a.targetType==='employee'?'':`Everyone in this ${noun} gets the course, including employees who join it later.`)}
-  ${assignStep(4,'assign-deadline',`Deadline date and time (${esc(zone)})`,`<input id="assign-deadline" type="datetime-local" name="deadline" value="${esc(a.deadline)}">`,'Required for mandatory training; optional otherwise.')}
-  ${managerOnly?'':assignStep(5,'assign-mandatory','Requirement',requirement)}
-  ${assignStep(managerOnly?5:6,'assign-note','Note (optional)',`<input id="assign-note" name="note" maxlength="500" value="${esc(a.note)}" placeholder="For example, why this course matters">`)}
-  <div class="assign-submit"><span class="assign-num" aria-hidden="true">${managerOnly?6:7}</span><div><button class="btn" type="submit">Assign course</button><p class="form-status" role="status"></p></div></div></form>`;
+  const target=a.targetType==='employee'
+    ?`<input id="assign-target" type="search" name="targetText" list="assign-people" value="${esc(a.targetText||assignTargetName(a))}" placeholder="Search by name or email" autocomplete="off" required><datalist id="assign-people">${peopleData().map(p=>`<option value="${esc(employeeLabel(p))}">${esc(p.department||'No department')}${p.jobRole?' · '+esc(p.jobRole):''}</option>`).join('')}</datalist>`
+    :`<select id="assign-target" name="targetId" required>${options(assignChoices(a.targetType),a.targetId,`Select a ${noun}…`)}</select>`;
+  const card=(value,title,text,checked,id='')=>`<label class="choice-card"><input ${id?`id="${id}"`:''} type="radio" name="requirement" value="${value}" ${checked?'checked':''}><span><strong>${title}</strong><small>${text}</small></span></label>`;
+  return `<form class="panel assign-card" id="assign-form" data-form="course-assign" data-course="${esc(selected.id)}" novalidate>
+  <section class="assign-section"><h2><span class="assign-num">1</span>Course and Audience</h2><div class="assign-grid">
+  ${assignField('assign-course','Published course',`<select id="assign-course" data-change="deadline-course">${options(courses.map(c=>[c.id,c.title]),selected.id)}</select>`,{required:true})}
+  ${assignField('assign-type','Assignment type',`<select id="assign-type" name="targetType" data-change="assign-type">${options(types,a.targetType)}</select>`,{required:true,hint:managerOnly?'Managers assign training to their direct reports.':''})}
+  ${assignField('assign-target',`Select ${noun}`,target,{required:true,wide:true,hint:a.targetType==='employee'?'Type to search, then choose an employee from the list.':`Everyone in this ${noun} gets the course, including employees who join it later.`})}</div></section>
+  <section class="assign-section"><h2><span class="assign-num">2</span>Deadline and Requirement</h2><div class="assign-grid">
+  ${assignField('assign-deadline','Deadline date and time (IST)',`<input id="assign-deadline" type="datetime-local" name="deadline" value="${esc(a.deadline)}">`,{extra:' <span class="req req-if-mandatory" aria-hidden="true">*</span>'})}
+  <div class="assign-field"><span class="field-label" id="assign-requirement-label">Training requirement <span class="req" aria-hidden="true">*</span></span><div class="choice-cards" role="radiogroup" aria-labelledby="assign-requirement-label">${managerOnly?'':card('mandatory','Mandatory','Requires a deadline',a.mandatory,'assign-mandatory')}${card('optional','Optional','Deadline optional',!a.mandatory)}</div></div></div></section>
+  <section class="assign-section"><h2><span class="assign-num">3</span>Additional Information</h2>
+  ${assignField('assign-note','Note (optional)',`<textarea id="assign-note" name="note" maxlength="500" rows="3" placeholder="Add instructions or context for the assigned learners…">${esc(a.note)}</textarea>`,{wide:true})}</section>
+  <div class="assign-actions"><p class="form-status" role="status"></p><button type="button" class="btn secondary" data-act="assign-clear">Clear</button><button class="btn" type="submit">Assign Course ${icon('arrow')}</button></div></form>`;
 }
-function assignmentTargets(data,selected,zone){
-  const f=assignFilters,list=data.targets.filter(a=>(!f.type||a.targetType===f.type)&&(!f.requirement||(f.requirement==='mandatory')===a.mandatory));
-  const filters=data.targets.length?`<div class="table-filters"><label>Assigned to<select data-change="assign-filter" data-field="type">${options(ASSIGN_TYPES,f.type,'All types')}</select></label><label>Requirement<select data-change="assign-filter" data-field="requirement">${options([['mandatory','Mandatory'],['optional','Optional']],f.requirement,'All')}</select></label></div>`:'';
-  const body=list.length?list.map(a=>deadlineTargetRow(a,selected.id,zone)).join(''):`<p class="muted">${data.targets.length?'No assignments match these filters.':'This course is not assigned yet. Use the form above to assign it.'}</p>`;
-  return panel(`Existing assignments · ${selected.title}`,filters+body,`<span class="tag">${data.targets.length} TOTAL</span>`);
+// Rules the server already enforces (development.create_assignment and the deadline rules); nothing here is new policy.
+function assignRules(){
+  const rules=['Only published courses can be assigned.','Mandatory training requires a deadline, and a new deadline cannot be in the past.',
+    'If the target already has this course, the assignment is updated, not duplicated.','An individual deadline replaces a department or job-role deadline, but optional training never replaces mandatory training.',
+    'Overdue courses remain open, and late completion is recorded.'];
+  if(currentUser.role==='manager')rules.unshift('Managers can assign optional training to their direct reports only.');
+  return `<section class="panel side-card"><div class="side-card-head"><span class="side-icon">${icon('check')}</span><h3>Assignment Rules</h3></div><ul class="rules-list">${rules.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></section>`;
 }
-function assignmentProgress(data,selected,zone){
-  const f=assignFilters,people=data.employees,departments=[...new Set(people.map(e=>e.department).filter(Boolean))].sort();
-  const status=(e,s)=>s==='completed'?e.status.startsWith('completed'):e.status===s,count=s=>people.filter(e=>status(e,s)).length;
-  const list=people.filter(e=>(!f.status||status(e,f.status))&&(!f.mandatory||(f.mandatory==='mandatory')===Boolean(e.mandatory))&&(!f.department||e.department===f.department));
-  const stats=`<div class="stats assign-stats">${kpi('users',people.length,'Assigned employees')}${kpi('check',count('completed'),'Completed')}${kpi('clock',count('due_soon'),'Due soon')}${kpi('calendar',count('overdue'),'Overdue')}</div>`;
-  const filters=people.length?`<div class="table-filters"><input type="search" class="search" data-row-search="assign-people" value="${esc(f.q)}" placeholder="Search employees" aria-label="Search employees"><label>Status<select data-change="assign-filter" data-field="status">${options(PROGRESS_STATUSES,f.status,'All statuses')}</select></label><label>Requirement<select data-change="assign-filter" data-field="mandatory">${options([['mandatory','Mandatory'],['optional','Optional']],f.mandatory,'All')}</select></label>${departments.length>1?`<label>Department<select data-change="assign-filter" data-field="department">${options(departments.map(d=>[d,d]),f.department,'All departments')}</select></label>`:''}</div>`:'';
-  const table=list.length?`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Employee</th><th>Deadline</th><th>Type</th><th>Status</th><th>Progress</th><th>Reminders</th><th>Actions</th></tr></thead><tbody>${list.map(e=>deadlineEmployeeRow(e,selected.id,zone)).join('')}</tbody></table></div>`:`<p class="muted">${people.length?'No employees match these filters.':'No employees have this course yet.'}</p>`;
-  const link=currentUser.role!=='trainer'?'<p class="muted"><a class="auth-link" href="#compliance">Open Training Compliance</a> to track every course and employee together.</p>':'';
-  return panel(`Employee progress · ${selected.title}`,`${people.length?stats:''}${filters}${table}${link}`);
+function assignSummary(){
+  return `<section class="panel side-card summary-card"><div class="side-card-head"><span class="side-icon">${icon('file')}</span><div><h3>Assignment Summary</h3><p class="muted">Review the assignment details before proceeding.</p></div></div><dl id="assign-summary" aria-live="polite">${assignSummaryRows()}</dl></section>`;
+}
+// ---------------------------------------------------------------- Assign a Course → records (assignments, deadlines, reminders)
+let assignRecords={tab:'assignments',q:'',course:'',status:'',requirement:'',page:1};
+function recordsPager(page,pages,total){
+  if(!total)return '';
+  const from=(page-1)*RECORDS_PAGE_SIZE+1,to=Math.min(total,page*RECORDS_PAGE_SIZE);
+  return `<div class="records-pager"><span class="muted">Showing ${from}–${to} of ${total}</span><div class="table-actions"><button type="button" data-act="records-page" data-page="${page-1}" ${page<=1?'disabled':''}>Previous</button><span class="muted">Page ${page} of ${pages}</span><button type="button" data-act="records-page" data-page="${page+1}" ${page>=pages?'disabled':''}>Next</button></div></div>`;
+}
+function pageSlice(list){const pages=Math.max(1,Math.ceil(list.length/RECORDS_PAGE_SIZE)),page=Math.min(Math.max(1,assignRecords.page),pages);return {rows:list.slice((page-1)*RECORDS_PAGE_SIZE,page*RECORDS_PAGE_SIZE),page,pages,total:list.length};}
+const assignRecordsTable=(head,rows,empty)=>rows?`<div class="admin-table-scroll"><table class="admin-table records-table"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`:`<p class="muted records-empty">${empty}</p>`;
+const assignTargetStatus=a=>a.employees&&a.completed>=a.employees?'completed':a.deadlineAt&&Date.parse(a.deadlineAt)<Date.now()+serverClockOffset?'overdue':'active';
+function deadlineForm(courseId,type,target,value,mandatory,note,label){
+  return `<form data-form="deadline-save" data-course="${esc(courseId)}" data-type="${esc(type)}" data-target="${esc(target)}">${note!=null?`<input type="hidden" name="note" value="${esc(note)}">`:''}<label>Deadline (IST)<input type="datetime-local" name="deadline" value="${esc(value||'')}" ${type==='employee'?'required':''} aria-label="${esc(label)}"></label><label class="check-label"><input type="checkbox" name="mandatory" ${mandatory?'checked':''}> Mandatory</label><button class="btn secondary" type="submit">Save</button><p class="form-status" role="status"></p></form>`;
+}
+function assignmentRecords(){
+  const r=assignRecords,entry=loadData('assign-list','manage/assignments');
+  if(!entry.data)return stateBlock(entry,'assignments','assign-list');
+  const q=r.q.trim().toLowerCase();
+  const list=entry.data.assignments.filter(a=>(!r.course||a.courseId===r.course)&&(!r.requirement||(r.requirement==='mandatory')===a.mandatory)&&(!r.status||assignTargetStatus(a)===r.status)&&(!q||[a.target,a.course,SOURCE_LABELS[a.targetType]].join(' ').toLowerCase().includes(q)));
+  const view=pageSlice(list),tones={active:'',overdue:'danger',completed:'success'},labels={active:'Active',overdue:'Overdue',completed:'Completed'};
+  const rows=view.rows.map(a=>{const pct=a.employees?Math.round(a.completed/a.employees*100):0,state=assignTargetStatus(a);
+    return `<tr><td><strong>${esc(a.target)}</strong><small>${esc(SOURCE_LABELS[a.targetType]||a.targetType)} · ${a.employees} employee${a.employees===1?'':'s'}</small></td><td>${esc(a.course)}</td><td>${esc(fmtDateTime(a.assignedAt))}${a.assignedBy?`<small>by ${esc(a.assignedBy)}</small>`:''}</td><td>${a.deadlineDisplay?esc(a.deadlineDisplay):'No deadline'}${a.originalDisplay?`<small>Originally ${esc(a.originalDisplay)}</small>`:''}</td><td>${a.mandatory?tagText('Mandatory','warn'):tagText('Optional','gray')}</td><td>${meter(pct,a.target+' completion')}<small>${a.completed} of ${a.employees} completed</small></td><td>${tagText(labels[state],tones[state])}</td><td><div class="table-actions record-actions"><details class="deadline-override"><summary>Update</summary>${deadlineForm(a.courseId,a.targetType,a.targetId,a.deadlineInput,a.mandatory,a.note||'',`Deadline for ${a.target}`)}</details>${a.canRemove?`<button type="button" class="danger-link" data-act="assignment-delete" data-id="${esc(a.id)}">Remove</button>`:''}</div></td></tr>`;}).join('');
+  return assignRecordsTable(['Assigned to','Course','Assigned','Deadline','Requirement','Progress','Status','Actions'],rows,entry.data.assignments.length?'No assignments match these filters.':'No courses have been assigned yet.')+recordsPager(view.page,view.pages,view.total);
+}
+// Employee deadlines come from Training Compliance, which filters and pages on the server.
+function deadlineRecords(){
+  const r=assignRecords,path='manage/compliance'+qs({q:r.q.trim(),course:r.course,status:r.status,type:r.requirement,page:r.page,size:RECORDS_PAGE_SIZE}),key='compliance:assign:'+path,entry=loadData(key,path);
+  if(!entry.data)return stateBlock(entry,'employee deadlines',key);
+  const t=entry.data.table;
+  const rows=t.rows.map(e=>`<tr><td><strong>${esc(e.employee)}</strong><small>${esc(e.email)} · ${esc(e.department)}</small></td><td>${esc(e.course)}</td><td>${e.deadlineDisplay?esc(e.deadlineDisplay):'No deadline'}${e.originalDeadlineDisplay&&e.originalDeadlineAt!==e.deadlineAt?`<small>Originally ${esc(e.originalDeadlineDisplay)}</small>`:''}</td><td>${esc(SOURCE_LABELS[e.source]||'—')}<small>${e.mandatory?'Mandatory':'Optional'}</small></td><td>${meter(e.progress,e.employee+' progress')}</td><td>${tagText(e.dueSoon?'Due soon':e.statusLabel,e.dueSoon?'due-soon':DEADLINE_TONES[e.status])}${e.completedDisplay?`<small>Completed ${esc(e.completedDisplay)}</small>`:e.overdueBy?`<small>Overdue by ${esc(e.overdueBy)}</small>`:''}</td><td><details class="deadline-override"><summary>Change</summary>${deadlineForm(e.courseId,'employee',e.employeeId,e.deadlineInput,e.mandatory,null,`Deadline for ${e.employee}`)}</details></td></tr>`).join('');
+  return assignRecordsTable(['Employee','Course','Deadline','Assignment type','Progress','Status','Actions'],rows,'No employee deadlines match these filters.')+recordsPager(t.page,t.pages,t.total);
+}
+function reminderRecords(){
+  const r=assignRecords,key='reminder-history:'+(r.course||'all'),entry=loadData(key,'manage/reminders/history'+qs({courseId:r.course}));
+  if(!entry.data)return stateBlock(entry,'reminder history',key);
+  const q=r.q.trim().toLowerCase(),list=entry.data.history.filter(h=>(!r.status||h.status===r.status)&&(!q||[h.employee,h.course||''].join(' ').toLowerCase().includes(q))),view=pageSlice(list);
+  const rows=view.rows.map(h=>`<tr><td><strong>${esc(h.employee)}</strong></td><td>${esc(h.course||'Removed course')}</td><td>${esc(reminderTypeLabel(h.type))}</td><td>${esc(fmtDateTime(h.scheduledAt))}</td><td>${h.sentAt?esc(fmtDateTime(h.sentAt)):'—'}</td><td>${tagText(h.status,REMINDER_STATUS_TONES[h.status]||'gray')}${h.failureReason?`<small>${esc(h.failureReason)}</small>`:''}</td></tr>`).join('');
+  return assignRecordsTable(['Employee','Course','Reminder','Scheduled','Sent','Delivery'],rows,entry.data.history.length?'No reminders match these filters.':'No reminders have been sent yet.')+recordsPager(view.page,view.pages,view.total)+'<p class="muted">The latest 100 reminders. Reminder settings are under Manage Courses → Reminders.</p>';
+}
+function assignRecordsPanel(courses){
+  const r=assignRecords,staff=['admin','hr'].includes(currentUser.role);
+  const tabs=[['assignments','users','Assignments'],['deadlines','calendar','Employee Deadlines'],...(staff?[['reminders','bell','Reminder History']]:[])];
+  if(!tabs.some(([id])=>id===r.tab))r.tab='assignments';
+  const select=(field,label,items,blank)=>`<label class="records-select"><span>${label}:</span><select data-change="records-filter" data-field="${field}" aria-label="${label}">${options(items,r[field],blank)}</select></label>`;
+  const filters=`<div class="records-filters"><div class="records-search">${icon('filter')}<input type="search" id="records-search" data-records-search value="${esc(r.q)}" placeholder="Search by employee or course…" aria-label="Search records"></div>${select('course','Course',courses.map(c=>[c.id,c.title]),'All courses')}${select('status','Status',RECORD_STATUSES[r.tab],'All statuses')}${r.tab!=='reminders'?select('requirement','Requirement',[['mandatory','Mandatory'],['optional','Optional']],'All'):''}</div>`;
+  const body=r.tab==='deadlines'?deadlineRecords():r.tab==='reminders'?reminderRecords():assignmentRecords();
+  return `<section class="panel records-panel"><div class="records-tabs" role="tablist" aria-label="Assignment records">${tabs.map(([id,name,label])=>`<button type="button" role="tab" aria-selected="${r.tab===id}" class="${r.tab===id?'active':''}" data-act="records-tab" data-tab="${id}">${icon(name)}${label}</button>`).join('')}</div>${filters}${body}</section>`;
 }
 function courseDeadlineSettings(){
   if(!can('courses.assign'))return '';
-  const courses=adminState.courses.filter(c=>c.status==='published');
-  if(!courses.length)return panel('Assign a course','<p class="muted">Only published courses can be assigned. Publish a course from the Courses tab, then assign it here.</p>');
-  const selected=courses.find(c=>c.id===deadlineCourseId)||courses[0],key='deadlines:'+selected.id,entry=loadData(key,'manage/deadlines?courseId='+encodeURIComponent(selected.id)),data=entry.data,zone=data?.timezone||'IST';
-  const form=panel('Assign a course',`${assignForm(courses,selected,zone)}<p class="muted">An individual deadline replaces a department or job-role deadline for that employee, except that optional training never replaces mandatory training. Assigning a course to someone who already has it updates that assignment instead of adding a second one. Overdue courses stay open, and late completion is recorded.</p>`);
-  return form+(data?assignmentTargets(data,selected,zone)+assignmentProgress(data,selected,zone):stateBlock(entry,'assignments',key));
+  const courses=assignCourses(),selected=assignCourse();
+  if(!selected)return panel('Assign a course','<p class="muted">Only published courses can be assigned. Publish a course from Manage Courses, then assign it here.</p>');
+  return `<div class="assign-layout">${assignForm(courses,selected)}<aside class="assign-side">${assignSummary()}${assignRules()}</aside></div>${assignRecordsPanel(courses)}`;
 }
 function courseResources(course){
   return panel('Learning materials',`${(course.resources||[]).map(r=>`<div class="admin-list-row"><div><strong>${esc(r.title)}</strong><small>${esc(capital(r.kind))}${r.module_index!=null?' · Module '+(r.module_index+1):''}</small></div><div class="table-actions"><a class="tag" href="${esc(r.url)}" target="_blank" rel="noopener">OPEN</a><button data-act="resource-delete" data-id="${r.id}">Remove</button></div></div>`).join('')||'<p class="muted">Add documents, presentations, videos or links for employees.</p>'}<form class="admin-form" data-form="resource-save" data-id="${esc(course.id)}"><label for="resource-title">Title</label><input id="resource-title" name="title" minlength="2" maxlength="150" required><div class="editor-fields"><div><label for="resource-kind">Type</label><select id="resource-kind" name="kind">${options([['document','Document'],['presentation','Presentation'],['video','Video'],['link','Link']],'document')}</select></div><div><label for="resource-module">Module</label><select id="resource-module" name="moduleIndex">${options([[0,'Module 1'],[1,'Module 2'],[2,'Module 3']],'','Whole course')}</select></div></div><label for="resource-file">Upload file (PDF, Office, video, image; up to 50 MB)</label><input id="resource-file" type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt,.csv,.mp4,.webm,.vtt,.png,.jpg,.jpeg"><label for="resource-url">…or link (HTTPS)</label><input id="resource-url" name="url" type="url" maxlength="2000" placeholder="https://"><button class="btn" type="submit">Add material</button><p class="form-status" role="status"></p></form><p class="muted">Uploaded files are stored privately and are visible to employees only while the course is published.</p>`);
@@ -396,10 +460,13 @@ function courseFlow(){
   return `<ol class="workflow course-flow" aria-label="Course workflow">${steps.map((label,i)=>`<li class="${current.includes(i)?'current':''}" ${current.includes(i)?'aria-current="step"':''}><span>${i+1}</span>${label}</li>`).join('')}</ol>`;
 }
 function courseManagerTabs(){
-  const tabs=[['catalog','Courses'],...(can('courses.assign')?[['assignments','Assignments & progress']]:[]),...(['admin','hr'].includes(currentUser.role)?[['reminders','Reminders']]:[])];
+  const tabs=[['catalog','Courses'],...(can('courses.assign')?[['assignments','Assign a Course']]:[]),...(['admin','hr'].includes(currentUser.role)?[['reminders','Reminders']]:[])];
   if(tabs.length<2)return '';
   return `<div class="compliance-tabs course-tabs" role="tablist" aria-label="Course management">${tabs.map(([id,label])=>`<button type="button" role="tab" aria-selected="${courseTab===id}" class="${courseTab===id?'active':''}" data-act="course-tab" data-tab="${id}">${esc(label)}</button>`).join('')}</div>`;
 }
+// Assign a Course has its own header (breadcrumb back to Manage Courses) in place of the page intro and tabs.
+const assignPageOpen=()=>courseTab==='assignments'&&can('courses.assign')&&!publishedCourse&&!courseDraft&&!editingCourse&&!(courseAddMode==='generate'&&generateState);
+function assignPageHeader(){return `<nav class="breadcrumb" aria-label="Breadcrumb"><button type="button" class="auth-link" data-act="course-tab" data-tab="catalog">Manage Courses</button><span aria-hidden="true">›</span><span aria-current="page">Assign a Course</span></nav><div class="intro assign-intro"><div><h1>Assign a Course</h1><p>Assign training to employees and manage completion deadlines.</p></div></div>`;}
 // Course Management → Create Course (4-step wizard) → Review & Publish → Assign → Track progress.
 // The wizard, the AI generator and the 3-module editor each replace the tabs while open.
 function courseManager(){
@@ -409,7 +476,8 @@ function courseManager(){
   if(course&&course.format!=='lessons')return `${back}${adminNotice()}${legacyCourseManager()}`;
   if(courseAddMode==='generate'&&generateState)return `${back}${adminNotice()}${courseGenerator()}`;
   if(courseDraft||editingCourse)return `${courseFlow()}${back}${adminNotice()}${courseBuilder()}${course&&courseDraft?courseResources(course):''}`;
-  const view=courseTab==='assignments'?courseDeadlineSettings():courseTab==='reminders'?reminderManagement():`${courseAddMode==='choose'?addCourseChooser():''}${courseCatalogTable()}`;
+  if(courseTab==='assignments')return assignPageHeader()+adminNotice()+courseDeadlineSettings();
+  const view=courseTab==='reminders'?reminderManagement():`${courseAddMode==='choose'?addCourseChooser():''}${courseCatalogTable()}`;
   return `${courseFlow()}${courseManagerTabs()}${adminNotice()}${view}`;
 }
 const findLesson=key=>courseDraft?.lessons.find(l=>l.key===key);
@@ -473,7 +541,8 @@ document.addEventListener('change',event=>{
 function adminPage(page){
   const names={'admin-users':['Users & teams','Add employees, organise departments and job roles, and manage access.'],'admin-courses':['Course management','Create courses, publish them, assign them and track employee progress.'],'admin-audit':['Activity log','A history of administrative actions.']};
   if(!names[page])return '';
-  return `<div class="intro"><div><h1>${names[page][0]}</h1><p>${names[page][1]}</p></div><span class="tag">${page==='admin-audit'?'ADMIN ONLY':'AUTHORISED STAFF'}</span></div>${page==='admin-users'?userManager():page==='admin-courses'?courseManager():`<section class="panel admin-table-scroll"><table class="admin-table"><thead><tr><th>Administrator</th><th>Action</th><th>Details</th><th>When</th></tr></thead><tbody>${adminState.events.map(event=>`<tr><td>${esc(event.admin_name)}</td><td>${esc(event.action.replaceAll('_',' ').replace('candidate','employee'))}</td><td>${esc(event.detail||event.target_id)}</td><td>${esc(new Date(event.created_at).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}))}</td></tr>`).join('')||'<tr><td colspan="4">No administrator actions yet.</td></tr>'}</tbody></table></section>`}`;
+  const header=page==='admin-courses'&&assignPageOpen()?'':`<div class="intro"><div><h1>${names[page][0]}</h1><p>${names[page][1]}</p></div><span class="tag">${page==='admin-audit'?'ADMIN ONLY':'AUTHORISED STAFF'}</span></div>`;
+  return `${header}${page==='admin-users'?userManager():page==='admin-courses'?courseManager():`<section class="panel admin-table-scroll"><table class="admin-table"><thead><tr><th>Administrator</th><th>Action</th><th>Details</th><th>When</th></tr></thead><tbody>${adminState.events.map(event=>`<tr><td>${esc(event.admin_name)}</td><td>${esc(event.action.replaceAll('_',' ').replace('candidate','employee'))}</td><td>${esc(event.detail||event.target_id)}</td><td>${esc(new Date(event.created_at).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}))}</td></tr>`).join('')||'<tr><td colspan="4">No administrator actions yet.</td></tr>'}</tbody></table></section>`}`;
 }
 function bindAdmin(){
   if(!currentUser||currentUser.role==='employee'||currentUser.mustChangePassword)return;
@@ -509,14 +578,25 @@ function openAssignment(courseId){
 function assignInput(el){
   if(!assignDraft||!el.closest?.('#assign-form'))return;
   if(el.name==='requirement')assignDraft.mandatory=el.value==='mandatory';
+  else if(el.name==='targetText'){const text=el.value.trim(),match=peopleData().find(p=>employeeLabel(p)===text);assignDraft.targetText=el.value;assignDraft.targetId=match?.id||'';}
   else if(['targetId','deadline','note'].includes(el.name))assignDraft[el.name]=el.value;
+  else return;
+  updateAssignSummary();
 }
 document.addEventListener('input',event=>assignInput(event.target));
 document.addEventListener('change',event=>assignInput(event.target));
 // Search boxes filter table rows in place, so typing never re-renders the page; the text is kept for the next render.
-const ROW_SEARCH={courses:value=>{catalogFilters.q=value;},'assign-people':value=>{assignFilters.q=value;}};
+const ROW_SEARCH={courses:value=>{catalogFilters.q=value;}};
 document.addEventListener('input',event=>{
   const el=event.target,kind=el.dataset?.rowSearch;if(!ROW_SEARCH[kind])return;
   ROW_SEARCH[kind](el.value);
   document.querySelectorAll(`[data-search-row="${kind}"]`).forEach(row=>{row.hidden=rowHidden(row.dataset.search||'',el.value);});
+});
+
+// Record search: wait for a pause in typing, reload the first page, and keep the cursor in the box.
+let recordsSearchTimer=null;
+document.addEventListener('input',event=>{
+  const el=event.target;if(!el.dataset||el.dataset.recordsSearch===undefined)return;
+  assignRecords.q=el.value;assignRecords.page=1;clearTimeout(recordsSearchTimer);
+  recordsSearchTimer=setTimeout(()=>{render();const box=document.getElementById('records-search');if(box&&box.focus){box.focus();const end=box.value.length;box.setSelectionRange?.(end,end);}},350);
 });

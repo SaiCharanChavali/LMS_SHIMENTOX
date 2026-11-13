@@ -875,6 +875,9 @@ const ACTIONS={
   'course-assign':el=>{const course=adminState.courses.find(c=>c.id===el.dataset.id);if(!course||course.status!=='published')return toast('Publish the course before assigning it.');openAssignment(course.id);},
   'published-assign':()=>openAssignment(publishedCourse.id),
   'published-edit':()=>{publishedCourse=null;render();},
+  'assign-clear':()=>{assignDraft=newAssignDraft();render();},
+  'records-tab':el=>{assignRecords={...assignRecords,tab:el.dataset.tab,status:'',page:1};render();},
+  'records-page':el=>{assignRecords.page=Math.max(1,Number(el.dataset.page)||1);render();},
   'course-close':()=>{if(builderDirty&&!confirm('Leave the course editor? Changes you have not saved will be lost.'))return;closeCourseEditor();courseTab='catalog';render();},
   'course-archive':async el=>{
     const course=adminState.courses.find(c=>c.id===el.dataset.id);if(!course)return;
@@ -883,7 +886,7 @@ const ACTIONS={
 It disappears from the catalogue and cannot be assigned. Employees keep their progress and certificates, and you can publish it again later.`))return;
     await api(`admin/courses/${encodeURIComponent(course.id)}/archive`,{});await loadAdminState();courseCatalog=(await api('courses')).courses;refreshData('deadlines');render();toast(`“${course.title}” archived.`);
   },
-  'assignment-delete':async el=>{if(!confirm('Remove this assignment? Employees keep any progress they have made, but the course is no longer assigned to them.'))return;await api(`manage/assignments/${el.dataset.id}/delete`,{});refreshData('deadlines','compliance');await loadAdminState();courseCatalog=(await api('courses')).courses;render();toast('Assignment removed.');},
+  'assignment-delete':async el=>{if(!confirm('Remove this assignment? Employees keep any progress they have made, but the course is no longer assigned to them.'))return;await api(`manage/assignments/${el.dataset.id}/delete`,{});refreshData('deadlines','compliance','assign-list');await loadAdminState();courseCatalog=(await api('courses')).courses;render();toast('Assignment removed.');},
 };
 const SUBMITS={
   'announcement-send':form=>submitForm(form,async()=>{await api('manage/announcements',formValues(form));await refreshNotifications();toast('Announcement published.');}),
@@ -902,17 +905,17 @@ const SUBMITS={
   'user-profile':form=>submitForm(form,async()=>{const v=formValues(form);await api(`admin/candidates/${form.dataset.id}/profile`,{name:v.name,role:v.role,joiningDate:v.joiningDate||null,departmentId:v.departmentId||null,jobRoleId:v.jobRoleId||null,managerId:v.managerId||null,jobTitle:v.jobTitle});editUserId=null;adminMessage='Employee profile updated.';await loadAdminState();refreshData('people','org');render();}),
   'org-save':form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('manage/'+form.dataset.kind,{name:v.name,departmentId:v.departmentId||null});pageCache.org={data};render();}),
   'resource-save':form=>submitForm(form,async()=>{const v=formValues(form);let url=v.url;const file=form.querySelector('input[type="file"]')?.files?.[0];if(file){url=(await uploadMaterial(file)).url;}if(!url)throw new Error('Choose a file to upload or enter a link.');await api(`manage/courses/${form.dataset.id}/resources`,{title:v.title,kind:v.kind,url,moduleIndex:intOrNull(v.moduleIndex)});await loadAdminState();adminMessage='Learning material added.';render();}),
-  'deadline-save':form=>submitForm(form,async()=>{const v=formValues(form),target=form.dataset.target;await api('manage/assignments',{courseId:form.dataset.course,targetType:target?form.dataset.type:v.targetType,targetId:target||v.targetId,mandatory:v.mandatory==='on',deadline:v.deadline||null,note:v.note||''});refreshData('deadlines','reminder-history','me-dash');courseCatalog=(await api('courses')).courses;adminMessage='Deadline saved. Employees have been notified.';render();}),
+  'deadline-save':form=>submitForm(form,async()=>{const v=formValues(form),target=form.dataset.target;await api('manage/assignments',{courseId:form.dataset.course,targetType:target?form.dataset.type:v.targetType,targetId:target||v.targetId,mandatory:v.mandatory==='on',deadline:v.deadline||null,note:v.note||''});refreshData('deadlines','reminder-history','me-dash','compliance','assign-list');courseCatalog=(await api('courses')).courses;adminMessage='Deadline saved. Employees have been notified.';render();}),
   // Assign a course: the server keeps one assignment per course and target, so assigning again updates it.
   'course-assign':form=>submitForm(form,async()=>{
     const a=assignDraft,courseId=form.dataset.course,course=adminState.courses.find(c=>c.id===courseId),noun=TARGET_NOUNS[a.targetType];
-    if(!a.targetId)throw new Error(`Select ${noun==='employee'?'an employee':'a '+noun} to assign the course to.`);
+    if(!a.targetId)throw new Error(a.targetType==='employee'&&a.targetText?.trim()?'Choose an employee from the list (type part of a name or email, then pick a match).':`Select ${noun==='employee'?'an employee':'a '+noun} to assign the course to.`);
     if(a.mandatory&&!a.deadline)throw new Error('Mandatory training needs a deadline. Set the deadline date and time (step 4).');
-    const existing=(pageCache['deadlines:'+courseId]?.data?.targets||[]).find(t=>t.targetType===a.targetType&&t.targetId===a.targetId);
+    const existing=(pageCache['assign-list']?.data?.assignments||[]).find(t=>t.courseId===courseId&&t.targetType===a.targetType&&t.targetId===a.targetId);
     if(existing&&!confirm(`${existing.target} already has “${course?.title||'this course'}”. Update that assignment with these settings?`)){render();return;}
-    const target=assignChoices(a.targetType).find(([id])=>id===a.targetId)?.[1]?.split(' · ')[0]||'the selected '+noun;
+    const target=assignTargetName(a)||'the selected '+noun;
     await api('manage/assignments',{courseId,targetType:a.targetType,targetId:a.targetId,mandatory:a.mandatory,deadline:a.deadline||null,note:a.note||''});
-    assignDraft=newAssignDraft();refreshData('deadlines','reminder-history','me-dash','compliance');await loadAdminState();courseCatalog=(await api('courses')).courses;
+    assignDraft=newAssignDraft();refreshData('deadlines','reminder-history','me-dash','compliance','assign-list');await loadAdminState();courseCatalog=(await api('courses')).courses;
     adminMessage=`“${course?.title||'Course'}” ${existing?'assignment updated for':'assigned to'} ${target}. Employees have been notified and see it in My Learning.`;render();}),
   'reminder-settings':form=>submitForm(form,async()=>{const v=formValues(form),intervalDays=String(v.intervalDays||'').split(',').map(x=>x.trim()).filter(Boolean).map(Number);const data=await api('manage/reminders/settings',{intervalDays,dueSoonDays:Number(v.dueSoonDays),deadlineDay:v.deadlineDay==='on',overdue:v.overdue==='on'});pageCache['reminder-settings']={data};refreshData('deadlines');courseCatalog=(await api('courses')).courses;toast('Reminder schedule saved.');render();}),
   'lesson-activity':form=>submitForm(form,async()=>{const lesson=currentCourseExtras.courseLessons.find(l=>l.id===form.dataset.lesson),answers=lesson.activity.tasks.map((_,i)=>(form.querySelector(`#answer-${i}`)?.value||'').trim());if(answers.some(a=>!a))throw new Error('Write a prompt for every task before submitting.');const result=await learningRequest('lesson-activity',{lessonId:lesson.id,answers});const r=result.activityResult;refreshData('me-dash');toast(r.passed?`Passed with ${r.score}%. Review the feedback and model answers.`:`You scored ${r.score}%. You need ${r.passPercent}% — use the tips and try again.`);render();document.getElementById('activity-title')?.scrollIntoView?.({behavior:'smooth',block:'start'});}),
@@ -921,9 +924,9 @@ const SUBMITS={
   assistant:form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('me/assistant',{courseId:currentCourseInfo.id,mode:v.mode,lessonIndex:intOrNull(v.lessonIndex),question:v.question});assistantAnswer={courseId:currentCourseInfo.id,text:data.answer+(data.truncated?'\n\n(The answer was cut short.)':'')};render();}),
 };
 const CHANGES={
-  'deadline-course':el=>{deadlineCourseId=el.value;assignFilters={...assignFilters,type:'',requirement:'',status:'',department:'',mandatory:'',q:''};render();},
-  'assign-type':el=>{assignDraft={...(assignDraft||newAssignDraft()),targetType:el.value,targetId:''};render();},
-  'assign-filter':el=>{assignFilters[el.dataset.field]=el.value;render();},
+  'deadline-course':el=>{deadlineCourseId=el.value;render();},
+  'assign-type':el=>{assignDraft={...(assignDraft||newAssignDraft()),targetType:el.value,targetId:'',targetText:''};render();},
+  'records-filter':el=>{assignRecords[el.dataset.field]=el.value;assignRecords.page=1;render();},
   'catalog-category':el=>{catalogFilters.category=el.value;render();},
   'reminder-course':el=>{reminderFilters.course=el.value;render();},
   'reminder-status':el=>{reminderFilters.status=el.value;render();},

@@ -9,7 +9,7 @@ A strip at the top of the page shows the current stage. The page has three tabs:
 | Tab | Who | Contents |
 | --- | --- | --- |
 | **Courses** | Admin, HR, trainers (their own courses) | Summary metrics, search, category and status filters, and the course catalogue |
-| **Assignments & progress** | Admin, HR | The assignment form, existing assignments and employee progress for one published course |
+| **Assign a Course** | Admin, HR | The assignment form with a live summary, then assignment, employee-deadline and reminder records |
 | **Reminders** | Admin, HR | Reminder settings and reminder history, filtered by course and delivery status |
 
 ## Courses (catalogue)
@@ -18,7 +18,7 @@ The metrics show total, published, draft and archived courses, assignments, and 
 
 - **Edit** opens the wizard. Courses in the older 3-module format open their curriculum editor instead.
 - **Preview** opens the wizard at Review & publish, which shows the course as employees see it.
-- **Assign** opens Assignments & progress with the course selected. Only published courses can be assigned: the button is disabled otherwise, and the server refuses with 409.
+- **Assign** opens Assign a Course with the course selected. Only published courses can be assigned: the button is disabled otherwise, and the server refuses with 409.
 - **More** contains **Archive**, which hides the course and keeps all records, and **Delete**. A course that employees have started can only be archived.
 
 ## Create Course (wizard)
@@ -34,25 +34,29 @@ Steps with nothing blocking publication are ticked. Lessons added but never fill
 
 After a course is first published, the page offers **Assign this course now** or **Back to Course Management** (assign it later with **Assign** in the catalogue).
 
-## Assignments & progress
+## Assign a Course
 
-The form follows the assignment workflow:
+The page opens from **Assign** in the catalogue, from **Assign this course now** after publishing, or from the **Assign a Course** tab. Its breadcrumb (**Manage Courses › Assign a Course**) leads back to the catalogue. On wide screens the form is on the left and the summary on the right; on phones the summary moves below the form.
 
-1. Published course.
-2. Assignment type: individual employee, department or job role.
-3. The target. The selector changes with the type, and department and job-role options show their employee counts.
-4. Deadline date and time, in IST.
-5. Mandatory or optional. Mandatory training requires a deadline.
-6. Note (optional).
-7. **Assign course**.
+The form has three sections:
+
+1. **Course and Audience**: published course, assignment type (individual employee, department or job role), and the target. For an individual employee, type part of a name or email and choose from the matching employees. Departments and job roles are picked from a list that shows their employee counts.
+2. **Deadline and Requirement**: deadline date and time (IST), and **Mandatory** (requires a deadline) or **Optional** (deadline optional), chosen as option cards.
+3. **Additional Information**: an optional note. **Clear** resets the form without sending anything; **Assign Course** saves it.
+
+**Assignment Summary** shows the course, type, target, deadline and requirement, and updates as each field changes; anything not chosen yet shows *Not selected*. **Assignment Rules** lists the rules the server already enforces.
 
 There is no "all employees" assignment type: assignments target an employee, a department or a job role. To reach everyone, assign each department.
 
 The server keeps one assignment per course and target. Assigning a course to a target that already has it asks for confirmation, then updates that assignment rather than adding a second one. Employees are notified, and the course appears in their **My Learning** under the existing assignment rules.
 
-**Existing assignments** can be filtered by target type and requirement. Each row keeps deadline updates, the mandatory switch and **Remove**.
+Below the form, three tabs share a search box and Course, Status and Requirement filters, with 10 rows per page:
 
-**Employee progress** shows assigned, completed, due-soon and overdue counts. It lists every employee who has the course, with their deadline, its source, requirement, status, progress, and last and next reminder. It can be searched and filtered by status, requirement and department. **Change** sets an individual deadline. **Training Compliance** covers all courses at once.
+| Tab | Shows | Actions |
+| --- | --- | --- |
+| **Assignments** | Every assignment record: who it is assigned to (employee, department or job role), course, assigned date and by whom, deadline, requirement, completion progress and status (Active, Overdue, Completed) | **Update** (deadline, mandatory), **Remove** |
+| **Employee Deadlines** | One row per employee and course, from Training Compliance (filtered and paged on the server): deadline, where the assignment comes from, progress and status | **Change** gives that employee an individual deadline |
+| **Reminder History** | The latest 100 reminders with delivery status (admin and HR only) | — |
 
 ## Reminders
 
@@ -60,7 +64,7 @@ Reminder settings (intervals, Due Soon window, deadline-day and overdue reminder
 
 ## APIs used
 
-The workflow uses the existing endpoints; none were added.
+The workflow uses existing endpoints; none were added.
 
 | Endpoint | Used for |
 | --- | --- |
@@ -69,7 +73,11 @@ The workflow uses the existing endpoints; none were added.
 | `GET /api/manage/courses/{id}/builder` | Load a course into the wizard |
 | `POST /api/admin/courses/{id}/archive`, `.../delete` | More → Archive / Delete |
 | `POST /api/manage/assignments`, `POST /api/manage/assignments/{id}/delete` | Assign, update, remove |
-| `GET /api/manage/deadlines?courseId` | Existing assignments and employee progress |
+| `GET /api/manage/assignments` | Assign a Course → Assignments tab |
+| `GET /api/manage/compliance?q&course&status&type&page&size` | Assign a Course → Employee Deadlines tab |
+| `GET /api/manage/people`, `GET /api/manage/org` | Employee search, departments and job roles |
 | `GET/POST /api/manage/reminders/settings`, `GET /api/manage/reminders/history?courseId`, `POST /api/manage/reminders/run` | Reminders tab |
+
+Training Compliance rows now also include `source` (`employee`, `department` or `job_role`: where the employee's assignment comes from) and `deadlineInput` (the deadline as a form value in IST). Both are read-only additions.
 
 `POST /api/admin/courses` now also accepts an optional `moduleTitle` on each lesson of a lesson-based course. It is stored in the existing `course_lessons.module_title` and `module_index` columns, so no migration is needed. A lesson saved without `moduleTitle` keeps its stored module.

@@ -43,7 +43,7 @@ async function main() {
     else if(path==='me/assistant')result={enabled:false,reason:'The AI learning assistant has not been enabled by your administrator.'};
     else if(path.startsWith('manage/dashboard'))result=orgDashboardData;
     else if(path==='manage/org')result={departments:[{id:'d1',name:'Engineering',employees:5}],jobRoles:[],categories:['Technical Skills'],courses:[{id:'python-programming',title:'PYTHON PROGRAMMING',status:'published'}],trainers:[],managers:[],levels:[]};
-    else if(path==='manage/people')result={people:[]};
+    else if(path==='manage/people')result={people:server.people||[]};
     else if(path==='manage/assessments')result={assessments:[]};
     else if(path==='me/onboarding')result={onboarding:server.onboarding===undefined?null:server.onboarding};
     else if(path==='manage/onboarding/templates')result={templates:[{id:'t1',name:'Engineering <x>',description:'',status:'active',departmentId:'d1',department:'Engineering',jobRoleIds:[],jobRoles:[],milestones:[{day:1,title:'Day 1'},{day:30,title:'Day 30'}],courses:[{courseId:'c1',title:'Welcome',day:1,mandatory:true,published:true}],mandatoryCount:1,onboardingsActive:2,onboardingsTotal:3,updatedAt:'2026-11-01T00:00:00Z',updatedBy:'Admin',warnings:['"Old course" is not published, so it will be skipped.']}],options:{departments:[['d1','Engineering']],jobRoles:[['r1','Developer']],courses:[['c1','Welcome']]}};
@@ -82,7 +82,8 @@ async function main() {
       employees:[{employeeId:'e1',name:'Asha',email:'asha@shimentox.com',department:'Engineering',assignmentId:'a1',source:'department',mandatory:true,deadlineInput:'2099-01-31T18:00',deadlineDisplay:'31 January 2099, 6:00 PM',status:'overdue',statusLabel:'Overdue',progress:40,lastReminder:null,nextReminderAt:null},{employeeId:'e2',name:'Ravi',email:'ravi@shimentox.com',department:'Sales',assignmentId:'a2',source:'employee',mandatory:false,deadlineInput:'',deadlineDisplay:null,status:'completed_on_time',statusLabel:'Completed on time',progress:100,lastReminder:null,nextReminderAt:null}]};
     else if(path==='manage/reminders/settings')result={settings:{intervalDays:[7,3,1],dueSoonDays:7,deadlineDay:true,overdue:true,lastRunAt:null,lastRun:null}};
     else if(path.startsWith('manage/reminders/history'))result={history:[{id:1,employee:'Asha',course:'Security Basics',type:'before_3d',scheduledAt:'2026-11-01T00:00:00Z',sentAt:'2026-11-01T00:00:01Z',status:'sent'},{id:2,employee:'Ravi',course:'Security Basics',type:'overdue',scheduledAt:'2026-11-02T00:00:00Z',sentAt:null,status:'failed',failureReason:'Mailbox <full>'}]};
-    else if(path==='manage/assignments')result={assignments:[]};
+    else if(path==='manage/assignments')result={assignments:options.body?[]:[{id:'a1',courseId:'new-course',course:'Security Basics',targetType:'department',targetId:'d1',target:'Engineering',mandatory:true,deadlineAt:'2099-01-31T12:30:00Z',deadlineDisplay:'31 January 2099, 6:00 PM',deadlineInput:'2099-01-31T18:00',note:'',assignedBy:'Admin',assignedAt:'2026-11-01T09:00:00Z',employees:5,completed:1,canRemove:true},
+      ...Array.from({length:12},(_,i)=>({id:'t'+i,courseId:'new-course',course:'Security Basics',targetType:'employee',targetId:'e'+i,target:'Team '+(i+1),mandatory:false,deadlineAt:null,deadlineDisplay:null,deadlineInput:'',note:'',assignedBy:'Admin',assignedAt:'2026-11-02T09:00:00Z',employees:1,completed:0,canRemove:true}))]};
     else if(path==='admin/courses')result={courses:[{...courseInfo,content:{sets:curriculum,lessons:fixtureLessons}},...(server.savedCourse?[{...courseInfo,...server.savedCourse,format:'lessons',assignments:2,learners:0}]:[])]};
     else if(path==='admin/audit')result={events:[]};
     else if (path === 'learning/resume') result = { learning: server.learning };
@@ -318,10 +319,11 @@ async function main() {
   assert.equal(run(builderDraft(10,15)),10);
   assert.equal(run(builderDraft(15,15)),undefined);
   run('courseDraft=null');
+  server.people=[{id:'emp-asha',name:'Asha Rao',email:'asha@shimentox.com',department:'Engineering',jobRole:'Developer'},{id:'emp-ravi',name:'Ravi Kumar',email:'ravi@shimentox.com',department:'Sales',jobRole:null}];delete context.pageCache;run("delete pageCache.people");
   context.confirm=()=>true;const settleUi=()=>new Promise(resolve=>setImmediate(resolve)),occurrences=text=>app.innerHTML.split(text).length-1;
   context.location.hash='#admin-courses';run('render()');await settleUi();run('render()');
   // Course Management opens on the catalogue: metrics, search, status filters, and Edit / Preview / Assign / More for each course.
-  for(const text of ['Course catalogue','Total courses','Enrolled learners','data-row-search="courses"','data-act="catalog-status"','data-act="course-assign"','data-act="course-archive"','data-act="course-delete"','Assignments &amp; progress','>Reminders<','Course Management'])assert.ok(app.innerHTML.includes(text),text);
+  for(const text of ['Course catalogue','Total courses','Enrolled learners','data-row-search="courses"','data-act="catalog-status"','data-act="course-assign"','data-act="course-archive"','data-act="course-delete"','data-tab="assignments">Assign a Course<','>Reminders<','Course Management'])assert.ok(app.innerHTML.includes(text),text);
   assert.ok(!app.innerHTML.includes('id="course-builder"'),'The wizard opens only when a course is created or edited.');
   run(`catalogFilters.status='draft';render()`);assert.ok(app.innerHTML.includes('No courses match these filters.'));run(`catalogFilters.status='all'`);
   run(`adminState.courses.push({...adminState.courses[0],id:'draft-1',title:'Draft Course',status:'draft',format:'lessons'});render()`);
@@ -349,31 +351,64 @@ async function main() {
   await run(`BUILDER_ACTIONS.publish()`);
   assert.ok(requests.some(r=>r.path==='admin/courses'&&r.data.status==='published'&&r.data.id==='new-course'));
   assert.ok(app.innerHTML.includes('is published')&&app.innerHTML.includes('data-act="published-assign"')&&app.innerHTML.includes('Back to Course Management'));
-  // Assign now opens Assignments with the course selected; the target selector follows the assignment type.
+  // Assign now opens Assign a Course with the course selected: breadcrumb, form, live summary and rules, then the records.
   run(`ACTIONS['published-assign']()`);await settleUi();run('render()');
   assert.equal(run('courseTab'),'assignments');assert.equal(run('courseDraft'),null);
-  assert.ok(app.innerHTML.includes('id="assign-form"')&&app.innerHTML.includes('<option value="new-course" selected>')&&app.innerHTML.includes('Select an employee…')&&app.innerHTML.includes('Deadline date and time (IST)'));
-  run(`CHANGES['assign-type']({value:'department'})`);
-  assert.ok(app.innerHTML.includes('Select a department…')&&app.innerHTML.includes('Engineering · 5 employees')&&app.innerHTML.includes('including employees who join it later'));
+  for(const text of ['Manage Courses</button><span aria-hidden="true">›</span><span aria-current="page">Assign a Course','<h1>Assign a Course</h1>','Assign training to employees and manage completion deadlines.','Course and Audience','Deadline and Requirement','Additional Information','Assignment Summary','Assignment Rules','Only published courses can be assigned.','If the target already has this course, the assignment is updated, not duplicated.','data-act="assign-clear"','Deadline date and time (IST)','Requires a deadline','Deadline optional'])assert.ok(app.innerHTML.includes(text),text);
+  assert.ok(!app.innerHTML.includes('<h1>Course management</h1>')&&!app.innerHTML.includes('class="workflow course-flow"'),'The assign page replaces the Manage Courses intro.');
+  assert.ok(app.innerHTML.includes('<option value="new-course" selected>')&&!app.innerHTML.includes('<option value="draft-1"'),'Only published courses are offered.');
+  // Individual employee: a searchable list of real people; the summary shows placeholders until something is chosen.
+  assert.ok(app.innerHTML.includes('id="assign-target" type="search"')&&app.innerHTML.includes('<option value="Asha Rao (asha@shimentox.com)">Engineering · Developer</option>'));
+  assert.equal(occurrences('Not selected'),1);
+  const summary={innerHTML:''};const realGet=context.document.getElementById;context.document.getElementById=id=>id==='assign-summary'?summary:realGet(id);
+  const typed=(name,value,type)=>({name,value,type,closest:()=>true});
+  context.typed=typed;run(`assignInput(typed('targetText','Asha Rao (asha@shimentox.com)'))`);
+  assert.equal(run('assignDraft.targetId'),'emp-asha');assert.ok(summary.innerHTML.includes('Asha Rao (asha@shimentox.com)'),'The summary updates without a re-render.');
+  run(`assignInput(typed('deadline','2099-02-01T17:30'));assignInput(typed('requirement','mandatory'))`);
+  assert.ok(summary.innerHTML.includes('01-02-2099 17:30')&&summary.innerHTML.includes('MANDATORY'));
+  run(`assignInput(typed('targetText','Asha'))`);assert.equal(run('assignDraft.targetId'),'','Partial text is not a selection.');
+  context.document.getElementById=realGet;
+  // Clear resets the form without submitting.
+  const sentBefore=requests.filter(r=>r.path==='manage/assignments'&&r.options.method==='POST').length;
+  run(`ACTIONS['assign-clear']()`);assert.deepEqual(JSON.parse(run('JSON.stringify(assignDraft)')),{targetType:'employee',targetId:'',targetText:'',deadline:'',mandatory:false,note:''});
+  assert.equal(requests.filter(r=>r.path==='manage/assignments'&&r.options.method==='POST').length,sentBefore);
+  // Department: the selector changes with the type.
+  run(`CHANGES['assign-type']({value:'department'})`);await settleUi();run('render()');
+assert.ok(app.innerHTML.includes('Select a department…')&&app.innerHTML.includes('Engineering · 5 employees')&&app.innerHTML.includes('including employees who join it later')&&!app.innerHTML.includes('id="assign-target" type="search"'));
   // Mandatory training needs a deadline; assigning a target that already has the course updates it after confirmation.
   context.testForm={dataset:{course:'new-course'},querySelector:()=>null};
   run(`assignDraft.targetId='d1';assignDraft.mandatory=true;assignDraft.note='Annual refresher'`);
   await run(`SUBMITS['course-assign'](testForm)`);assert.ok(toast.textContent.includes('needs a deadline'));
-  const assignCalls=requests.filter(r=>r.path==='manage/assignments').length;
+  const assignCalls=requests.filter(r=>r.path==='manage/assignments'&&r.options.method==='POST').length;
   run(`assignDraft.deadline='2099-02-01T17:30'`);context.confirm=()=>false;await run(`SUBMITS['course-assign'](testForm)`);
-  assert.equal(requests.filter(r=>r.path==='manage/assignments').length,assignCalls,'Cancelled: no request.');
+  assert.equal(requests.filter(r=>r.path==='manage/assignments'&&r.options.method==='POST').length,assignCalls,'Cancelled: no request.');
   context.confirm=()=>true;await run(`SUBMITS['course-assign'](testForm)`);
-  assert.deepEqual(requests.filter(r=>r.path==='manage/assignments').at(-1).data,{courseId:'new-course',targetType:'department',targetId:'d1',mandatory:true,deadline:'2099-02-01T17:30',note:'Annual refresher'});
+  assert.deepEqual(requests.filter(r=>r.path==='manage/assignments'&&r.options.method==='POST').at(-1).data,{courseId:'new-course',targetType:'department',targetId:'d1',mandatory:true,deadline:'2099-02-01T17:30',note:'Annual refresher'});
   assert.ok(app.innerHTML.includes('assignment updated for Engineering'));assert.equal(run('assignDraft.targetId'),'');
-  // Existing assignments and employee progress keep update, removal, mandatory, progress and reminder columns, with filters.
+  // Individual employee assignment sends the chosen person's ID.
+  run(`assignDraft={...newAssignDraft(),targetText:'Ravi Kumar (ravi@shimentox.com)',targetId:'emp-ravi'}`);await run(`SUBMITS['course-assign'](testForm)`);
+  assert.deepEqual(requests.filter(r=>r.path==='manage/assignments'&&r.options.method==='POST').at(-1).data,{courseId:'new-course',targetType:'employee',targetId:'emp-ravi',mandatory:false,deadline:null,note:''});
+  assert.ok(app.innerHTML.includes('assigned to Ravi Kumar (ravi@shimentox.com)'));
+  // Records, tab 1: real assignment records with Update and Remove, filters and pagination.
   await settleUi();run('render()');
-  assert.equal(occurrences('class="deadline-target"'),2);assert.ok(app.innerHTML.includes('data-act="assignment-delete"')&&app.innerHTML.includes('<th>Reminders</th>')&&app.innerHTML.includes('Assigned employees'));
-  run(`assignFilters.type='employee';render()`);assert.equal(occurrences('class="deadline-target"'),1);run(`assignFilters.type=''`);
-  run(`assignFilters.status='overdue';render()`);assert.equal(occurrences('data-search-row="assign-people"'),1);run(`assignFilters.status='';assignFilters.q='ravi';render()`);
-  assert.ok(app.innerHTML.includes('data-search="asha asha@shimentox.com engineering" hidden')&&!app.innerHTML.includes('data-search="ravi ravi@shimentox.com sales" hidden'));run(`assignFilters.q=''`);
-  // Reminders: settings and history in their own tab, filtered by course and delivery status.
+  for(const text of ['Assignments</button>','Employee Deadlines</button>','Reminder History</button>','<th>Assigned to</th><th>Course</th><th>Assigned</th><th>Deadline</th><th>Requirement</th><th>Progress</th><th>Status</th><th>Actions</th>','data-act="assignment-delete"','<summary>Update</summary>','1 of 5 completed'])assert.ok(app.innerHTML.includes(text),text);
+  assert.equal(occurrences('<summary>Update</summary>'),10,'Ten per page.');assert.ok(app.innerHTML.includes('Showing 1–10 of 13'));
+  run(`ACTIONS['records-page']({dataset:{page:'2'}})`);assert.equal(occurrences('<summary>Update</summary>'),3);
+  run(`CHANGES['records-filter']({dataset:{field:'requirement'},value:'mandatory'})`);assert.equal(occurrences('<summary>Update</summary>'),1);assert.equal(run('assignRecords.page'),1);
+  run(`assignRecords.requirement='';assignRecords.q='team 1';render()`);assert.ok(app.innerHTML.includes('Team 12')&&!app.innerHTML.includes('Engineering</strong>'));run(`assignRecords.q=''`);
+  // Tab 2: employee deadlines from Training Compliance, filtered and paged on the server.
+  run(`ACTIONS['records-tab']({dataset:{tab:'deadlines'}})`);await settleUi();run('render()');
+  assert.ok(requests.some(r=>r.path.startsWith('manage/compliance?')&&r.path.includes('page=1')&&r.path.includes('size=10')));
+  assert.ok(app.innerHTML.includes('<th>Employee</th><th>Course</th><th>Deadline</th><th>Assignment type</th><th>Progress</th><th>Status</th><th>Actions</th>')&&app.innerHTML.includes('<summary>Change</summary>')&&app.innerHTML.includes('data-type="employee" data-target="11111111-2222-3333-4444-555555555555"'));
+  run(`CHANGES['records-filter']({dataset:{field:'status'},value:'overdue'})`);await settleUi();assert.ok(requests.some(r=>r.path.startsWith('manage/compliance?')&&r.path.includes('status=overdue')));
+  // Tab 3: reminder history with delivery status.
+  run(`ACTIONS['records-tab']({dataset:{tab:'reminders'}})`);await settleUi();run('render()');
+  assert.ok(app.innerHTML.includes('3 days before')&&app.innerHTML.includes('Mailbox &lt;full&gt;')&&!app.innerHTML.includes('data-field="requirement"'));
+  run(`CHANGES['records-filter']({dataset:{field:'status'},value:'failed'})`);assert.ok(!app.innerHTML.includes('3 days before')&&app.innerHTML.includes('Mailbox'));
+  run(`assignRecords={tab:'assignments',q:'',course:'',status:'',requirement:'',page:1}`);
+  // Reminders: settings and history in their own Manage Courses tab, filtered by course and delivery status.
   run(`ACTIONS['course-tab']({dataset:{tab:'reminders'}})`);await settleUi();run('render()');
-  assert.ok(app.innerHTML.includes('Reminder settings')&&app.innerHTML.includes('Reminder history')&&app.innerHTML.includes('3 days before')&&app.innerHTML.includes('Mailbox &lt;full&gt;')&&!app.innerHTML.includes('id="assign-form"'));
+  assert.ok(app.innerHTML.includes('Reminder settings')&&app.innerHTML.includes('Reminder history')&&app.innerHTML.includes('3 days before')&&!app.innerHTML.includes('id="assign-form"'));
   run(`reminderFilters.status='failed';render()`);assert.ok(!app.innerHTML.includes('3 days before')&&app.innerHTML.includes('Mailbox'));
   run(`CHANGES['reminder-course']({value:'python-programming'})`);await settleUi();assert.ok(requests.some(r=>r.path==='manage/reminders/history?courseId=python-programming'));run(`reminderFilters={course:'',status:''}`);
   // More → Archive keeps records; the 3-module editor opens with a way back.
@@ -394,7 +429,7 @@ async function main() {
   assert.deepEqual(builderBody.lessons.map(l=>l.title),['What is GenAI?','Prompting']);
   assert.deepEqual(builderBody.assessment.questions[0],{prompt:'Pick one',options:['A','B'],correct:1,explanation:''});
   run('builderStep=4;render()');assert.ok(app.innerHTML.includes('LESSON 1 OF 2')&&app.innerHTML.includes('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'));
-  run('closeCourseEditor();resetCourseManagement()');server.savedCourse=null;
+  run('closeCourseEditor();resetCourseManagement()');server.savedCourse=null;server.people=null;run("delete pageCache.people");
   console.log('PASS Manage Courses workflow: catalogue, 4-step wizard, draft and publish, assignment, progress filters, reminders');
   // The extended lesson formatting keeps nested lists and code.
   assert.ok(run("renderMarkdown('- one\\n  - nested\\n\\n```python\\nx=1\\n```')").includes('<ul><li>one<ul><li>nested</li></ul></li></ul>'));

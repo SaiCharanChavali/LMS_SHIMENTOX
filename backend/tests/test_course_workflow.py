@@ -87,6 +87,15 @@ class CourseWorkflowTests(PortalFixture):
         self.assertEqual(after[learner.id]['status'], 'in_progress')
         self.assertGreater(after[learner.id]['progress'], 0)
         self.assertNotIn(other.id, after)
+        # Assign a Course → Employee Deadlines reads Training Compliance: each row says where its assignment comes from.
+        rows = self.admin.request(f'manage/compliance?course={identity}&size=10')[1]['table']['rows']
+        mine = next(r for r in rows if r['employeeId'] == learner.id)
+        self.assertEqual((mine['source'], mine['deadlineInput'], mine['status']), ('department', '2099-04-01T09:00', 'in_progress'))
+        # Changing one employee's deadline from that table adds an individual assignment for them only.
+        changed = self.admin.request('manage/assignments', {'courseId': identity, 'targetType': 'employee', 'targetId': learner.id, 'mandatory': True, 'deadline': mine['deadlineInput'].replace('04-01', '05-01')})
+        self.assertEqual(changed[0], 200, changed[1])
+        rows = {r['employeeId']: r for r in self.admin.request(f'manage/compliance?course={identity}&size=10')[1]['table']['rows']}
+        self.assertEqual((rows[learner.id]['source'], rows[learner.id]['deadlineInput']), ('employee', '2099-05-01T09:00'))
         # Reminders for the course are listed per course for HR.
         self.assertEqual(self.admin.request(f'manage/reminders/history?courseId={identity}')[0], 200)
         # Archive from the catalogue keeps the learner's run and blocks new assignments.

@@ -16,7 +16,7 @@ from xml.sax.saxutils import escape
 
 from admin import audit
 from analytics import PAGE_SIZE, assignment_index, course_rows, employee_rows, progress_index, query_date, scope
-from deadlines import STATUS_LABELS, deadline_status, format_deadline, format_span, local_date, parse_utc, portal_timezone, timezone_label, utc_iso
+from deadlines import STATUS_LABELS, deadline_status, format_deadline, format_span, local_date, local_input, parse_utc, portal_timezone, timezone_label, utc_iso
 import reminders
 from services import check
 
@@ -63,7 +63,7 @@ def records(db, user):
         last_activity = (p or {}).get('lastActivity') or completed_at
         overdue_seconds = int((at - parse_utc(a['deadlineAt'])).total_seconds()) if status == 'overdue' else None
         rows.append({'employeeId': person['id'], 'employee': person['name'], 'email': person['email'], 'department': person['department'] or 'Unassigned', 'departmentId': person['department_id'] or NONE,
-                     'jobRole': person['job_role'] or 'Unassigned', 'jobRoleId': person['job_role_id'] or NONE, 'courseId': course['id'], 'course': course['title'], 'mandatory': a['mandatory'],
+                     'jobRole': person['job_role'] or 'Unassigned', 'jobRoleId': person['job_role_id'] or NONE, 'courseId': course['id'], 'course': course['title'], 'mandatory': a['mandatory'], 'source': a['targetType'], 'deadlineInput': local_input(a['deadlineAt']),
                      'assignedAt': a['assignedAt'], 'assignedDate': portal_day(a['assignedAt']), 'assignedDisplay': display(a['assignedAt']), 'deadlineAt': a['deadlineAt'], 'deadlineDate': portal_day(a['deadlineAt']), 'deadlineDisplay': display(a['deadlineAt']),
                      'originalDeadlineAt': a['originalDeadlineAt'], 'originalDeadlineDisplay': display(a['originalDeadlineAt']), 'completedAt': completed_at, 'completedDate': portal_day(completed_at), 'completedDisplay': display(completed_at),
                      'progress': 100 if completed_at else (p or {}).get('progress', 0), 'status': status, 'statusLabel': STATUS_LABELS[status], 'dueSoon': due_soon,

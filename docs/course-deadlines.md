@@ -2,7 +2,7 @@
 
 ## For administrators
 
-**Manage Courses → Assignments & progress** lists each published course's assignments and every employee's effective deadline, status, progress and reminders (see [course management](course-management.md)). From there, administrators and HR can:
+**Manage Courses → Assign a Course** assigns courses and lists every assignment, each employee's effective deadline, status and progress, and reminder history (see [course management](course-management.md)). From there, administrators and HR can:
 
 - Assign a course to an employee, department or job role, with a deadline date and time.
 - Mark it mandatory (a deadline is then required) or optional.

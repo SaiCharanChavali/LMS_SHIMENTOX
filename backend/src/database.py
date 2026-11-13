@@ -105,6 +105,8 @@ def initialize(path):
             db.execute('ALTER TABLE certificates ADD COLUMN certificate_number TEXT')
         if 'public_token' not in certificate_columns:
             db.execute('ALTER TABLE certificates ADD COLUMN public_token TEXT')
+        if 'revoked_at' not in certificate_columns:
+            db.execute('ALTER TABLE certificates ADD COLUMN revoked_at TEXT')
         db.execute('CREATE UNIQUE INDEX IF NOT EXISTS certificates_number ON certificates(certificate_number)')
         db.execute('CREATE UNIQUE INDEX IF NOT EXISTS certificates_public_token ON certificates(public_token) WHERE public_token IS NOT NULL')
         for row in db.execute('SELECT id FROM certificates WHERE certificate_number IS NULL OR certificate_number=\'\'').fetchall():

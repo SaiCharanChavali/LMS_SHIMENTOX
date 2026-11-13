@@ -206,7 +206,8 @@ CREATE TABLE IF NOT EXISTS certificates (
     course_title TEXT NOT NULL,
     issued_at TEXT NOT NULL,
     certificate_number TEXT,
-    public_token TEXT
+    public_token TEXT,
+    revoked_at TEXT
 );
 CREATE TABLE IF NOT EXISTS admin_events (
     id INTEGER PRIMARY KEY,

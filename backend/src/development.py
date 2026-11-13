@@ -21,6 +21,7 @@ import onboarding
 import games
 import course_generator
 import keka
+import live_training
 from database import BACKEND, MAX_EXAM_ATTEMPTS, VIDEO_ROOT, public_curriculum
 from deadlines import STATUS_LABELS, deadline_status, deadline_view, end_of_day, format_deadline, local_date, local_input, parse_utc, timezone_label, utc_iso
 import reminders
@@ -471,7 +472,8 @@ def material_file(db, user, identity):
     url = f'api/materials/{identity}'
     if not allowed(user, 'courses.manage'):
         used = db.execute("SELECT 1 FROM course_resources r JOIN courses c ON c.id=r.course_id WHERE r.url=? AND c.status='published'", (url,)).fetchone() or \
-            db.execute("SELECT 1 FROM courses WHERE status='published' AND instr(lessons_json,?)>0", (url,)).fetchone()
+            db.execute("SELECT 1 FROM courses WHERE status='published' AND instr(lessons_json,?)>0", (url,)).fetchone() or \
+            db.execute("SELECT 1 FROM training_sessions s JOIN session_registrations g ON g.session_id=s.id WHERE s.recording_url=? AND g.employee_id=? AND g.status IN ('registered','attended')", (url, user['id'])).fetchone()
         check(used is not None, 'This file is not part of a published course.', 403)
     path = (MATERIALS / row['stored_name']).resolve()
     check(path.is_relative_to(MATERIALS.resolve()) and path.is_file(), 'File was not found.', 404)
@@ -716,23 +718,25 @@ def submit_assessment(db, user, identity, data):
 
 # ---------------------------------------------------------------- training sessions
 
-def session_rows(db, user=None, upcoming_only=False):
+def session_rows(db, user=None, upcoming_only=False, where=None, params=()):
     sql = '''SELECT s.*,c.full_name AS trainer,k.title AS course,
         (SELECT COUNT(*) FROM session_registrations g WHERE g.session_id=s.id AND g.status IN ('registered','attended')) AS registered
         FROM training_sessions s LEFT JOIN candidates c ON c.id=s.trainer_id LEFT JOIN courses k ON k.id=s.course_id'''
-    params = ()
     if upcoming_only:
-        sql += " WHERE s.status='scheduled' AND s.ends_at>=?"
-        params = (local_now(),)
+        where, params = "s.status='scheduled' AND s.ends_at>=?", (local_now(),)
+    if where:
+        sql += ' WHERE ' + where
     rows = []
     for r in db.execute(sql + ' ORDER BY s.starts_at', params):
         item = {'id': r['id'], 'title': r['title'], 'description': r['description'], 'kind': r['kind'], 'courseId': r['course_id'], 'course': r['course'], 'trainerId': r['trainer_id'], 'trainer': r['trainer'],
                 'location': r['location'], 'startsAt': r['starts_at'], 'endsAt': r['ends_at'], 'capacity': r['capacity'], 'registered': r['registered'],
                 'seatsLeft': max(0, r['capacity'] - r['registered']), 'status': r['status']}
+        mine = None
         if user is not None:
-            mine = db.execute('SELECT status FROM session_registrations WHERE session_id=? AND employee_id=?', (r['id'], user['id'])).fetchone()
-            item['myStatus'] = mine[0] if mine else None
-            item['canEdit'] = user['role'] in ('admin', 'hr') or user['id'] in (r['trainer_id'], r['created_by'])
+            mine = live_training.my_status(db, r['id'], user['id'])
+            item['myStatus'] = mine
+            item['canEdit'] = live_training.is_staff(user, r)
+        item.update(live_training.row_extras(db, user, r, mine))
         rows.append(item)
     return rows
 
@@ -744,7 +748,7 @@ def save_session(db, user, data):
     check(identity is None or old is not None, 'Session was not found.', 404)
     check(old is None or user['role'] in ('admin', 'hr') or user['id'] in (old['trainer_id'], old['created_by']), 'Trainers can edit only their own sessions.', 403)
     title, description = text(data, 'title', 2, 150), opt_text(data, 'description', 2000, 'Description')
-    kind = choice(data, 'kind', ('session', 'workshop'), 'session type', 'session')
+    kind = choice(data, 'kind', ('session', 'workshop', 'webinar'), 'session type', 'session')
     course = ref(db, data, 'courseId', 'courses', 'course')
     trainer = user['id'] if user['role'] == 'trainer' else ref(db, data, 'trainerId', 'candidates', 'trainer', "AND is_active=1 AND role IN ('admin','hr','trainer')")
     location = opt_text(data, 'location', 200, 'Location')
@@ -752,19 +756,25 @@ def save_session(db, user, data):
     check(ends > starts, 'The session must end after it starts.')
     capacity = integer(data, 'capacity', 1, 10000, 'Capacity')
     status = choice(data, 'status', ('scheduled', 'cancelled'), 'status', 'scheduled')
+    extra = live_training.session_fields(db, data, old)
+    if status == 'scheduled':
+        live_training.check_trainer_free(db, trainer, starts, ends, identity)
+    columns = dict(title=title, description=description, kind=kind, course_id=course, trainer_id=trainer, location=location, starts_at=starts, ends_at=ends,
+                   capacity=capacity, status=status, **extra)
     if old:
         registered = db.execute("SELECT COUNT(*) FROM session_registrations WHERE session_id=? AND status IN ('registered','attended')", (identity,)).fetchone()[0]
         check(capacity >= registered, f'{registered} employees are registered; capacity cannot be lower.', 409)
-        db.execute('UPDATE training_sessions SET title=?,description=?,kind=?,course_id=?,trainer_id=?,location=?,starts_at=?,ends_at=?,capacity=?,status=? WHERE id=?',
-                   (title, description, kind, course, trainer, location, starts, ends, capacity, status, identity))
+        db.execute(f"UPDATE training_sessions SET {','.join(f'{c}=?' for c in columns)} WHERE id=?", (*columns.values(), identity))
         attendees = [r[0] for r in db.execute("SELECT employee_id FROM session_registrations WHERE session_id=? AND status='registered'", (identity,))]
         if status == 'cancelled' and old['status'] != 'cancelled':
             notify(db, attendees, 'session', f'Session cancelled: {title}', f'The session on {starts.replace("T", " ")} has been cancelled.', 'calendar', f'session-cancel:{identity}')
         elif status == 'scheduled' and (starts, ends, location) != (old['starts_at'], old['ends_at'], old['location']):
             notify(db, attendees, 'session', f'Session updated: {title}', f'Now {starts.replace("T", " ")} at {location or "the published location"}.', 'calendar', f'session-update:{identity}:{starts}:{location}')
+        live_training.after_save(db, identity, title, old, extra)
     else:
         identity = uid()
-        db.execute('INSERT INTO training_sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', (identity, title, description, kind, course, trainer, location, starts, ends, capacity, status, user['id'], now()))
+        columns.update(id=identity, created_by=user['id'], created_at=now())
+        db.execute(f"INSERT INTO training_sessions({','.join(columns)}) VALUES ({','.join('?' * len(columns))})", tuple(columns.values()))
     audit(db, user['id'], 'session_saved', identity, f'{status}: {title}')
     return {'sessions': session_rows(db, user)}
 
@@ -773,8 +783,9 @@ def session_registrations(db, user, identity):
     require(user, 'sessions.manage')
     session = db.execute('SELECT * FROM training_sessions WHERE id=?', (identity,)).fetchone()
     check(session is not None, 'Session was not found.', 404)
-    return {'registrations': [dict(r) for r in db.execute('''SELECT g.employee_id AS employeeId,c.full_name AS name,d.name AS department,g.status,g.registered_at AS registeredAt
-        FROM session_registrations g JOIN candidates c ON c.id=g.employee_id LEFT JOIN departments d ON d.id=c.department_id WHERE g.session_id=? ORDER BY c.full_name''', (identity,))]}
+    rows = [dict(r) for r in db.execute('''SELECT g.employee_id AS employeeId,c.full_name AS name,c.email,d.name AS department,g.status,g.registered_at AS registeredAt
+        FROM session_registrations g JOIN candidates c ON c.id=g.employee_id LEFT JOIN departments d ON d.id=c.department_id WHERE g.session_id=? ORDER BY c.full_name''', (identity,))]
+    return {'registrations': live_training.registration_extras(db, session, rows)}
 
 
 def mark_attendance(db, user, identity, data):
@@ -783,6 +794,10 @@ def mark_attendance(db, user, identity, data):
     check(session is not None, 'Session was not found.', 404)
     check(user['role'] in ('admin', 'hr') or user['id'] in (session['trainer_id'], session['created_by']), 'Only the session trainer or HR can record attendance.', 403)
     check(session['starts_at'] <= local_now(), 'Attendance can be recorded once the session has started.', 409)
+    if data.get('all') is True:
+        marked = db.execute("UPDATE session_registrations SET status='attended',updated_at=? WHERE session_id=? AND status='registered'", (now(), identity)).rowcount
+        audit(db, user['id'], 'attendance_recorded', identity, f'all registered: {marked}')
+        return session_registrations(db, user, identity)
     employee = data.get('employeeId')
     row = db.execute("SELECT status FROM session_registrations WHERE session_id=? AND employee_id=? AND status IN ('registered','attended')", (identity, employee)).fetchone()
     check(row is not None, 'This employee is not registered for the session.', 404)
@@ -809,15 +824,18 @@ def register_session(db, user, identity, register):
 
 def my_calendar(db, user):
     upcoming = session_rows(db, user, True)
-    past = [dict(r) for r in db.execute("SELECT s.title,s.kind,s.starts_at AS startsAt,g.status FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.employee_id=? AND s.ends_at<? ORDER BY s.starts_at DESC LIMIT 20", (user['id'], local_now()))]
-    return {'sessions': upcoming, 'past': past}
+    # Past sessions keep their recording, feedback form and post-session assessment.
+    past = session_rows(db, user, where="s.ends_at<? AND EXISTS(SELECT 1 FROM session_registrations g WHERE g.session_id=s.id AND g.employee_id=? AND g.status IN ('registered','attended'))",
+                        params=(local_now(), user['id']))
+    past.reverse()
+    return {'sessions': upcoming, 'past': past[:20]}
 
 
 # ---------------------------------------------------------------- notifications and reminders
 
-def refresh_reminders(db, employee, progress, assigned, titles=None, sessions=None):
-    """Create staff overdue, inactivity, and session reminders; dedupe keys stop repeats. Employee deadline reminders are in reminders.py.
-    For many employees, pass `titles` (course id -> title) and `sessions` (employee id -> upcoming sessions) read once."""
+def refresh_reminders(db, employee, progress, assigned, titles=None):
+    """Create staff overdue and inactivity reminders; dedupe keys stop repeats. Employee deadline reminders are in reminders.py
+    and session reminders in live_training.py. For many employees, pass `titles` (course id -> title) read once."""
     titles = {r[0]: r[1] for r in db.execute('SELECT id,title FROM courses')} if titles is None else titles
     for pair, a in assigned.items():
         if a['dueDate'] and pair_status(progress.get(pair), a) == 'overdue':
@@ -828,10 +846,6 @@ def refresh_reminders(db, employee, progress, assigned, titles=None, sessions=No
     for (e, course), item in progress.items():
         if item['started'] and not item['completed'] and item['lastActivity'] and item['lastActivity'] < stale and course in titles:
             notify(db, [e], 'reminder', f'Continue {titles[course]}', f'You are {item["progress"]}% through this course.', 'courses', f'incomplete:{course}:{week[0]}-{week[1]}')
-    limit = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%dT%H:%M')
-    upcoming = db.execute("SELECT s.id,s.title,s.starts_at FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.employee_id=? AND g.status='registered' AND s.status='scheduled' AND s.starts_at BETWEEN ? AND ?", (employee['id'], local_now(), limit)) if sessions is None else sessions.get(employee['id'], ())
-    for s in upcoming:
-        notify(db, [employee['id']], 'session', f'Upcoming: {s["title"]}', f'Starts {s["starts_at"].replace("T", " ")}.', 'calendar', f'session-soon:{s["id"]}:{s["starts_at"]}')
 
 
 def my_notifications(db, user):
@@ -847,16 +861,12 @@ def my_notifications(db, user):
         by_progress, by_assignment = {}, {}
         for key, value in team_progress.items(): by_progress.setdefault(key[0], {})[key] = value
         for key, value in team_assignments.items(): by_assignment.setdefault(key[0], {})[key] = value
-        # Course titles and upcoming sessions are read once for the whole team, not once per person.
+        # Course titles are read once for the whole team, not once per person.
         titles = {r[0]: r[1] for r in db.execute('SELECT id,title FROM courses')}
-        limit, sessions = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%dT%H:%M'), {}
-        for start in range(0, len(team_ids), 500):
-            part = team_ids[start:start + 500]
-            for s in db.execute(f"SELECT g.employee_id,s.id,s.title,s.starts_at FROM session_registrations g JOIN training_sessions s ON s.id=g.session_id WHERE g.employee_id IN ({','.join('?' * len(part))}) AND g.status='registered' AND s.status='scheduled' AND s.starts_at BETWEEN ? AND ?",
-                                [*part, local_now(), limit]):
-                sessions.setdefault(s['employee_id'], []).append(s)
         for person in team:
-            refresh_reminders(db, person, by_progress.get(person['id'], {}), by_assignment.get(person['id'], {}), titles, sessions)
+            refresh_reminders(db, person, by_progress.get(person['id'], {}), by_assignment.get(person['id'], {}), titles)
+    # Fallback only: the scheduler sends session reminders and follow-ups whether or not anyone opens the portal.
+    live_training.process(db)
     own_progress, own_assigned = progress_index(db, [user['id']]), assignment_index(db, [user['id']])
     refresh_reminders(db, employee, own_progress, own_assigned)
     if user['role'] != 'admin':
@@ -1089,7 +1099,7 @@ def development_action(db, user, method, route, query, data):
     check(parts[0] == 'manage', f'Endpoint was not found: {method} /api/{route}', 404)
     check(user['role'] != 'employee', 'You do not have permission for this area.', 403)
     p = parts[1:]
-    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync', 'settings', 'run', 'history', 'templates', 'status', 'start', 'cancel', 'analytics', 'employees') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('assign', 'progress', 'delete', 'attempts', 'registrations', 'attendance', 'preview', 'resources', 'builder', 'save', 'sync', 'settings', 'run', 'history', 'templates', 'status', 'start', 'cancel', 'analytics', 'employees', 'questions', 'feedback') else '*' for i, x in enumerate(p)))
     handlers = {
         ('POST', 'announcements'): lambda: announce(db, user, data),
         ('GET', 'org'): lambda: org(db, user),
@@ -1134,18 +1144,25 @@ def development_action(db, user, method, route, query, data):
         ('POST', 'sessions'): lambda: save_session(db, user, data),
         ('GET', 'sessions/*/registrations'): lambda: session_registrations(db, user, p[1]),
         ('POST', 'sessions/*/attendance'): lambda: mark_attendance(db, user, p[1], data),
+        ('GET', 'sessions/*/feedback'): lambda: live_training.feedback_report(db, user, p[1]),
+        ('POST', 'sessions/*/questions/*'): lambda: live_training.moderate(db, user, p[1], p[3], data),
+        ('GET', 'trainers'): lambda: live_training.trainers(db, user),
     }
     check(key in handlers, f'Endpoint was not found: {method} /api/{route}', 404)
     return handlers[key]()
 
 
 def employee_action(db, user, method, p, query, data):
-    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read', 'unread', 'open') else '*' for i, x in enumerate(p)))
+    key = (method, '/'.join(x if i == 0 or x in ('register', 'cancel', 'start', 'submit', 'terminate', 'read', 'unread', 'open', 'questions', 'vote', 'feedback') else '*' for i, x in enumerate(p)))
     handlers = {
         ('GET', 'dashboard'): lambda: my_dashboard(db, user),
         ('GET', 'calendar'): lambda: my_calendar(db, user),
         ('POST', 'sessions/*/register'): lambda: register_session(db, user, p[1], True),
         ('POST', 'sessions/*/cancel'): lambda: register_session(db, user, p[1], False),
+        ('GET', 'sessions/*/questions'): lambda: live_training.questions(db, user, p[1]),
+        ('POST', 'sessions/*/questions'): lambda: live_training.ask(db, user, p[1], data),
+        ('POST', 'sessions/*/questions/*/vote'): lambda: live_training.vote(db, user, p[1], p[3]),
+        ('POST', 'sessions/*/feedback'): lambda: live_training.submit_feedback(db, user, p[1], data),
         ('GET', 'assessments'): lambda: my_assessments(db, user),
         ('POST', 'assessments/*/start'): lambda: start_assessment(db, user, p[1]),
         ('POST', 'assessments/*/submit'): lambda: submit_assessment(db, user, p[1], data),

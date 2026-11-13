@@ -27,6 +27,7 @@ import assistant
 import compliance
 import onboarding
 import keka
+import live_training
 
 PUBLIC = BACKEND.parent / 'frontend/public'
 COOKIE = 'shimentox_session'
@@ -421,6 +422,10 @@ class PortalHandler(SimpleHTTPRequestHandler):
                     return self.json_response(200,payload)
                 if method=='GET' and path in ('/api/manage/compliance/export','/api/manage/onboarding/export'):
                     download=(compliance if 'compliance' in path else onboarding).export(db,user,query)
+                    db.commit()
+                    return self.download_response(*download)
+                if method=='GET' and re.fullmatch(r'/api/me/(calendar|sessions/[^/]+/calendar)\.ics',path):
+                    download=live_training.calendar_file(db,user,path)
                     db.commit()
                     return self.download_response(*download)
                 if path.startswith('/api/manage/') or path.startswith('/api/me/'):

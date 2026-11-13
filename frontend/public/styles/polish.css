@@ -1,0 +1,188 @@
+/* Polish layer: one depth, radius and motion system across every page, with the existing yellow & charcoal palette.
+   Loaded after every other stylesheet. Movement is skipped for people who ask for reduced motion, and entrance
+   animations run only when the page changes (app.js sets data-enter on #app), never on in-page updates.
+   Keyframes move elements with the translate property, so they add to an element's own transform instead of replacing it.
+   The dark theme is generated from this file too (npm run theme:dark). */
+:root{
+  --radius-sm:8px;--radius:12px;--radius-lg:16px;
+  --shadow-xs:0 1px 2px rgba(38,50,56,.05);
+  --shadow-sm:0 1px 2px rgba(38,50,56,.04),0 2px 6px rgba(38,50,56,.05);
+  --shadow-md:0 2px 4px rgba(38,50,56,.04),0 8px 20px rgba(38,50,56,.08);
+  --shadow-lg:0 4px 8px rgba(38,50,56,.05),0 18px 40px rgba(38,50,56,.13);
+  --glow:0 6px 18px rgba(251,192,45,.38);
+  --ease:cubic-bezier(.2,.8,.2,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --fast:.16s;--medium:.26s;--slow:.45s;
+  --hover-tint:#fffaeb;--ring:0 0 0 3px rgba(251,192,45,.32)
+}
+
+/* ---------------------------------------------------------------- base */
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+body{line-height:1.5}
+::selection{background:#ffe082;color:#263238}
+h1{font-size:30px;letter-spacing:-.8px;line-height:1.2}
+.intro{margin-bottom:26px;gap:16px}
+.intro p{font-size:13px;line-height:1.6;max-width:72ch}
+.stat strong,.mini-stat strong,.admin-table td,.summary-chips b,.compliance-kpi strong{font-variant-numeric:tabular-nums}
+:focus-visible{outline:none}
+button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:none;box-shadow:var(--ring);border-radius:var(--radius-sm)}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
+
+/* ---------------------------------------------------------------- shell: sidebar and header */
+.sidebar{box-shadow:1px 0 0 rgba(255,255,255,.04),4px 0 24px rgba(15,22,26,.12)}
+.sidebar .nav{gap:4px}
+.sidebar .nav a{position:relative;border-radius:10px;padding:11px 14px;letter-spacing:.1px}
+.sidebar .nav a .ico{transition:transform var(--medium) var(--ease)}
+.sidebar .nav a.active{background:linear-gradient(135deg,var(--secondary),var(--primary));color:var(--ink);font-weight:700;box-shadow:0 6px 16px rgba(251,192,45,.28),inset 0 1px 0 rgba(255,255,255,.35)}
+.sidebar .help-box{border:1px solid rgba(255,255,255,.06);border-radius:var(--radius)}
+.topbar{position:sticky;top:0;z-index:30;height:76px;background:rgba(255,255,255,.86);-webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);box-shadow:0 1px 0 var(--line)}
+.crumb{font-size:12px;letter-spacing:.2px}
+.crumb b{font-weight:600}
+.icon-btn{border-radius:50%;width:38px;height:38px;display:inline-grid;place-items:center;padding:0}
+.icon-btn:hover{background:var(--hover-tint)}
+.notification-count{box-shadow:0 2px 6px rgba(251,192,45,.5)}
+.avatar{background:linear-gradient(135deg,#fff3ce,#ffe082);box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(251,192,45,.55)}
+.profile{padding:4px 6px;border-radius:999px}
+
+/* ---------------------------------------------------------------- surfaces */
+.panel{border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border-color:#eceff1;padding:22px}
+.panel h2,.section-heading h2{letter-spacing:-.3px}
+.stat,.mini-stat,.compliance-kpi{border-radius:var(--radius);box-shadow:var(--shadow-xs);border-color:#eceff1}
+.stat-icon{border-radius:11px;background:linear-gradient(140deg,#fff7dc,#ffe9a8);box-shadow:inset 0 0 0 1px rgba(251,192,45,.25)}
+.course-card,.session-card,.course-tile,.recommendation,.catalog-card,.course{border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);border-color:#eceff1}
+.course-tile,.recommendation{background:#fff}
+.course-badge{border-radius:999px;padding:5px 11px;box-shadow:var(--shadow-sm)}
+.session-date{border-radius:12px;background:linear-gradient(160deg,#fff7dc,#ffecb3);color:#795600}
+.empty-state{padding:34px 16px}
+.empty-state h3{font-size:15px}
+.notice{border-radius:var(--radius)}
+
+/* ---------------------------------------------------------------- buttons, links and chips */
+.btn{border-radius:10px;font-weight:650;letter-spacing:.1px;position:relative;isolation:isolate;overflow:hidden}
+.btn:not(.secondary){background:linear-gradient(180deg,var(--secondary),var(--primary));box-shadow:0 1px 2px rgba(121,86,0,.18),inset 0 1px 0 rgba(255,255,255,.4)}
+.btn:not(.secondary):hover{background:linear-gradient(180deg,#ffe066,var(--secondary))}
+.btn.secondary{box-shadow:var(--shadow-xs)}
+.btn .ico{transition:transform var(--medium) var(--ease)}
+.btn:disabled,.btn[disabled]{opacity:.55;cursor:not-allowed;box-shadow:none}
+.table-actions button{border-radius:8px;font-weight:600}
+.tag{border-radius:999px;padding:4px 9px;letter-spacing:.7px}
+.segmented button,.status-chips button,.notification-tabs button{transition:background-color var(--fast) ease,border-color var(--fast) ease,color var(--fast) ease,box-shadow var(--fast) ease}
+.segmented button.active,.status-chips button.active{box-shadow:0 2px 8px rgba(251,192,45,.25)}
+.compliance-tabs button.active{box-shadow:0 3px 10px rgba(251,192,45,.3)}
+.auth-link,.section-heading a,.link-action{background-image:linear-gradient(currentColor,currentColor);background-size:0 1.5px;background-position:0 100%;background-repeat:no-repeat;transition:background-size var(--medium) var(--ease),color var(--fast) ease}
+.auth-link:hover,.section-heading a:hover,.link-action:hover{background-size:100% 1.5px}
+
+/* ---------------------------------------------------------------- forms */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{border-radius:10px;transition:border-color var(--fast) ease,box-shadow var(--fast) ease,background-color var(--fast) ease}
+input:not([type=checkbox]):not([type=radio]):not([type=file]):hover,select:hover,textarea:hover{border-color:#cfd6da}
+input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{border-color:#e0a800!important;box-shadow:var(--ring)!important;outline:none}
+input[type=checkbox],input[type=radio]{accent-color:#e0a800}
+/* Dropdowns without their own styling get the same field look (no specificity, so any styled select keeps its rules). */
+:where(.content) select{min-height:40px;padding:8px 12px;border:1px solid #dce1e4;border-radius:10px;background-color:#fff;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.row-menu>summary{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:8px;transition:background-color var(--fast) ease,box-shadow var(--fast) ease,transform var(--fast) var(--ease)}
+.row-menu>summary:after{content:'';width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:translateY(-2px) rotate(45deg);margin-left:4px;transition:transform var(--fast) var(--ease)}
+.row-menu[open]>summary:after{transform:translateY(1px) rotate(-135deg)}
+.row-menu>summary:hover{background:#fff2c8}
+.search{border-radius:10px}
+
+/* ---------------------------------------------------------------- tables */
+.admin-table{border-collapse:separate;border-spacing:0}
+.admin-table th{background:#fafbfb;color:#7d8a90;font-weight:700}
+.admin-table th:first-child{border-top-left-radius:10px}
+.admin-table th:last-child{border-top-right-radius:10px}
+.admin-table tbody tr{transition:background-color var(--fast) ease}
+.admin-table tbody tr:last-child td{border-bottom:0}
+
+/* ---------------------------------------------------------------- menus, dropdowns and notifications */
+.notification-panel{border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);border-color:#eceff1;padding:14px;transform-origin:top right}
+.notification{border-radius:10px;padding:10px 10px;transition:background-color var(--fast) ease}
+.export-options,.row-menu-list{border-radius:12px;box-shadow:var(--shadow-lg);border-color:#eceff1;transform-origin:top right}
+.export-options button,.export-options a{transition:background-color var(--fast) ease,padding-left var(--fast) ease}
+#toast{border-radius:12px;box-shadow:var(--shadow-lg);padding:13px 20px;font-weight:500}
+
+/* ---------------------------------------------------------------- progress */
+.progress,.meter{border-radius:999px;overflow:hidden}
+.progress span,.meter span{border-radius:999px;background:linear-gradient(90deg,var(--primary),#ffd54f);position:relative;overflow:hidden}
+
+/* ---------------------------------------------------------------- loading */
+.state-panel{position:relative;overflow:hidden;min-height:64px}
+.state-panel::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(251,192,45,.08) 50%,transparent 70%);transform:translateX(-100%)}
+
+/* ---------------------------------------------------------------- motion (only for people who have not asked for less) */
+@media(prefers-reduced-motion:no-preference){
+  /* The page and its blocks rise in when you navigate; staying on a page never replays this. */
+  .content,.login-form .form-inner{animation:none}
+  #app[data-enter] .content>*{animation:rise-in var(--slow) var(--ease) both}
+  #app[data-enter] .content>*:nth-child(2){animation-delay:.04s}
+  #app[data-enter] .content>*:nth-child(3){animation-delay:.08s}
+  #app[data-enter] .content>*:nth-child(4){animation-delay:.12s}
+  #app[data-enter] .content>*:nth-child(5){animation-delay:.16s}
+  #app[data-enter] .content>*:nth-child(n+6){animation-delay:.2s}
+  #app[data-enter] :is(.stats,.compliance-kpis,.tile-grid,.course-grid,.session-list,.mini-stats)>*{animation:rise-in var(--slow) var(--ease) both}
+  #app[data-enter] :is(.stats,.compliance-kpis,.tile-grid,.course-grid,.session-list,.mini-stats)>*:nth-child(2){animation-delay:.05s}
+  #app[data-enter] :is(.stats,.compliance-kpis,.tile-grid,.course-grid,.session-list,.mini-stats)>*:nth-child(3){animation-delay:.1s}
+  #app[data-enter] :is(.stats,.compliance-kpis,.tile-grid,.course-grid,.session-list,.mini-stats)>*:nth-child(4){animation-delay:.15s}
+  #app[data-enter] :is(.stats,.compliance-kpis,.tile-grid,.course-grid,.session-list,.mini-stats)>*:nth-child(5){animation-delay:.2s}
+  #app[data-enter] :is(.stats,.compliance-kpis,.tile-grid,.course-grid,.session-list,.mini-stats)>*:nth-child(n+6){animation-delay:.25s}
+  #app[data-enter] :is(.progress,.meter) span{animation:grow-x .9s var(--ease) .15s both;transform-origin:left center}
+  .login-form .form-inner{animation:rise-in .5s var(--ease) both}
+  @keyframes rise-in{from{opacity:0;translate:0 10px}to{opacity:1;translate:0 0}}
+  @keyframes grow-x{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes pop-in{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes badge-pop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+  @keyframes bell-ring{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-12deg)}60%{transform:rotate(7deg)}80%{transform:rotate(-4deg)}}
+  @keyframes shimmer{to{transform:translateX(100%)}}
+  @keyframes sheen{from{transform:translateX(-100%)}to{transform:translateX(200%)}}
+  @keyframes live-pulse{0%{box-shadow:0 0 0 0 rgba(224,168,0,.45)}70%{box-shadow:0 0 0 10px rgba(224,168,0,0)}100%{box-shadow:0 0 0 0 rgba(224,168,0,0)}}
+  @keyframes float-y{0%,100%{translate:0 0}50%{translate:0 -6px}}
+
+  .notification-panel,.export-menu[open] .export-options,.row-menu[open] .row-menu-list{animation:pop-in var(--medium) var(--ease) both}
+  .notification-count{animation:badge-pop .4s var(--ease-spring) both}
+  .state-panel::after{animation:shimmer 1.4s ease-in-out infinite}
+  .session-card.is-live{animation:live-pulse 2s ease-out infinite}
+  details>summary~*{animation:pop-in var(--medium) var(--ease) both}
+  #toast{transition:opacity var(--medium) var(--ease),transform var(--medium) var(--ease-spring)}
+  .login-code-card,.login-visual .code-window{animation:float-y 6s ease-in-out infinite}
+  .login-code-card:nth-child(2){animation-delay:-2s}
+  .login-code-card:nth-child(3){animation-delay:-4s}
+
+  .panel,.stat,.mini-stat,.compliance-kpi,.course-card,.session-card,.course-tile,.recommendation,.qa-item{transition:transform var(--medium) var(--ease),box-shadow var(--medium) var(--ease),border-color var(--medium) ease}
+  .btn{transition:transform var(--fast) var(--ease),box-shadow var(--medium) var(--ease),background-color var(--fast) ease,border-color var(--fast) ease,color var(--fast) ease}
+  .sidebar .nav a{transition:background-color var(--fast) ease,color var(--fast) ease,box-shadow var(--medium) var(--ease),transform var(--fast) var(--ease)}
+
+  @media(hover:hover) and (pointer:fine){
+    .btn:not(:disabled):hover{transform:translateY(-1px)}
+    .btn:not(.secondary):not(:disabled):hover{box-shadow:var(--glow),inset 0 1px 0 rgba(255,255,255,.4)}
+    .btn.secondary:not(:disabled):hover{box-shadow:var(--shadow-md)}
+    .btn:not(:disabled):hover .ico:last-child{transform:translateX(3px)}
+    .btn:not(.secondary):not(:disabled)::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);transform:translateX(-100%)}
+    .btn:not(.secondary):not(:disabled):hover::after{animation:sheen .8s var(--ease)}
+    .sidebar .nav a:not(.active):hover{transform:translateX(3px)}
+    .sidebar .nav a:hover .ico{transform:scale(1.12)}
+    .stat:hover,.mini-stat:hover,.compliance-kpi:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:#f3dc92}
+    .stat:hover .stat-icon{transform:rotate(-6deg) scale(1.06)}
+    .course-card:hover,.session-card:hover,.course-tile:hover,.recommendation:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:#efd27a}
+    .admin-table tbody tr:hover{background:var(--hover-tint)}
+    .icon-btn:hover .ico{transform:scale(1.08)}
+    #notifications:hover .ico{animation:bell-ring .7s ease}
+    .theme-toggle:hover .ico{transform:rotate(25deg) scale(1.08)}
+    .table-actions button:not(:disabled):hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+    .segmented button:not(.active):hover,.status-chips button:not(.active):hover{border-color:#efd27a;background:var(--hover-tint)}
+    .notification:hover{background:var(--hover-tint)}
+    .export-options button:hover,.export-options a:hover{padding-left:14px}
+    .avatar:hover{transform:scale(1.05)}
+    .qa-item:hover{box-shadow:var(--shadow-sm)}
+  }
+  .stat-icon,.avatar,.icon-btn .ico{transition:transform var(--medium) var(--ease-spring)}
+  .btn:not(:disabled):active,.table-actions button:not(:disabled):active{transform:translateY(0) scale(.97);transition-duration:.06s}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{
+  .topbar{position:static;backdrop-filter:none}
+  #app[data-enter] *{animation:none!important}
+  .panel,.stat,.course-card{box-shadow:none}
+}
+@media(max-width:680px){
+  .topbar{height:62px}
+  h1{font-size:24px}
+  .panel{padding:18px;border-radius:var(--radius)}
+}

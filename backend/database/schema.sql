@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS training_sessions (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL CHECK(length(title) BETWEEN 2 AND 150),
     description TEXT NOT NULL DEFAULT '',
-    kind TEXT NOT NULL DEFAULT 'session' CHECK(kind IN ('session','workshop')),
+    kind TEXT NOT NULL DEFAULT 'session' CHECK(kind IN ('session','workshop','webinar')),
     course_id TEXT REFERENCES courses(id) ON DELETE SET NULL,
     trainer_id TEXT REFERENCES candidates(id) ON DELETE SET NULL,
     location TEXT NOT NULL DEFAULT '',
@@ -294,6 +294,36 @@ CREATE TABLE IF NOT EXISTS training_sessions (
     status TEXT NOT NULL DEFAULT 'scheduled' CHECK(status IN ('scheduled','cancelled')),
     created_by TEXT REFERENCES candidates(id),
     created_at TEXT NOT NULL
+);
+-- Live Q&A: questions asked before or during a session, upvoted by other participants and answered by the trainer.
+CREATE TABLE IF NOT EXISTS session_questions (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    body TEXT NOT NULL CHECK(length(body) BETWEEN 2 AND 500),
+    anonymous INTEGER NOT NULL DEFAULT 0 CHECK(anonymous IN (0,1)),
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','answered','dismissed')),
+    answer TEXT NOT NULL DEFAULT '',
+    answered_by TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+    answered_at TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS session_questions_session ON session_questions(session_id);
+CREATE TABLE IF NOT EXISTS session_question_votes (
+    question_id TEXT NOT NULL REFERENCES session_questions(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY(question_id, employee_id)
+);
+-- One rating (1-5 stars) and optional comment per participant per session.
+CREATE TABLE IF NOT EXISTS session_feedback (
+    session_id TEXT NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    comment TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(session_id, employee_id)
 );
 -- Yearly training-hours target per employee, set by an administrator/HR or the employee's manager.
 CREATE TABLE IF NOT EXISTS training_targets (

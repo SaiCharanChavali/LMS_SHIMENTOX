@@ -11,7 +11,7 @@ from deadlines import end_of_day
 
 BACKEND = Path(__file__).resolve().parents[1]
 COURSE_ID = 'python-programming'
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 # Columns added after a table first shipped (versions 4-6); added only where missing.
 ADDED_COLUMNS = [
     ('courses', 'format', "TEXT NOT NULL DEFAULT 'modules' CHECK(format IN ('modules','lessons'))"),
@@ -53,6 +53,14 @@ ADDED_COLUMNS = [
     ('course_runs', 'deadline_at_completion', 'TEXT'),
     # Version 10: the joining date that automatic onboarding counts its milestones from (YYYY-MM-DD).
     ('candidates', 'joining_date', 'TEXT'),
+    # Version 13: live training and webinars (online meeting link, recording, post-session assessment, Q&A and feedback switches).
+    ('training_sessions', 'delivery', "TEXT NOT NULL DEFAULT 'in_person' CHECK(delivery IN ('in_person','online','hybrid'))"),
+    ('training_sessions', 'meeting_provider', "TEXT NOT NULL DEFAULT '' CHECK(meeting_provider IN ('','zoom','meet','teams','other'))"),
+    ('training_sessions', 'meeting_url', "TEXT NOT NULL DEFAULT ''"),
+    ('training_sessions', 'recording_url', "TEXT NOT NULL DEFAULT ''"),
+    ('training_sessions', 'assessment_id', 'TEXT REFERENCES assessments(id) ON DELETE SET NULL'),
+    ('training_sessions', 'qa_enabled', 'INTEGER NOT NULL DEFAULT 1 CHECK(qa_enabled IN (0,1))'),
+    ('training_sessions', 'feedback_enabled', 'INTEGER NOT NULL DEFAULT 1 CHECK(feedback_enabled IN (0,1))'),
 ]
 GENAI_COURSE = BACKEND / 'data/generative-ai-course.json'
 RAG_COURSE = BACKEND / 'data/rag-course.json'
@@ -95,6 +103,7 @@ def initialize(path):
         db.executescript((BACKEND / 'database/schema.sql').read_text(encoding='utf-8'))
         upgrade_assessment_attempts(db)
         remove_skills_and_paths(db)
+        upgrade_training_sessions(db)
         # Fresh and upgraded databases converge on the same columns without losing rows.
         for table, column, definition in ADDED_COLUMNS:
             if column not in {r[1] for r in db.execute(f'PRAGMA table_info({table})')}:
@@ -225,6 +234,41 @@ def upgrade_assessment_attempts(db):
 
 
 SKILL_AND_PATH_TABLES = ('path_assignments', 'learning_path_courses', 'learning_paths', 'learning_goals', 'skill_evidence', 'role_competencies', 'course_skills', 'skills')
+
+
+def upgrade_training_sessions(db):
+    """Allow the 'webinar' session type. SQLite cannot change a CHECK constraint in place, so an older table is rebuilt once.
+
+    Only the original columns exist before this upgrade; the live-training columns are added afterwards from ADDED_COLUMNS.
+    """
+    sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='training_sessions'").fetchone()[0]
+    if "'webinar'" in sql:
+        return
+    db.executescript('''
+        PRAGMA foreign_keys=OFF;
+        BEGIN;
+        CREATE TABLE training_sessions_upgraded (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL CHECK(length(title) BETWEEN 2 AND 150),
+            description TEXT NOT NULL DEFAULT '',
+            kind TEXT NOT NULL DEFAULT 'session' CHECK(kind IN ('session','workshop','webinar')),
+            course_id TEXT REFERENCES courses(id) ON DELETE SET NULL,
+            trainer_id TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+            location TEXT NOT NULL DEFAULT '',
+            starts_at TEXT NOT NULL,
+            ends_at TEXT NOT NULL,
+            capacity INTEGER NOT NULL CHECK(capacity BETWEEN 1 AND 10000),
+            status TEXT NOT NULL DEFAULT 'scheduled' CHECK(status IN ('scheduled','cancelled')),
+            created_by TEXT REFERENCES candidates(id),
+            created_at TEXT NOT NULL
+        );
+        INSERT INTO training_sessions_upgraded(id,title,description,kind,course_id,trainer_id,location,starts_at,ends_at,capacity,status,created_by,created_at)
+            SELECT id,title,description,kind,course_id,trainer_id,location,starts_at,ends_at,capacity,status,created_by,created_at FROM training_sessions;
+        DROP TABLE training_sessions;
+        ALTER TABLE training_sessions_upgraded RENAME TO training_sessions;
+        COMMIT;
+        PRAGMA foreign_keys=ON;
+    ''')
 
 
 def remove_skills_and_paths(db):

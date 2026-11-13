@@ -14,7 +14,7 @@ const isLearner=()=>Boolean(currentUser);
 let pageCache={},devMessage='',devFilters={dashboard:{},report:{type:'enrollments',page:1}},notificationState={items:[],unread:0,open:false};
 let sessionEditor=null,sessionRoster=null,assessmentEditor=null,assessmentAttemptsId=null,activeAssessment=null,assessmentResult=null,editUserId=null,previewCourseId=null,courseFilter='all',courseArea='all',courseDifficulty='all',courseSearch='',assistantAnswer=null;
 
-function resetDevelopment(){if(typeof resetActivity==='function')resetActivity();if(typeof resetCourseManagement==='function')resetCourseManagement();selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;courseFilter='all';courseArea='all';courseDifficulty='all';courseSearch='';}
+function resetDevelopment(){if(typeof resetActivity==='function')resetActivity();if(typeof resetLiveTraining==='function')resetLiveTraining();if(typeof resetCourseManagement==='function')resetCourseManagement();selectedLessonId=null;inlineAttempt=null;inlineResult=null;if(typeof courseDraft!=='undefined'){courseDraft=null;builderStep=1;}pageCache={};devMessage='';devFilters={dashboard:{},report:{type:'enrollments',page:1}};notificationState={items:[],unread:0,open:false};sessionEditor=sessionRoster=assessmentEditor=assessmentAttemptsId=activeAssessment=assessmentResult=editUserId=previewCourseId=assistantAnswer=null;deadlineCourseId='';reminderPanelOpen=false;if(typeof onb!=='undefined')onb=onbDefaults();compliance=COMPLIANCE_DEFAULTS();complianceOptions=null;courseFilter='all';courseArea='all';courseDifficulty='all';courseSearch='';}
 function loadData(key,path){
   if(pageCache[key])return pageCache[key];
   pageCache[key]={loading:true};
@@ -213,35 +213,7 @@ function managerView(){
   <div class="dash-grid"><div class="dash-main">${teamTrainingPanel(entry.data.training||[])}${progressPanel(entry.data.progress)}</div><div class="dash-side">${activityPanel(entry.data.recent)}</div></div>`;
 }
 
-function calendarPage(){
-  return intro('Training calendar','Instructor-led sessions and workshops, with seats and registration status.',can('sessions.manage')?'SCHEDULE & REGISTER':'MY CALENDAR')+devNotice()+(isLearner()?myCalendar():'')+(can('sessions.manage')?manageSessions():'');
-}
-function sessionCard(s){
-  const full=s.seatsLeft<=0&&s.myStatus!=='registered';
-  return `<article class="session-card"><div class="session-date"><strong>${esc(new Date(s.startsAt).toLocaleDateString('en-IN',{day:'numeric'}))}</strong><span>${esc(new Date(s.startsAt).toLocaleDateString('en-IN',{month:'short'}).toUpperCase())}</span></div><div class="session-body"><div class="tile-tags"><span class="tag">${esc(s.kind.toUpperCase())}</span>${s.myStatus==='registered'?'<span class="tag success">REGISTERED</span>':''}${s.myStatus==='attended'?'<span class="tag success">ATTENDED</span>':''}</div><h3>${esc(s.title)}</h3><p class="muted">${esc(fmtDateTime(s.startsAt))} – ${esc(new Date(s.endsAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}))}${s.location?' · '+esc(s.location):''}${s.trainer?' · '+esc(s.trainer):''}</p>${s.description?`<p class="muted">${esc(s.description)}</p>`:''}<p class="muted"><b>${s.seatsLeft}</b> of ${s.capacity} seats available${s.course?' · Linked course: '+esc(s.course):''}</p>${s.myStatus==='registered'?`<button class="btn secondary" data-act="session-cancel" data-id="${s.id}">Cancel registration</button>`:s.myStatus==='attended'?'':`<button class="btn" data-act="session-register" data-id="${s.id}" ${full?'disabled':''}>${full?'Session full':'Register'}</button>`}</div></article>`;
-}
-function myCalendar(){
-  const entry=loadData('me-cal','me/calendar');
-  if(!entry.data)return stateBlock(entry,'training sessions','me-cal');
-  const d=entry.data;
-  return panel('Upcoming sessions',d.sessions.length?`<div class="session-list">${d.sessions.map(sessionCard).join('')}</div>`:emptyState('No sessions scheduled','Instructor-led sessions and workshops will appear here when they are scheduled.'))+(d.past.length?panel('Past sessions',d.past.map(p=>`<div class="admin-list-row"><div><strong>${esc(p.title)}</strong><small>${esc(fmtDateTime(p.startsAt))}</small></div><span class="tag ${p.status==='attended'?'success':'gray'}">${esc(p.status.toUpperCase())}</span></div>`).join('')):'');
-}
-function manageSessions(){
-  const entry=loadData('m-sessions','manage/sessions');
-  if(!entry.data)return stateBlock(entry,'scheduled sessions','m-sessions');
-  const sessions=entry.data.sessions,org=orgData();
-  const table=`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Session</th><th>When</th><th>Seats</th><th>Status</th><th>Actions</th></tr></thead><tbody>${sessions.map(s=>`<tr><td><strong>${esc(s.title)}</strong><small>${esc(capital(s.kind))}${s.trainer?' · '+esc(s.trainer):''}${s.location?' · '+esc(s.location):''}</small></td><td>${esc(fmtDateTime(s.startsAt))}</td><td>${s.registered}/${s.capacity}</td><td><span class="tag ${s.status==='cancelled'?'danger':''}">${esc(s.status.toUpperCase())}</span></td><td><div class="table-actions">${s.canEdit?`<button data-act="session-edit" data-id="${s.id}">Edit</button>`:''}<button data-act="session-roster" data-id="${s.id}">Registrations</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="muted">No sessions scheduled yet.</td></tr>'}</tbody></table></div>`;
-  const s=sessionEditor;
-  const form=s?`<section class="panel admin-form"><span class="tag">${s.id?'EDIT SESSION':'NEW SESSION'}</span><h2>${s.id?'Edit session':'Schedule a session'}</h2><form data-form="session-save" data-id="${esc(s.id||'')}"><label for="session-title">Title</label><input id="session-title" name="title" value="${esc(s.title||'')}" minlength="2" maxlength="150" required><label for="session-description">Description</label><textarea id="session-description" name="description" rows="2" maxlength="2000">${esc(s.description||'')}</textarea><div class="editor-fields"><div><label for="session-kind">Type</label><select id="session-kind" name="kind">${options([['session','Training session'],['workshop','Workshop']],s.kind||'session')}</select></div><div><label for="session-capacity">Seats</label><input id="session-capacity" name="capacity" type="number" min="1" max="10000" value="${esc(s.capacity||20)}" required></div><div><label for="session-status">Status</label><select id="session-status" name="status">${options([['scheduled','Scheduled'],['cancelled','Cancelled']],s.status||'scheduled')}</select></div></div><div class="editor-fields"><div><label for="session-start">Starts</label><input id="session-start" name="startsAt" type="datetime-local" value="${esc(s.startsAt||'')}" required></div><div><label for="session-end">Ends</label><input id="session-end" name="endsAt" type="datetime-local" value="${esc(s.endsAt||'')}" required></div><div><label for="session-location">Location or link</label><input id="session-location" name="location" value="${esc(s.location||'')}" maxlength="200"></div></div><div class="editor-fields"><div><label for="session-course">Linked course (optional)</label><select id="session-course" name="courseId">${options(org.courses.map(c=>[c.id,c.title]),s.courseId,'None')}</select></div>${currentUser.role!=='trainer'?`<div><label for="session-trainer">Trainer</label><select id="session-trainer" name="trainerId">${options(org.trainers.map(t=>[t.id,t.name]),s.trainerId,'Not assigned')}</select></div>`:''}</div><p class="muted">Times use the server's local time zone. Registered employees are notified when a session is cancelled or rescheduled.</p><div class="admin-actions"><button class="btn" type="submit">Save session</button><button class="btn secondary" type="button" data-act="session-editor-close">Cancel</button></div><p class="form-status" role="status"></p></form></section>`:'';
-  return panel('Manage sessions',table,'<button class="btn" data-act="session-new">Schedule session</button>')+form+(sessionRoster?rosterPanel(sessions.find(x=>x.id===sessionRoster)):'');
-}
-function rosterPanel(session){
-  if(!session)return '';
-  const key='roster:'+session.id,entry=loadData(key,`manage/sessions/${session.id}/registrations`);
-  if(!entry.data)return stateBlock(entry,'registrations',key);
-  const started=session.startsAt<=new Date().toISOString().slice(0,16);
-  return panel(`Registrations: ${session.title}`,`<div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Employee</th><th>Department</th><th>Status</th><th>Attendance</th></tr></thead><tbody>${entry.data.registrations.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.department||'—')}</td><td>${esc(capital(r.status))}</td><td>${r.status==='cancelled'?'—':started?`<label class="check-label"><input type="checkbox" data-change="attendance" data-session="${session.id}" data-employee="${r.employeeId}" ${r.status==='attended'?'checked':''}> Attended</label>`:'<span class="muted">After start</span>'}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">No registrations yet.</td></tr>'}</tbody></table></div>`,'<button class="btn secondary" data-act="session-roster-close">Close</button>');
-}
+// The Training Calendar (sessions, webinars, Q&A, feedback, trainers) lives in live-training.js.
 
 // ---------------------------------------------------------------- assessments
 
@@ -828,13 +800,6 @@ const ACTIONS={
   'report-page':el=>{devFilters.report.page=Number(el.dataset.page);render();},
   'report-export':async el=>{const data=await api('manage/reports'+el.dataset.query);download(`shimentox-${data.type}-report.csv`,toCSV(data.columns,data.rows),'text/csv;charset=utf-8');toast(`Exported ${data.rows.length} records.`);},
   'record-delete':async el=>{await api('me/records',{id:el.dataset.id,delete:true});refreshData('me-history');render();},
-  'session-register':async el=>{const data=await api(`me/sessions/${el.dataset.id}/register`,{});pageCache['me-cal']={data};refreshData('m-sessions','me-dash');devMessage='You are registered for the session.';render();},
-  'session-cancel':async el=>{const data=await api(`me/sessions/${el.dataset.id}/cancel`,{});pageCache['me-cal']={data};refreshData('m-sessions','me-dash');devMessage='Your registration was cancelled.';render();},
-  'session-new':()=>{sessionEditor={};render();},
-  'session-edit':el=>{sessionEditor={...pageCache['m-sessions'].data.sessions.find(s=>s.id===el.dataset.id)};render();},
-  'session-editor-close':()=>{sessionEditor=null;render();},
-  'session-roster':el=>{sessionRoster=el.dataset.id;delete pageCache['roster:'+el.dataset.id];render();},
-  'session-roster-close':()=>{sessionRoster=null;render();},
   'assessment-start':async el=>{const item=pageCache['me-assess'].data.assessments.find(a=>a.id===el.dataset.id);if(assessmentStarting||examActive())return;assessmentStarting=true;
     try{if(!await enterExamFullscreen())return toast(FULLSCREEN_REQUIRED);const data=await api(`me/assessments/${item.id}/start`,{});activeAssessment={id:item.id,title:item.title,attempt:data.attempt};assessmentResult=null;render();updateAssessmentTimer();}
     catch(error){exitExamFullscreen();throw error;}finally{assessmentStarting=false;}},
@@ -890,7 +855,6 @@ const SUBMITS={
   'dash-period':form=>{const v=formValues(form);devFilters.dashboard={from:v.from,to:v.to};render();},
   'compliance-filters':form=>{compliance.filters=Object.fromEntries(Object.entries(formValues(form)).filter(([,v])=>v));complianceFirstPage();},
   'report-filters':form=>{const v=formValues(form);devFilters.report={type:v.type||devFilters.report.type,department:v.department,employee:v.employee,course:v.course,from:v.from,to:v.to,page:1};render();},
-  'session-save':form=>submitForm(form,async()=>{const v=formValues(form);const data=await api('manage/sessions',{...v,id:form.dataset.id||null,capacity:Number(v.capacity),courseId:v.courseId||null,trainerId:v.trainerId||null});pageCache['m-sessions']={data};sessionEditor=null;refreshData('me-cal');devMessage='Session saved.';render();}),
   'assessment-submit':form=>submitForm(form,async()=>{const a=activeAssessment,answers=a.attempt.questions.map((_,i)=>{const value=new FormData(form).get('q'+i);return value===null?null:Number(value);});if(answers.includes(null))throw new Error('Answer every question before submitting.');const data=await api(`me/assessments/${a.id}/submit`,{attemptId:a.attempt.id,answers});activeAssessment=null;exitExamFullscreen();assessmentResult=data.result;refreshData('me-assess','me-dash');refreshNotifications();if(data.result.status==='passed'){try{learning.certificates=(await api('certificates')).certificates;}catch{/* The list refreshes on the next page load. */}}render();}),
   'assessment-save':form=>submitForm(form,async()=>{const v=formValues(form);let questions;try{questions=JSON.parse(v.questions);}catch{throw new Error('The question bank JSON is invalid. Check its syntax.');}const data=await api('manage/assessments',{id:form.dataset.id||null,title:v.title,description:v.description,kind:v.kind,courseId:v.courseId||null,passPercent:Number(v.passPercent),maxAttempts:Number(v.maxAttempts),questionCount:Number(v.questionCount),timeLimitMinutes:Number(v.timeLimitMinutes),status:v.status,questions});pageCache['m-assess']={data:{assessments:data.assessments}};assessmentEditor=null;refreshData('me-assess');devMessage='Assessment saved.';render();}),
   'record-save':form=>submitForm(form,async()=>{const v=formValues(form);await api('me/records',{title:v.title,provider:v.provider,completedOn:v.completedOn,hours:Number(v.hours||0)});refreshData('me-history');myHistory.page=1;render();}),
@@ -930,7 +894,6 @@ const CHANGES={
   'course-difficulty':el=>{courseDifficulty=el.value;render();},
   'compliance-size':el=>{compliance.size=Number(el.value);complianceFirstPage();},
   'target-type':el=>{const target=document.getElementById(el.dataset.target);if(target)target.innerHTML=options(targetChoices(el.value),'','Select…');},
-  attendance:async el=>{try{const data=await api(`manage/sessions/${el.dataset.session}/attendance`,{employeeId:el.dataset.employee,attended:el.checked});pageCache['roster:'+el.dataset.session]={data};render();}catch(error){toast(error.message);el.checked=!el.checked;}},
 };
 async function uploadMaterial(file){
   if(file.size>50*1024*1024)throw new Error('Files must be 50 MB or smaller.');

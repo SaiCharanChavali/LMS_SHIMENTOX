@@ -124,7 +124,7 @@ async function main() {
   };
   vm.createContext(context);
   const run = code => vm.runInContext(code, context);
-  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'onboarding.js', 'activity.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
+  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'live-training.js', 'onboarding.js', 'activity.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(app.innerHTML.includes('id="login-form"'));
   // Sign in with Keka account: a link to the server's Keka start route, and a clear message when Keka sign-in fails.
@@ -238,6 +238,8 @@ async function main() {
 
   for (const page of ['dashboard', 'home', 'courses', 'course', 'certificates', 'account']) {
     context.location.hash = '#' + page; run('render()'); assert.ok(app.innerHTML.includes('class="shell"'));
+    // Every signed-in page has the light/dark switch in its header.
+    assert.ok(app.innerHTML.includes('id="theme-toggle"')&&app.innerHTML.includes('Switch to dark mode'));
   }
   context.location.hash = '#course'; run('selectedActivity="video-0";render()');
   const video = elements['course-video']; Object.assign(video, { duration: 48, currentTime: 30, playbackRate: 1, paused: false });

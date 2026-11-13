@@ -15,7 +15,7 @@ from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, unquote, parse_qs
-from zoneinfo import ZoneInfo
+from deadlines import IST
 
 from database import BACKEND, connect, public_curriculum
 from security import token, token_hash, password_hash, verify_password
@@ -27,6 +27,7 @@ import assistant
 import compliance
 import onboarding
 import keka
+import live_training
 
 PUBLIC = BACKEND.parent / 'frontend/public'
 COOKIE = 'shimentox_session'
@@ -153,7 +154,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
             return self.certificate_html_response(404, not_found, head)
         db = connect(self.server.db_path)
         try:
-            award = db.execute('SELECT candidate_name,course_title,issued_at,certificate_number FROM certificates WHERE public_token=?', (token,)).fetchone()
+            award = db.execute('SELECT candidate_name,course_title,issued_at,certificate_number,revoked_at FROM certificates WHERE public_token=?', (token,)).fetchone()
         finally:
             db.close()
         if award is None:
@@ -166,7 +167,7 @@ class PortalHandler(SimpleHTTPRequestHandler):
         link = f'{base}/certificates/{token}'
         image = f'{base}/assets/images/certificate-share-preview.png'
         timestamp = datetime.fromisoformat(award['issued_at'].replace('Z', '+00:00'))
-        completed = timestamp.astimezone(ZoneInfo('Asia/Kolkata'))
+        completed = timestamp.astimezone(IST)
         date = f'{completed.day} {completed.strftime("%B %Y")}'
         name = escape(award['candidate_name'], quote=True)
         course = escape(award['course_title'], quote=True)
@@ -176,6 +177,8 @@ class PortalHandler(SimpleHTTPRequestHandler):
         description = escape(f'{award["candidate_name"]} completed {award["course_title"]} on {date}.', quote=True)
         safe_link = escape(link, quote=True)
         safe_image = escape(image, quote=True)
+        status = 'Revoked' if award['revoked_at'] else 'Valid'
+        status_class = ' revoked' if award['revoked_at'] else ''
         body = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive"><meta name="googlebot" content="noindex,nofollow,noarchive">
@@ -184,10 +187,21 @@ class PortalHandler(SimpleHTTPRequestHandler):
 <meta property="og:url" content="{safe_link}"><meta property="og:image" content="{safe_image}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image"><title>{title}</title>
-<style>body{{margin:0;background:#f4f2e9;color:#163e35;font:16px/1.5 Arial,sans-serif}}main{{box-sizing:border-box;max-width:860px;margin:8vh auto;padding:48px;background:#fffdf7;border:1px solid #dfdccb;box-shadow:0 8px 30px #163e3508;text-align:center}}header{{margin:-48px -48px 40px;padding:22px;background:#163e35;color:#f3d875;letter-spacing:.14em;font-size:13px}}h1{{font:40px Georgia,serif;font-weight:400}}dl{{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:34px auto 0;max-width:650px}}dt{{color:#788176;font-size:11px;letter-spacing:.12em;text-transform:uppercase}}dd{{margin:7px 0 0;font:20px Georgia,serif;overflow-wrap:anywhere}}.name{{font-size:32px}}@media(max-width:600px){{main{{margin:0;padding:28px 18px}}header{{margin:-28px -18px 32px}}dl{{grid-template-columns:1fr}}h1{{font-size:32px}}}}</style>
-</head><body><main><header>SHIMENTOX · LEARNING &amp; DEVELOPMENT</header><h1>Certificate of Completion</h1>
-<dl><div><dt>Learner</dt><dd class="name">{name}</dd></div><div><dt>Course</dt><dd>{course}</dd></div>
-<div><dt>Completion date</dt><dd>{safe_date}</dd></div><div><dt>Certificate number</dt><dd>{number}</dd></div></dl></main></body></html>'''
+<link rel="stylesheet" href="/styles/main.css"><link rel="stylesheet" href="/styles/certificate.css">
+</head><body class="public-certificate"><main>
+<p class="certificate-status{status_class}">{status}</p>
+<article class="certificate" aria-label="Certificate of Completion">
+<div class="certificate-header"><img src="/assets/images/ShimentoX-Light-Logo.webp" alt="ShimentoX" width="960" height="169"><span>LEARNING &amp; DEVELOPMENT</span></div>
+<div class="certificate-body"><div class="certificate-kicker">A COMMITMENT TO CONTINUOUS GROWTH</div>
+<h2>Certificate of Completion</h2><p class="certificate-presented">This certificate is proudly presented to</p>
+<h3 class="certificate-name">{name}</h3>
+<p class="certificate-description">for successfully completing all lessons, practice activities and required assessments in</p>
+<h4 class="certificate-course">{course}</h4><p class="certificate-description">Lessons &middot; Practice &middot; Assessment</p>
+<div class="certificate-details"><div><strong>{safe_date}</strong><span>DATE OF COMPLETION</span></div>
+<div class="certificate-seal"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m8 12-2 9 6-3 6 3-2-9"/></svg></span><span>COURSE<br>COMPLETED</span></div>
+<div><strong>ShimentoX</strong><span>LEARNING &amp; DEVELOPMENT</span></div></div>
+<p class="certificate-note">Certificate number <span class="certificate-number">{number}</span></p>
+</div></article></main></body></html>'''
         return self.certificate_html_response(200, body, head)
 
     def json_response(self, status, payload, cookie=None):
@@ -408,6 +422,10 @@ class PortalHandler(SimpleHTTPRequestHandler):
                     return self.json_response(200,payload)
                 if method=='GET' and path in ('/api/manage/compliance/export','/api/manage/onboarding/export'):
                     download=(compliance if 'compliance' in path else onboarding).export(db,user,query)
+                    db.commit()
+                    return self.download_response(*download)
+                if method=='GET' and re.fullmatch(r'/api/me/(calendar|sessions/[^/]+/calendar)\.ics',path):
+                    download=live_training.calendar_file(db,user,path)
                     db.commit()
                     return self.download_response(*download)
                 if path.startswith('/api/manage/') or path.startswith('/api/me/'):

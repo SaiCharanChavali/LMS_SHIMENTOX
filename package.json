@@ -13,7 +13,8 @@
     "test:compliance": "python -m unittest discover -s backend/tests -p test_compliance.py -v",
     "test:backend": "python -m unittest discover -s backend/tests -v",
     "benchmark": "python backend/tools/benchmark_performance.py",
-    "check": "node --check frontend/public/scripts/admin.js && node --check frontend/public/scripts/development.js && node --check frontend/public/scripts/onboarding.js && node --check frontend/public/scripts/activity.js && node --check frontend/public/scripts/course-import.js && node --check frontend/public/scripts/auth.js && node --check frontend/public/scripts/app.js && node --check frontend/public/scripts/learning.js && node --check frontend/public/scripts/python-practice.js && node --check frontend/public/scripts/python-sandbox.js",
-    "videos:generate": "python frontend/tools/generate_videos.py"
+    "check": "node --check frontend/public/scripts/admin.js && node --check frontend/public/scripts/development.js && node --check frontend/public/scripts/live-training.js && node --check frontend/public/scripts/onboarding.js && node --check frontend/public/scripts/activity.js && node --check frontend/public/scripts/course-import.js && node --check frontend/public/scripts/auth.js && node --check frontend/public/scripts/app.js && node --check frontend/public/scripts/learning.js && node --check frontend/public/scripts/python-practice.js && node --check frontend/public/scripts/python-sandbox.js",
+    "videos:generate": "python frontend/tools/generate_videos.py",
+    "theme:dark": "python frontend/tools/build_dark_theme.py"
   }
 }

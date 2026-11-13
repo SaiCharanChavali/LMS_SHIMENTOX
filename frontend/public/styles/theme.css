@@ -128,3 +128,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{border-color:#b1
 @media(max-width:680px){.lesson-outline nav{grid-template-columns:1fr}}
 .table-actions button.danger-link{background:#fff;border-color:#efc2bc;color:#b4443b}
 .table-actions button.danger-link:not(:disabled):hover{background:#fdf1ef;border-color:#d98b80}
+/* Light / dark theme switch in the header */
+.theme-toggle{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;transition:background .15s ease,color .15s ease}
+.theme-toggle:hover{background:#fff3cd;color:#795600}

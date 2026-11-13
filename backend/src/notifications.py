@@ -1,6 +1,4 @@
 """Notification events and scoped reminders. No email or external delivery."""
-from datetime import datetime, timedelta
-
 from services import notify, now, text, check, uid
 
 
@@ -52,10 +50,7 @@ def refresh(db, user):
                     if not left:
                         name = name or db.execute('SELECT full_name FROM candidates WHERE id=?', (employee,)).fetchone()[0]
                         staff_event(db, employee, f'Exam attempts exhausted: {name}', f'{run["title"]}, Module {s+1}.', f'exhausted:{run["id"]}:{s}')
-    # Short reminders complement the existing two-day session notice.
-    start = datetime.now()
-    for session in db.execute("SELECT s.* FROM training_sessions s WHERE s.status='scheduled' AND (s.trainer_id=? OR EXISTS(SELECT 1 FROM session_registrations g WHERE g.session_id=s.id AND g.employee_id=? AND g.status='registered')) AND s.starts_at BETWEEN ? AND ?", (employee, employee, start.strftime('%Y-%m-%dT%H:%M'), (start+timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M'))):
-        notify(db, [employee], 'session', f'Starts within 30 minutes: {session["title"]}', f'{session["starts_at"].replace("T", " ")} — {session["location"] or "See session details"}.', 'calendar', f'session-30:{session["id"]}:{session["starts_at"]}')
+    # Session reminders (24 hours, 1 hour and 15 minutes before) are sent by live_training.process.
 
 
 def announce(db, actor, data):

@@ -308,6 +308,11 @@ def start_scheduler(path, interval_seconds):
                 run_pass(path)
             except Exception as error:
                 print(f'Reminder pass could not run: {type(error).__name__}', file=sys.stderr, flush=True)
+            try:
+                import live_training  # Session reminders and post-session follow-ups share this loop.
+                live_training.run_pass(path)
+            except Exception as error:
+                print(f'Session reminder pass could not run: {type(error).__name__}', file=sys.stderr, flush=True)
 
     threading.Thread(target=loop, name='deadline-reminders', daemon=True).start()
     return stop

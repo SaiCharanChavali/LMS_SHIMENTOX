@@ -1,6 +1,8 @@
 # AI learning assistant
 
-The course page includes an optional AI learning assistant. It is **off by default**. While it is off, employees see a short notice instead of the assistant form, and no external calls are made.
+> **The course page no longer shows this AI assistant.** Its summarise, explain, practice and revision actions now belong to the rule-based [LMS assistant](lms-assistant.md), which uses no AI service. The server endpoint described below (`/api/me/assistant`) still exists but is no longer called by the portal. The Claude settings on this page are still used by **Create from a link with AI** in Manage Courses.
+
+The AI learning assistant is **off by default**. While it is off, no external calls are made.
 
 ## What it does
 

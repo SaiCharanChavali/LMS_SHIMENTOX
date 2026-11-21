@@ -125,7 +125,7 @@ async function main() {
   };
   vm.createContext(context);
   const run = code => vm.runInContext(code, context);
-  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'live-training.js', 'onboarding.js', 'activity.js', 'course-import.js', 'python-practice.js', 'learning.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
+  for (const file of ['auth.js', 'app.js', 'admin.js', 'development.js', 'live-training.js', 'onboarding.js', 'activity.js', 'course-import.js', 'python-practice.js', 'learning.js', 'chatbot-config.js', 'chatbot-intents.js', 'chatbot-data.js', 'chatbot-responses.js', 'chatbot.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/scripts/' + file, 'utf8'), context, { filename: file });
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(app.innerHTML.includes('id="login-form"'));
   // Sign in with Keka account: a link to the server's Keka start route, and a clear message when Keka sign-in fails.
@@ -470,7 +470,8 @@ assert.ok(app.innerHTML.includes('Select a department…')&&app.innerHTML.includ
   assert.ok(!app.innerHTML.includes('href="#admin-users"')&&!app.innerHTML.includes('href="#reports"'));
   assert.equal(run('notificationState.unread'),1);assert.ok(app.innerHTML.includes('class="notification-count"'));
   context.location.hash='#course';run('render()');await new Promise(resolve=>setImmediate(resolve));
-  assert.ok(app.innerHTML.includes('Learning materials')&&app.innerHTML.includes('has not been enabled'));
+  assert.ok(app.innerHTML.includes('Learning materials')&&app.innerHTML.includes('Course assistant')&&app.innerHTML.includes('data-chatbot-open="summarize"')&&app.innerHTML.includes('data-chatbot-open="revision"'),'The course assistant opens the LMS assistant.');
+  assert.ok(!requests.some(r=>r.path==='me/assistant'),'The course page no longer calls the AI assistant.');
   assert.ok(app.innerHTML.includes('MODULE 1'));
   context.location.hash='#reports';run('render()');assert.ok(!app.innerHTML.includes('Export CSV'));
   context.location.hash='#dashboard';run('render()');await new Promise(resolve=>setImmediate(resolve));

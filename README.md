@@ -68,7 +68,7 @@ In **Users & Teams**, an admin or HR assigns a full name, work email, role, depa
 
 In **Manage courses**, create a draft, enter metadata, edit the curriculum JSON template, then publish. Each course has three sets, two videos and exercises per set, and one exam per set. Only published courses appear for candidates. Each course has independent progress and attempts. Create a new version to change assessments after learners have enrolled. See [admin guide](docs/admin-guide.md).
 
-The optional AI learning assistant, and creating a course from a website link with AI, are off unless configured on the server; see [AI assistant](docs/ai-assistant.md). No other environment variables are required.
+A rule-based [LMS assistant](docs/lms-assistant.md) answers learning questions from the portal's own data on every page. Creating a course from a website link with AI is off unless configured on the server; see [AI assistant](docs/ai-assistant.md). No other environment variables are required.
 
 SQLite is created automatically at `backend/data/lms.sqlite3`. Schema version 3 upgrades existing databases automatically, keeping all accounts and learning records; former candidate accounts become employees. Uploaded learning materials are stored privately in `backend/data/materials/`, which is excluded from version control; back it up together with the database. No database installation or npm dependency installation is needed. Back up this file to retain candidate data. Use `npm run db:init` to initialize the schema without starting the server.
 

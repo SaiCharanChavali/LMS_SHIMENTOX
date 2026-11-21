@@ -15,3 +15,5 @@
 :where(html[data-theme="dark"]) .certificate-seal span{color:#cec097}
 :where(html[data-theme="dark"]) .certificate-note{color:#aeb1a4}
 :where(html[data-theme="dark"]) .certificate-actions p{color:#9ea8ab}
+:where(html[data-theme="dark"]) .certificate-status{border:1px solid #56695c;background:#202d24;color:#c3eae1}
+:where(html[data-theme="dark"]) .certificate-status.revoked{background:#311412;border-color:#6c4643;color:#e28b8b}
